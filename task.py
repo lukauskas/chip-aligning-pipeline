@@ -35,6 +35,10 @@ class Task(luigi.Task):
     def _extension(self):
         return u''
 
+    @property
+    def __full_path(self):
+        return os.path.join(_OUTPUT_DIR, u'.'.join([self._basename, self._extension]))
+
     def output(self):
-        return luigi.File(os.path.join(_OUTPUT_DIR), u'.'.join([self._basename, self._extension]))
+        return luigi.File(self.__full_path)
 
