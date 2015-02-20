@@ -7,3 +7,8 @@ try:
     from sh import zip
 except ImportError:
     raise ImportError('Cannot import zip command from your system, make sure zip archiver is installed')
+
+try:
+    from sh import tar
+except ImportError:
+    raise ImportError('Cannot import zip command from your system, make sure tar archiver is installed')

@@ -58,7 +58,7 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
         logger.debug('Done building index')
 
         final_filename = '{}.zip'.format(name)
-        wildcard = '{}*.bt2'
+        wildcard = '{}*.bt2'.format(name)
         logger.debug('Zipping {} to {}'.format(wildcard, final_filename))
         zip(final_filename, wildcard)
 
