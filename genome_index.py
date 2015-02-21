@@ -17,6 +17,7 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
     from command_line_applications.ucsc_suite import twoBitToFa
     from command_line_applications.archiving import zip
     import shutil
+    import sh
 
     output_abspath = os.path.abspath(output.path)
     output_dir = os.path.dirname(output_abspath)
@@ -32,7 +33,7 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
 
     current_working_directory = os.getcwdu()
 
-    temporary_directory = tempfile.mkdtemp()
+    temporary_directory = tempfile.mkdtemp(prefix='tmp-bt2index-')
 
     try:
         logger.debug('Changing directory to {}'.format(temporary_directory))
@@ -56,16 +57,25 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
         logger.debug('Building index (takes a while)')
         bowtie2_build('-q', '--seed', random_seed, fasta_sequence_filename, name)
         logger.debug('Done building index')
+        logger.debug('Files in directory: {}'.format('; '.join(os.listdir('.'))))
 
         final_filename = '{}.zip'.format(name)
-        wildcard = '{}*.bt2'.format(name)
+
+        if os.path.exists('{}.1.bt2'.format(name)):
+            # small index
+            wildcard = '{}*.bt2'.format(name)
+        elif os.path.exists('{}.1.bt2l'.format(name)):
+            # Large index
+            wildcard = '{}*.bt2l'.format(name)
+        else:
+            raise Exception('Cannot determine wildcard for index')
         logger.debug('Zipping {} to {}'.format(wildcard, final_filename))
-        zip(final_filename, wildcard)
+        zip(final_filename, sh.glob(wildcard))
 
         logger.debug('Moving {} to {}'.format(final_filename, output_abspath))
         shutil.move(final_filename, output_abspath)
     finally:
-        shutil.rmtree(temporary_directory)
+        #shutil.rmtree(temporary_directory)
         os.chdir(current_working_directory)
 
 class GenomeIndex(Task):
