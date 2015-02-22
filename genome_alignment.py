@@ -116,8 +116,7 @@ class BowtieAlignmentTask(Task):
         finally:
             logger.debug('Cleaning up')
             os.chdir(current_working_directory)
-            #shutil.rmtree(temporary_directory)
-        pass
+            shutil.rmtree(temporary_directory)
 
 
 if __name__ == '__main__':
