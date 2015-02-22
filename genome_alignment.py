@@ -20,6 +20,9 @@ class BowtieAlignmentTask(Task):
     experiment_alias = ShortReadsForExperiment.experiment_alias
 
     bowtie_seed = luigi.IntParameter(default=0)
+
+    pretrim_reads = luigi.BooleanParameter(default=True)
+
     number_of_processes = luigi.IntParameter(default=cpu_count(), significant=False)
 
     def requires(self):
@@ -30,7 +33,11 @@ class BowtieAlignmentTask(Task):
 
     @property
     def _parameters(self):
-        return [self.study_accession, self.experiment_accession, self.experiment_alias]
+        return [self.study_accession,
+                self.experiment_accession,
+                self.experiment_alias,
+                self.bowtie_seed,
+                self.pretrim_reads]
 
     @property
     def _extension(self):
@@ -92,6 +99,26 @@ class BowtieAlignmentTask(Task):
             tar('-xjf', sra_output_abspath, '--directory={}'.format(sequences_dirname))
 
             sequences_to_align = os.listdir(sequences_dirname)
+
+            if self.pretrim_reads:
+                logger.debug('Pretrim sequences set, trimming')
+                from command_line_applications.sickle import sickle
+
+                trimmed_sequences_dirname = 'trimmed_sequences'
+                os.makedirs(trimmed_sequences_dirname)
+
+                for sequence in sequences_to_align:
+                    logger.debug('Trimming {}'.format(sequence))
+                    sickle('se',
+                           '-f', os.path.join(sequences_dirname, sequence),
+                           '-t', 'sanger',
+                           '-o', os.path.join(trimmed_sequences_dirname, sequence))
+
+                logger.debug('Deleting untrimmed sequences')
+                shutil.rmtree(sequences_dirname)
+
+                sequences_dirname = trimmed_sequences_dirname
+
             bowtie_align_string = ','.join([os.path.join(sequences_dirname, x) for x in sequences_to_align])
             logging.debug('Bowtie string to align sequences: {!r}'.format(bowtie_align_string))
 
