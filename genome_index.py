@@ -91,7 +91,7 @@ class GenomeIndex(Task):
     _GENOME_SEQUENCES = {'hg38': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit'}
 
     @property
-    def _parameters(self):
+    def parameters(self):
         return [self.genome_version]
 
     @property

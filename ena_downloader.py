@@ -44,7 +44,7 @@ class ShortReadsForExperiment(Task):
     experiment_alias = luigi.Parameter()
 
     @property
-    def _parameters(self):
+    def parameters(self):
         return [self.study_accession, self.experiment_accession, self.experiment_alias]
 
     @property

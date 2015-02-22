@@ -18,13 +18,13 @@ def _file_safe_string(value):
 class Task(luigi.Task):
 
     @property
-    def _parameters(self):
+    def parameters(self):
         return []
 
     @property
     def _basename(self):
         class_name = self.__class__.__name__
-        parameters = self._parameters
+        parameters = self.parameters
 
         basename_components = [class_name] + parameters
         basename_components = map(_file_safe_string, basename_components)

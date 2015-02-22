@@ -21,7 +21,7 @@ class BowtieAlignmentTask(Task):
 
     bowtie_seed = luigi.IntParameter(default=0)
 
-    pretrim_reads = luigi.BooleanParameter(default=True)
+    pretrim_reads = luigi.BooleanParameter(default=False)
 
     number_of_processes = luigi.IntParameter(default=cpu_count(), significant=False)
 
@@ -31,13 +31,21 @@ class BowtieAlignmentTask(Task):
                                         study_accession=self.study_accession,
                                         experiment_alias=self.experiment_alias)]
 
+
     @property
-    def _parameters(self):
-        return [self.study_accession,
-                self.experiment_accession,
-                self.experiment_alias,
-                self.bowtie_seed,
-                self.pretrim_reads]
+    def parameters(self):
+        params = [self.study_accession,
+                  self.experiment_accession,
+                  self.experiment_alias,
+                  self.genome_version]
+
+        if self.bowtie_seed != 0:
+            params.append(self.bowtie_seed)
+        if self.pretrim_reads:
+            params.append('trim')
+
+        return params
+
 
     @property
     def _extension(self):
@@ -101,23 +109,31 @@ class BowtieAlignmentTask(Task):
             sequences_to_align = os.listdir(sequences_dirname)
 
             if self.pretrim_reads:
+
                 logger.debug('Pretrim sequences set, trimming')
                 from command_line_applications.sickle import sickle
 
                 trimmed_sequences_dirname = 'trimmed_sequences'
                 os.makedirs(trimmed_sequences_dirname)
 
+                trimmed_sequences = []
                 for sequence in sequences_to_align:
+                    assert sequence[-3:] == '.gz'
+                    sequence_without_gzip = sequence[:-3]
+
                     logger.debug('Trimming {}'.format(sequence))
                     sickle('se',
                            '-f', os.path.join(sequences_dirname, sequence),
                            '-t', 'sanger',
-                           '-o', os.path.join(trimmed_sequences_dirname, sequence))
+                           '-o', os.path.join(trimmed_sequences_dirname, sequence_without_gzip))
 
+                    trimmed_sequences.append(sequence_without_gzip)
+                    
                 logger.debug('Deleting untrimmed sequences')
                 shutil.rmtree(sequences_dirname)
 
                 sequences_dirname = trimmed_sequences_dirname
+                sequences_to_align = trimmed_sequences
 
             bowtie_align_string = ','.join([os.path.join(sequences_dirname, x) for x in sequences_to_align])
             logging.debug('Bowtie string to align sequences: {!r}'.format(bowtie_align_string))
