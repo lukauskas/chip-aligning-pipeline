@@ -23,7 +23,7 @@ class BowtieAlignmentTask(Task):
 
     pretrim_reads = luigi.BooleanParameter(default=False)
 
-    number_of_processes = luigi.IntParameter(default=cpu_count(), significant=False)
+    number_of_processes = luigi.IntParameter(default=cpu_count()/8, significant=False)
 
     def requires(self):
         return [GenomeIndex(genome_version=self.genome_version),
@@ -128,7 +128,7 @@ class BowtieAlignmentTask(Task):
                            '-o', os.path.join(trimmed_sequences_dirname, sequence_without_gzip))
 
                     trimmed_sequences.append(sequence_without_gzip)
-                    
+
                 logger.debug('Deleting untrimmed sequences')
                 shutil.rmtree(sequences_dirname)
 

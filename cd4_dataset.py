@@ -4,6 +4,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 # SRA000206
+import luigi
+from peak_calling import Peaks
+
 METHYLATIONS = [
     #dict(experiment_accession='SRX000138', experiment_alias='CTCF', study_accession='SRP000201'),
     dict(experiment_accession='SRX000139', experiment_alias='H2A.Z', study_accession='SRP000201'),
@@ -56,3 +59,39 @@ ACETYLATIONS = [
     dict(experiment_accession='SRX000375', experiment_alias='H4K91ac', study_accession='SRP000200'),
 
 ]
+
+# SRX103444
+TRANSCRIPTION_FACTORS = [
+    # BRD4
+    dict(experiment_accession='SRX103444', experiment_alias='GSM823378_1',
+         study_accession='PRJNA149083')
+    ]
+
+
+def tasks_for_genome(genome_version):
+    for data_dict in METHYLATIONS + ACETYLATIONS:
+        yield Peaks(genome_version=genome_version,
+                    pretrim_reads=True,
+                    broad=True,
+                    **data_dict)
+
+    for data_dict in TRANSCRIPTION_FACTORS:
+        yield Peaks(genome_version=genome_version,
+                    pretrim_reads=True,
+                    broad=False,
+                    **data_dict)
+
+
+class CD4MasterTask(luigi.Task):
+
+    genome_version = luigi.Parameter()
+
+    def requires(self):
+        return list(tasks_for_genome(self.genome_version))
+
+    def complete(self):
+        return all(map(lambda x: x.complete(), self.requires()))
+
+
+if __name__ == '__main__':
+    luigi.run(main_task_cls=CD4MasterTask)
