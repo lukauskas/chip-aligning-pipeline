@@ -23,7 +23,7 @@ class BowtieAlignmentTask(Task):
 
     pretrim_reads = luigi.BooleanParameter(default=False)
 
-    number_of_processes = luigi.IntParameter(default=cpu_count()/8, significant=False)
+    number_of_processes = luigi.IntParameter(default=int(cpu_count()/8), significant=False)
 
     def requires(self):
         return [GenomeIndex(genome_version=self.genome_version),
