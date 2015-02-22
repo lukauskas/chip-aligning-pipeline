@@ -21,7 +21,7 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
 
     output_abspath = os.path.abspath(output.path)
     output_dir = os.path.dirname(output_abspath)
-    logging.debug('Ensuring {} exists'.format(output_dir))
+    logger.debug('Ensuring {} exists'.format(output_dir))
     # Make sure to create directories
     try:
         os.makedirs(output_dir)
@@ -75,8 +75,8 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
         logger.debug('Moving {} to {}'.format(final_filename, output_abspath))
         shutil.move(final_filename, output_abspath)
     finally:
-        #shutil.rmtree(temporary_directory)
         os.chdir(current_working_directory)
+        shutil.rmtree(temporary_directory)
 
 class GenomeIndex(Task):
     """

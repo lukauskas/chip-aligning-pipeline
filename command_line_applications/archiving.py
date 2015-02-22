@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 try:
-    from sh import zip
+    from sh import zip, unzip
 except ImportError:
     raise ImportError('Cannot import zip command from your system, make sure zip archiver is installed')
 
