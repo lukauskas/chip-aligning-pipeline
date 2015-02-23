@@ -3,14 +3,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
+import logging
 
 import luigi
-from genome_windows import NonOverlappingWindows
-from peak_calling import Peaks
-
 import pybedtools
-import logging
-import gzip
+
+from genome_windows import NonOverlappingWindows
+from peak_calling.macs import Peaks
 from task import Task, GzipOutputFile
 
 def _intersection_counts_to_wiggle(output_file_handle,

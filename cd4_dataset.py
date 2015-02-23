@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 # SRA000206
 import luigi
 from genomic_profile import Profile
-from peak_calling import Peaks
 
 METHYLATIONS = [
     #dict(experiment_accession='SRX000138', experiment_alias='CTCF', study_accession='SRP000201'),
