@@ -80,6 +80,7 @@ class Deadzones(Task):
     def requires(self):
         return [self._genome_sequence_task]
 
+    @property
     def parameters(self):
         return [self.genome_version, 'k{}'.format(self.width_of_kmers)]
 

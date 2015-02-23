@@ -17,7 +17,7 @@ class GenomeSequence(Task):
 
     @property
     def parameters(self):
-        return self.genome_version
+        return [self.genome_version]
 
     @property
     def _extension(self):
