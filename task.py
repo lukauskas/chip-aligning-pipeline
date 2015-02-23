@@ -2,8 +2,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import gzip
 
 import luigi
+import luigi.format
+
 import re
 import os
 
@@ -14,6 +17,11 @@ def _file_safe_string(value):
     value = re.sub('[^a-zA-Z0-9]', '_', value)
     value = re.sub('__+', '_', value)
     return value
+
+class GzipOutputFile(luigi.File):
+
+    def __init__(self, path=None):
+        super(GzipOutputFile, self).__init__(path=path, format=luigi.format.Gzip)
 
 class Task(luigi.Task):
 

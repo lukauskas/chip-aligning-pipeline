@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 # SRA000206
 import luigi
+from genomic_profile import Profile
 from peak_calling import Peaks
 
 METHYLATIONS = [
@@ -67,19 +68,24 @@ TRANSCRIPTION_FACTORS = [
          study_accession='PRJNA149083')
     ]
 
+WINDOW_SIZE = 200
 
 def tasks_for_genome(genome_version):
     for data_dict in METHYLATIONS + ACETYLATIONS:
-        yield Peaks(genome_version=genome_version,
-                    pretrim_reads=True,
-                    broad=True,
-                    **data_dict)
+        yield Profile(genome_version=genome_version,
+                      pretrim_reads=True,
+                      broad=True,
+                      window_size=WINDOW_SIZE,
+                      binary=True,
+                      **data_dict)
 
     for data_dict in TRANSCRIPTION_FACTORS:
-        yield Peaks(genome_version=genome_version,
-                    pretrim_reads=True,
-                    broad=False,
-                    **data_dict)
+        yield Profile(genome_version=genome_version,
+                      pretrim_reads=True,
+                      broad=False,
+                      window_size=WINDOW_SIZE,
+                      binary=True,
+                      **data_dict)
 
 
 class CD4MasterTask(luigi.Task):

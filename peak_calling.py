@@ -6,6 +6,7 @@ import logging
 import os
 import luigi
 import shutil
+import sh
 from genome_alignment import BowtieAlignmentTask
 from task import Task
 import tempfile
@@ -93,12 +94,16 @@ class Peaks(Task):
                 broad_params = ['--broad']
             else:
                 broad_params = []
-            macs2('callpeak',
-                  '-t', bam_input_abspath,
-                  '-f', 'BAM',
-                  '-g', 'hs',
-                  *broad_params,
-                  _err=stderr_output)
+            macs2_args = ['callpeak',
+                          '-t', bam_input_abspath,
+                          '-f', 'BAM',
+                          '-g', 'hs'] + broad_params
+            try:
+                macs2(*macs2_args,
+                      _err=stderr_output)
+            except sh.ErrorReturnCode as e:
+                # Rerun command without output redirection, so we can capture it in the exception
+                macs2(*macs2_args)
 
             logger.debug('Moving files')
             shutil.move(stderr_output, stdout_output_abspath)

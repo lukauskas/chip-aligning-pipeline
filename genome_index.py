@@ -76,6 +76,7 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
                 logger.debug('Adding {} to archive'.format(file_))
                 zipf.write(file_)
 
+        # TODO: for some reason this moves an empty archive in the end, and I cannot figure out why
         logger.debug('Moving {} to {}'.format(final_filename, output_abspath))
         shutil.move(final_filename, output_abspath)
     finally:

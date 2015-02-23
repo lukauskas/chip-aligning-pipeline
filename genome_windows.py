@@ -15,7 +15,7 @@ class NonOverlappingWindows(Task):
     window_size = luigi.IntParameter()
 
     @property
-    def _parameters(self):
+    def parameters(self):
         return [self.genome_version, 'w{}'.format(self.window_size)]
 
     @property
