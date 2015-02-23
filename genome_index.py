@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import luigi
+from os.path import splitext
 from task import Task
 from downloader import fetch
 import os
@@ -15,9 +16,10 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
 
     from command_line_applications.bowtie import bowtie2_build
     from command_line_applications.ucsc_suite import twoBitToFa
-    from command_line_applications.archiving import zip
     import shutil
     import sh
+    import zipfile
+
 
     output_abspath = os.path.abspath(output.path)
     output_dir = os.path.dirname(output_abspath)
@@ -61,22 +63,24 @@ def _build_index(url_of_2bit_sequence, name, output, random_seed=0):
 
         final_filename = '{}.zip'.format(name)
 
-        if os.path.exists('{}.1.bt2'.format(name)):
-            # small index
-            wildcard = '{}*.bt2'.format(name)
-        elif os.path.exists('{}.1.bt2l'.format(name)):
-            # Large index
-            wildcard = '{}*.bt2l'.format(name)
-        else:
-            raise Exception('Cannot determine wildcard for index')
-        logger.debug('Zipping {} to {}'.format(wildcard, final_filename))
-        zip(final_filename, sh.glob(wildcard))
+        index_extensions = frozenset(['.bt2', '.bt2l'])
+        files_to_zip = filter(lambda x: splitext(x)[1] in index_extensions, os.listdir('.'))
+
+        if not files_to_zip:
+            raise Exception('Something is wrong: no files found to zip!')
+
+        logger.debug('Zipping to {}'.format(final_filename))
+        with zipfile.ZipFile(final_filename, 'w', allowZip64=True,
+                             compression=zipfile.ZIP_DEFLATED) as zipf:
+            for file_ in files_to_zip:
+                logger.debug('Adding {} to archive'.format(file_))
+                zipf.write(file_)
 
         logger.debug('Moving {} to {}'.format(final_filename, output_abspath))
         shutil.move(final_filename, output_abspath)
     finally:
         os.chdir(current_working_directory)
-        shutil.rmtree(temporary_directory)
+        #shutil.rmtree(temporary_directory)
 
 class GenomeIndex(Task):
     """
