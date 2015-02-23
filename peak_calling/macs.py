@@ -26,7 +26,7 @@ class Peaks(Task):
     broad = luigi.BooleanParameter()
 
     @property
-    def _bowtie_alignment_task(self):
+    def alignment_task(self):
         return BowtieAlignmentTask(genome_version=self.genome_version,
                                    experiment_accession=self.experiment_accession,
                                    study_accession=self.study_accession,
@@ -35,11 +35,11 @@ class Peaks(Task):
                                    pretrim_reads=self.pretrim_reads)
 
     def requires(self):
-        return self._bowtie_alignment_task
+        return self.alignment_task
 
     @property
     def parameters(self):
-        alignment_params = self._bowtie_alignment_task.parameters
+        alignment_params = self.alignment_task.parameters
         alignment_params.append('broad' if self.broad else 'narrow')
 
         return alignment_params

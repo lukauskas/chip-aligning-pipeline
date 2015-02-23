@@ -2,11 +2,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import logging
+import os
+
+import luigi
+import pysam
+from genomic_profile import Profile
+from itertools import imap, ifilterfalse
+from collections import Counter
+import pandas as pd
 
 # SRA000206
-import luigi
-from genomic_profile import Profile
-
 METHYLATIONS = [
     #dict(experiment_accession='SRX000138', experiment_alias='CTCF', study_accession='SRP000201'),
     dict(experiment_accession='SRX000139', experiment_alias='H2A.Z', study_accession='SRP000201'),
@@ -97,6 +103,51 @@ class CD4MasterTask(luigi.Task):
     def complete(self):
         return all(map(lambda x: x.complete(), self.requires()))
 
+class CD4AlignedReadLengthSummary(luigi.Task):
+
+    genome_version = luigi.Parameter()
+
+    def alignment_tasks(self):
+        alignment_tasks = []
+        profile_tasks = tasks_for_genome(self.genome_version)
+        for profile_task in profile_tasks:
+            alignment_task = profile_task.peaks_task.alignment_task
+            alignment_tasks.append(alignment_task)
+        return alignment_tasks
+
+    def requires(self):
+        return self.alignment_tasks()
+
+    def output(self):
+        return luigi.File('cd4_{}_query_length_counts.csv'.format(self.genome_version))
+
+    def run(self):
+        logger = logging.getLogger('CD4AlignedReadLengthSummary')
+        df = []
+        number_of_alignment_tasks = len(self.alignment_tasks())
+        for i, alignment_task in enumerate(self.alignment_tasks(), start=1):
+            bam_file = alignment_task.output()[0].path
+            logger.debug('[{}/{}] Processing: {}'.format(i, number_of_alignment_tasks, bam_file))
+
+            samfile_handle = pysam.Samfile(bam_file)
+
+            mapped_reads = ifilterfalse(lambda x: x.is_unmapped, samfile_handle)
+            query_lengths = imap(lambda x: x.query_length, mapped_reads)
+            query_length_histogram = Counter(query_lengths)
+
+            for key, value in query_length_histogram.iteritems():
+                d = {'filename': os.path.basename(bam_file),
+                     'query_length': key,
+                     'count': value}
+                df.append(d)
+
+        df = pd.DataFrame(df)
+        df = df.set_index('filename')
+
+        with self.output().open('w') as f:
+            df.to_csv(f)
 
 if __name__ == '__main__':
-    luigi.run(main_task_cls=CD4MasterTask)
+    logging.getLogger('CD4AlignedReadLengthSummary').setLevel(logging.DEBUG)
+    logging.basicConfig()
+    luigi.run()

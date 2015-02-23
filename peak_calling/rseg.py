@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from genome_browser import GenomeSequence
 from task import Task, luigi, GzipOutputFile
 
 import requests
@@ -66,6 +67,17 @@ class Deadzones(Task):
     width_of_kmers = luigi.IntParameter()
 
     prefix_length = luigi.IntParameter(default=15, significant=False)
+
+    @property
+    def _genome_sequence_task(self):
+        return GenomeSequence(genome_version=self.genome_version)
+
+    @property
+    def _unfinished_sections_task(self):
+        return UnfinishedGenomeSections(genome_version=self.genome_version)
+
+    def requires(self):
+        return [self._genome_sequence_task, self._unfinished_sections_task]
 
     def parameters(self):
         return [self.genome_version, 'k{}'.format(self.width_of_kmers)]

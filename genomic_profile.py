@@ -56,7 +56,7 @@ class Profile(Task):
     binary = luigi.BooleanParameter()
 
     @property
-    def _peaks_task(self):
+    def peaks_task(self):
         return Peaks(genome_version=self.genome_version,
                      experiment_accession=self.experiment_accession,
                      study_accession=self.study_accession,
@@ -67,7 +67,7 @@ class Profile(Task):
 
     @property
     def parameters(self):
-        parameters = self._peaks_task.parameters
+        parameters = self.peaks_task.parameters
         parameters.append('w{}'.format(self.window_size))
         if self.binary:
             parameters.append('b')
@@ -88,13 +88,13 @@ class Profile(Task):
         return GzipOutputFile(super_output_path)
 
     def requires(self):
-        return [self._genome_windows_task, self._peaks_task]
+        return [self._genome_windows_task, self.peaks_task]
 
     def run(self):
         logger = logging.getLogger('Profile')
 
         windows_task_output = self._genome_windows_task.output()
-        peaks_task_output, __ = self._peaks_task.output()
+        peaks_task_output, __ = self.peaks_task.output()
 
         windows = pybedtools.BedTool(windows_task_output.path)
         peaks = pybedtools.BedTool(peaks_task_output.path)

@@ -31,4 +31,3 @@ class GenomeSequence(Task):
 
         with self.output().open('w') as output_file:
             fetch(uri, output_file)
-            
