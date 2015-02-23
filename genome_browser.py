@@ -1,0 +1,34 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from downloader import fetch
+from task import Task, luigi
+
+
+class GenomeSequence(Task):
+
+    _DOWNLOAD_URIS = {
+        'hg18': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg18/bigZips/hg18.2bit',
+        'hg38': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit'
+    }
+
+    genome_version = luigi.Parameter()
+
+    @property
+    def parameters(self):
+        return self.genome_version
+
+    @property
+    def _extension(self):
+        return '2bit'
+
+    def run(self):
+        try:
+            uri = self._DOWNLOAD_URIS[self.genome_version]
+        except KeyError:
+            raise ValueError('Unsupported genome version: {!r}'.format(self.genome_version))
+
+        with self.output().open('w') as output_file:
+            fetch(uri, output_file)
+            

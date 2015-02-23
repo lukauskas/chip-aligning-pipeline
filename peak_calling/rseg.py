@@ -60,6 +60,20 @@ class UnfinishedGenomeSections(Task):
                 line_to_output += '\n'
                 output.write(line_to_output)
 
+class Deadzones(Task):
+
+    genome_version = luigi.Parameter()
+    width_of_kmers = luigi.IntParameter()
+
+    prefix_length = luigi.IntParameter(default=15, significant=False)
+
+    def parameters(self):
+        return [self.genome_version, 'k{}'.format(self.width_of_kmers)]
+
+    def run(self):
+        pass
+
+
 if __name__ == '__main__':
     logging.getLogger('UnfinishedGenomeSections').setLevel(logging.DEBUG)
     logging.basicConfig()
