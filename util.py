@@ -32,9 +32,12 @@ def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs
     except:
         if cleanup_on_exception:
             # If exception, and cleanup_on_exception is set -- remove directory
+            logger.debug('Removing {} as cleanup_on_exception is set'.format(cleanup_on_exception))
             shutil.rmtree(temp_dir)
+        raise
     finally:
         os.chdir(current_working_directory)
 
     # No exception case - remove always
+    logger.debug('Removing {}'.format(temp_dir))
     shutil.rmtree(temp_dir)
