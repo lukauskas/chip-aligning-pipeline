@@ -31,7 +31,7 @@ class MacsPeaks(PeaksBase):
         temporary_directory = tempfile.mkdtemp(prefix='tmp-peaks')
         current_directory = os.getcwd()
 
-        bam_input_file, __ = self.input()
+        bam_input_file, __ = self.input()[0]
         bam_input_abspath = os.path.abspath(bam_input_file.path)
 
         bed_output, stdout_output = self.output()
