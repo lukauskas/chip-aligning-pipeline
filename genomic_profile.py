@@ -11,6 +11,8 @@ import pybedtools
 from genome_windows import NonOverlappingWindows
 from peak_calling.macs import MacsPeaks
 from task import Task, GzipOutputFile
+from peak_calling.rseg import RsegPeaks
+
 
 def _intersection_counts_to_wiggle(output_file_handle,
                                    intersection_with_counts_bed,
@@ -39,7 +41,8 @@ def _intersection_counts_to_wiggle(output_file_handle,
 
         output_file_handle.write('{0}\t{1}\n'.format(start, count))
 
-class Profile(Task):
+
+class ProfileBase(Task):
 
     genome_version = MacsPeaks.genome_version
 
@@ -50,20 +53,12 @@ class Profile(Task):
     bowtie_seed = MacsPeaks.bowtie_seed
     pretrim_reads = MacsPeaks.pretrim_reads
 
-    broad = MacsPeaks.broad
-
     window_size = NonOverlappingWindows.window_size
     binary = luigi.BooleanParameter()
 
     @property
     def peaks_task(self):
-        return MacsPeaks(genome_version=self.genome_version,
-                     experiment_accession=self.experiment_accession,
-                     study_accession=self.study_accession,
-                     experiment_alias=self.experiment_alias,
-                     bowtie_seed=self.bowtie_seed,
-                     pretrim_reads=self.pretrim_reads,
-                     broad=self.broad)
+        raise NotImplementedError
 
     @property
     def parameters(self):
@@ -84,7 +79,7 @@ class Profile(Task):
                                      window_size=self.window_size)
 
     def output(self):
-        super_output_path = super(Profile, self).output().path
+        super_output_path = super(ProfileBase, self).output().path
         return GzipOutputFile(super_output_path)
 
     def requires(self):
@@ -115,6 +110,40 @@ class Profile(Task):
                                            window_size=self.window_size,
                                            binarise=self.binary
                                            )
+
+class MacsProfile(ProfileBase):
+
+    broad = MacsPeaks.broad
+
+    @property
+    def peaks_task(self):
+        return MacsPeaks(genome_version=self.genome_version,
+                     experiment_accession=self.experiment_accession,
+                     study_accession=self.study_accession,
+                     experiment_alias=self.experiment_alias,
+                     bowtie_seed=self.bowtie_seed,
+                     pretrim_reads=self.pretrim_reads,
+                     broad=self.broad)
+
+class RsegProfile(ProfileBase):
+
+    width_of_kmers = RsegPeaks.width_of_kmers
+    prefix_length = RsegPeaks.prefix_length
+
+    number_of_iterations = RsegPeaks.number_of_iterations
+
+    @property
+    def peaks_task(self):
+        return RsegPeaks(genome_version=self.genome_version,
+                         experiment_accession=self.experiment_accession,
+                         study_accession=self.study_accession,
+                         experiment_alias=self.experiment_alias,
+                         bowtie_seed=self.bowtie_seed,
+                         pretrim_reads=self.pretrim_reads,
+                         width_of_kmers=self.width_of_kmers,
+                         prefix_length=self.prefix_length,
+                         number_of_iterations=self.number_of_iterations)
+
 
 if __name__ == '__main__':
     logging.basicConfig()

@@ -7,7 +7,7 @@ import os
 
 import luigi
 import pysam
-from genomic_profile import Profile
+from genomic_profile import MacsProfile, RsegProfile
 from itertools import imap, ifilterfalse
 from collections import Counter
 import pandas as pd
@@ -74,18 +74,29 @@ TRANSCRIPTION_FACTORS = [
     ]
 
 WINDOW_SIZE = 200
+WIDTH_OF_KMERS=20
+NUMBER_OF_RSEG_ITERATIONS=20
 
 def tasks_for_genome(genome_version):
     for data_dict in METHYLATIONS + ACETYLATIONS:
-        yield Profile(genome_version=genome_version,
+        yield MacsProfile(genome_version=genome_version,
                       pretrim_reads=True,
                       broad=True,
                       window_size=WINDOW_SIZE,
                       binary=True,
                       **data_dict)
 
+        yield RsegProfile(genome_version=genome_version,
+                          pretrim_reads=True,
+                          window_size=WINDOW_SIZE,
+                          binary=True,
+                          width_of_kmers=WIDTH_OF_KMERS,
+                          number_of_iterations=NUMBER_OF_RSEG_ITERATIONS,
+                          **data_dict
+                         )
+
     for data_dict in TRANSCRIPTION_FACTORS:
-        yield Profile(genome_version=genome_version,
+        yield MacsProfile(genome_version=genome_version,
                       pretrim_reads=True,
                       broad=False,
                       window_size=WINDOW_SIZE,
