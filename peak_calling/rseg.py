@@ -129,6 +129,10 @@ class Deadzones(Task):
     prefix_length = UnmappableRegions.prefix_length
 
     @property
+    def parameters(self):
+        return [self.genome_version, 'k{}'.format(self.width_of_kmers)]
+
+    @property
     def unmappable_regions_task(self):
         return UnmappableRegions(genome_version=self.genome_version,
                                  width_of_kmers=self.width_of_kmers,
@@ -156,6 +160,7 @@ class Deadzones(Task):
 
         abspath_unmappable = os.path.abspath(self.unmappable_regions_task.output().path)
         abspath_unfinished = os.path.abspath(self.unfinished_genome_sections_task.output().path)
+        abspath_output = os.path.abspath(self.output().path)
 
         with temporary_directory(prefix='tmp-deadzones-', logger=logger, cleanup_on_exception=False):
             unfinished_ungzipped_filename = 'unfinished.bed'
@@ -164,12 +169,18 @@ class Deadzones(Task):
                     out.writelines(in_)
 
             logger.debug('Sorting and joining the data')
-            joined_data = rseg_join(sort(cat(unfinished_ungzipped_filename, abspath_unmappable, _piped=True),
-                                    '-k 1,1', '-k2,2n', _piped=True),
-                                    _iter=True)
+            joined_data_filename = 'joined.bed'
+            rseg_join(sort(cat(unfinished_ungzipped_filename, abspath_unmappable),
+                      '-k 1,1', '-k2,2n'),
+                      _out=joined_data_filename)
 
-            with self.output().open('w') as f:
-                f.writelines(joined_data)
+            logger.debug('Outputting data')
+            with open(joined_data_filename, 'r') as in_:
+                with gzip.GzipFile(abspath_output, 'w') as out:
+                    for line in in_:
+                        line = '\t'.join(line.split('\t')[:3])
+                        out.write(line)
+
 
 class RsegPeaks(PeaksBase):
 
@@ -202,7 +213,7 @@ class RsegPeaks(PeaksBase):
         from command_line_applications.rseg import rseg
         import pybedtools
 
-        alignments_abspath = os.path.abspath(self.alignment_task.output().path)
+        alignments_abspath = os.path.abspath(self.alignment_task.output()[0].path)
         deadzones_abspath = os.path.abspath(self.deadzones_task.output().path)
 
         peaks_output, stdout_output = self.output()
@@ -223,7 +234,13 @@ class RsegPeaks(PeaksBase):
 
             chromsizes_file = 'chromsizes.bed'
             logger.debug('Getting chromosome sizes to {}'.format(chromsizes_file))
-            pybedtools.chromsizes_to_file(self.genome_version, chromsizes_file)
+            chromsizes = pybedtools.chromsizes(self.genome_version)
+
+            with open(chromsizes_file, 'w') as cf:
+                for chrom, (__, size) in chromsizes.iteritems():
+                    if '_' in chrom:
+                        continue  # RSEG cocks up if _random and other chromosomes included
+                    cf.write('{}\t{}\t{}\n'.format(chrom, 1, size))
 
             output_directory = 'output'
             os.makedirs(output_directory)
@@ -233,6 +250,7 @@ class RsegPeaks(PeaksBase):
             rseg('-c', chromsizes_file,
                  '-i', self.number_of_iterations,
                  '-o', output_directory,
+                 '-d', deadzones_file,
                  '-v',
                  bed_alignments_file,
                  _out=stdout_file)
@@ -243,10 +261,10 @@ class RsegPeaks(PeaksBase):
 
             logger.debug('Filtering the output for enriched regions')
             filtered_domains_file = 'filtered-domains.bed'
-            with open(domains_file, 'r') as in_:
+            with open(os.path.join(output_directory, domains_file), 'r') as in_:
                 with open(filtered_domains_file, 'w') as out:
                     for line in in_:
-                        if line.contains('ENRICHED'):
+                        if 'ENRICHED' in line:
                             out.write(line)
 
             logger.debug('Moving')
