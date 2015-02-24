@@ -253,7 +253,7 @@ class RsegPeaks(PeaksBase):
                  '-d', deadzones_file,
                  '-v',
                  bed_alignments_file,
-                 _out=stdout_file)
+                 _err=stdout_file)
 
             logger.debug('Looking for domains file')
             domains_file = filter(lambda x: x.endswith('-domains.bed'), os.listdir(output_directory))[0]
