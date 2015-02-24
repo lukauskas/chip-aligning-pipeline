@@ -9,7 +9,7 @@ import luigi
 import pybedtools
 
 from genome_windows import NonOverlappingWindows
-from peak_calling.macs import Peaks
+from peak_calling.macs import MacsPeaks
 from task import Task, GzipOutputFile
 
 def _intersection_counts_to_wiggle(output_file_handle,
@@ -41,23 +41,23 @@ def _intersection_counts_to_wiggle(output_file_handle,
 
 class Profile(Task):
 
-    genome_version = Peaks.genome_version
+    genome_version = MacsPeaks.genome_version
 
-    experiment_accession = Peaks.experiment_accession
-    study_accession = Peaks.study_accession
-    experiment_alias = Peaks.experiment_alias
+    experiment_accession = MacsPeaks.experiment_accession
+    study_accession = MacsPeaks.study_accession
+    experiment_alias = MacsPeaks.experiment_alias
 
-    bowtie_seed = Peaks.bowtie_seed
-    pretrim_reads = Peaks.pretrim_reads
+    bowtie_seed = MacsPeaks.bowtie_seed
+    pretrim_reads = MacsPeaks.pretrim_reads
 
-    broad = Peaks.broad
+    broad = MacsPeaks.broad
 
     window_size = NonOverlappingWindows.window_size
     binary = luigi.BooleanParameter()
 
     @property
     def peaks_task(self):
-        return Peaks(genome_version=self.genome_version,
+        return MacsPeaks(genome_version=self.genome_version,
                      experiment_accession=self.experiment_accession,
                      study_accession=self.study_accession,
                      experiment_alias=self.experiment_alias,

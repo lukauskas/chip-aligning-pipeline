@@ -8,34 +8,13 @@ import luigi
 import shutil
 import sh
 from genome_alignment import BowtieAlignmentTask
-from task import Task
+from peak_calling.base import PeaksBase
 import tempfile
 
 
-class Peaks(Task):
-
-    genome_version = BowtieAlignmentTask.genome_version
-    experiment_accession = BowtieAlignmentTask.experiment_accession
-    study_accession = BowtieAlignmentTask.study_accession
-    experiment_alias = BowtieAlignmentTask.experiment_alias
-
-    bowtie_seed = BowtieAlignmentTask.bowtie_seed
-
-    pretrim_reads = BowtieAlignmentTask.pretrim_reads
+class MacsPeaks(PeaksBase):
 
     broad = luigi.BooleanParameter()
-
-    @property
-    def alignment_task(self):
-        return BowtieAlignmentTask(genome_version=self.genome_version,
-                                   experiment_accession=self.experiment_accession,
-                                   study_accession=self.study_accession,
-                                   experiment_alias=self.experiment_alias,
-                                   bowtie_seed=self.bowtie_seed,
-                                   pretrim_reads=self.pretrim_reads)
-
-    def requires(self):
-        return self.alignment_task
 
     @property
     def parameters(self):
@@ -43,15 +22,6 @@ class Peaks(Task):
         alignment_params.append('broad' if self.broad else 'narrow')
 
         return alignment_params
-
-    @property
-    def _extension(self):
-        return 'bed'
-
-    def output(self):
-        bed_output = super(Peaks, self).output()
-        stderr_dump = luigi.File(bed_output.path + '.out')
-        return bed_output, stderr_dump
 
     def run(self):
 
