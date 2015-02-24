@@ -6,6 +6,7 @@ import os
 import shutil
 import gzip
 from genome_browser import GenomeSequence
+from peak_calling.base import PeaksBase
 from task import Task, luigi, GzipOutputFile
 
 import requests
@@ -170,10 +171,94 @@ class Deadzones(Task):
             with self.output().open('w') as f:
                 f.writelines(joined_data)
 
+class RsegPeaks(PeaksBase):
+
+    width_of_kmers = Deadzones.genome_version
+    prefix_length = Deadzones.prefix_length
+
+    number_of_iterations = luigi.IntParameter()
+
+    @property
+    def deadzones_task(self):
+        return Deadzones(genome_version=self.genome_version,
+                         width_of_kmers=self.width_of_kmers,
+                         prefix_length=self.prefix_length)
+
+    @property
+    def parameters(self):
+        parameters = super(PeaksBase, self).parameters
+        parameters.append('k{}'.format(self.width_of_kmers))
+        parameters.append('i{}'.format(self.number_of_iterations))
+        return parameters
+
+    def requires(self):
+        requirements = super(RsegPeaks, self).requires()
+        requirements.append(self.deadzones_task)
+        return requirements
+
+    def run(self):
+        logger = logging.getLogger('RsegPeaks')
+        from command_line_applications.bedtools import bamToBed
+        from command_line_applications.rseg import rseg
+        import pybedtools
+
+        alignments_abspath = os.path.abspath(self.alignment_task.output().path)
+        deadzones_abspath = os.path.abspath(self.deadzones_task.output().path)
+
+        peaks_output, stdout_output = self.output()
+        peaks_output_abspath = os.path.abspath(peaks_output.path)
+        stdout_output_abspath = os.path.abspath(stdout_output.path)
+
+        with temporary_directory(prefix='tmp-rseg-peaks', logger=logger):
+            bed_alignments_file = 'alignments.bed'
+            logger.debug('Dumping reads to {}'.format(bed_alignments_file))
+            bamToBed('-i', alignments_abspath, _out=bed_alignments_file)
+
+            deadzones_file = 'deadzones.bed'
+            logger.debug('Gunzipping deadzones to {}'.format(deadzones_file))
+
+            with gzip.GzipFile(deadzones_abspath, 'r') as in_:
+                with open(deadzones_file, 'w') as out:
+                    out.writelines(in_)
+
+            chromsizes_file = 'chromsizes.bed'
+            logger.debug('Getting chromosome sizes to {}'.format(chromsizes_file))
+            pybedtools.chromsizes_to_file(self.genome_version, chromsizes_file)
+
+            output_directory = 'output'
+            os.makedirs(output_directory)
+            logger.debug('Running RSEG')
+
+            stdout_file = 'stdout'
+            rseg('-c', chromsizes_file,
+                 '-i', self.number_of_iterations,
+                 '-o', output_directory,
+                 '-v',
+                 bed_alignments_file,
+                 _out=stdout_file)
+
+            logger.debug('Looking for domains file')
+            domains_file = filter(lambda x: x.endswith('-domains.bed'), os.listdir(output_directory))[0]
+            logger.debug('Found {}'.format(domains_file))
+
+            logger.debug('Filtering the output for enriched regions')
+            filtered_domains_file = 'filtered-domains.bed'
+            with open(domains_file, 'r') as in_:
+                with open(filtered_domains_file, 'w') as out:
+                    for line in in_:
+                        if line.contains('ENRICHED'):
+                            out.write(line)
+
+            logger.debug('Moving')
+            shutil.move(stdout_file, stdout_output_abspath)
+            shutil.move(filtered_domains_file, peaks_output_abspath)
+
+            logger.debug('Done')
 
 if __name__ == '__main__':
     logging.getLogger('UnfinishedGenomeSections').setLevel(logging.DEBUG)
     logging.getLogger('UnmappableRegions').setLevel(logging.DEBUG)
     logging.getLogger('Deadzones').setLevel(logging.DEBUG)
+    logging.getLogger('RsegPeaks').setLevel(logging.DEBUG)
     logging.basicConfig()
     luigi.run()

@@ -18,10 +18,10 @@ class MacsPeaks(PeaksBase):
 
     @property
     def parameters(self):
-        alignment_params = self.alignment_task.parameters
-        alignment_params.append('broad' if self.broad else 'narrow')
+        parameters = super(PeaksBase, self).parameters
+        parameters.append('broad' if self.broad else 'narrow')
 
-        return alignment_params
+        return parameters
 
     def run(self):
 

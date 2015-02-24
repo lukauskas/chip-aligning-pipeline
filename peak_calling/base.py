@@ -28,7 +28,11 @@ class PeaksBase(Task):
                                    pretrim_reads=self.pretrim_reads)
 
     def requires(self):
-        return self.alignment_task
+        return [self.alignment_task]
+
+    @property
+    def parameters(self):
+        return self.alignment_task.parameters
 
     @property
     def _extension(self):
