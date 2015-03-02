@@ -7,6 +7,7 @@ import logging
 
 import luigi
 import pybedtools
+from blacklist import BlacklistedRegions
 
 from genome_windows import NonOverlappingWindows
 from peak_calling.macs import MacsPeaks
@@ -41,23 +42,50 @@ def _intersection_counts_to_wiggle(output_file_handle,
 
         output_file_handle.write('{0}\t{1}\n'.format(start, count))
 
+def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
+                    output, window_size, binarise, wigfile_name,  logger=None):
+
+    def _debug(*args, **kwargs):
+        if logger:
+            logger.debug(*args, **kwargs)
+
+    try:
+        windows = pybedtools.BedTool(windows_task_output_abspath)
+        peaks = pybedtools.BedTool(peaks_task_output_abspath)
+
+        _debug('Sorting peaks')
+
+        peaks = peaks.sort()
+
+        _debug('Computing the intersection')
+        intersection = windows.intersect(peaks, c=True, sorted=True)
+
+        _debug('Outputting to {}'.format(output.path))
+        with output.open('w') as output_file:
+            _intersection_counts_to_wiggle(output_file,
+                                           intersection,
+                                           name=wigfile_name,
+                                           description=os.path.basename(output.path),
+                                           window_size=window_size,
+                                           binarise=binarise
+                                           )
+    finally:
+        pybedtools.cleanup()
+
 
 class ProfileBase(Task):
 
     genome_version = MacsPeaks.genome_version
-
-    experiment_accession = MacsPeaks.experiment_accession
-    study_accession = MacsPeaks.study_accession
-    experiment_alias = MacsPeaks.experiment_alias
-
-    bowtie_seed = MacsPeaks.bowtie_seed
-    pretrim_reads = MacsPeaks.pretrim_reads
 
     window_size = NonOverlappingWindows.window_size
     binary = luigi.BooleanParameter()
 
     @property
     def peaks_task(self):
+        raise NotImplementedError
+
+    @property
+    def friendly_name(self):
         raise NotImplementedError
 
     @property
@@ -89,29 +117,48 @@ class ProfileBase(Task):
         logger = logging.getLogger('Profile')
 
         windows_task_output = self._genome_windows_task.output()
-        peaks_task_output, __ = self.peaks_task.output()
+        peaks_task_output = self.peaks_task.output()
+        if isinstance(peaks_task_output, list):
+            assert len(peaks_task_output) == 2
+            peaks_task_output = peaks_task_output[0]
 
-        windows = pybedtools.BedTool(windows_task_output.path)
-        peaks = pybedtools.BedTool(peaks_task_output.path)
 
-        logger.debug('Sorting peaks')
+        compute_profile(os.path.abspath(windows_task_output.path),
+                        os.path.abspath(peaks_task_output.path),
+                        self.output(),
+                        self.window_size,
+                        self.binary,
+                        self.friendly_name,
+                        logger=logger
+                        )
 
-        peaks = peaks.sort()
+class GenomicProfileBase(ProfileBase):
+    experiment_accession = MacsPeaks.experiment_accession
+    study_accession = MacsPeaks.study_accession
+    experiment_alias = MacsPeaks.experiment_alias
 
-        logger.debug('Computing the intersection')
-        intersection = windows.intersect(peaks, c=True, sorted=True)
+    bowtie_seed = MacsPeaks.bowtie_seed
+    pretrim_reads = MacsPeaks.pretrim_reads
 
-        logger.debug('Outputting to {}'.format(self.output().path))
-        with self.output().open('w') as output_file:
-            _intersection_counts_to_wiggle(output_file,
-                                           intersection,
-                                           name=self.experiment_alias,
-                                           description=os.path.basename(self.output().path),
-                                           window_size=self.window_size,
-                                           binarise=self.binary
-                                           )
+    @property
+    def friendly_name(self):
+        return self.experiment_alias
 
-class MacsProfile(ProfileBase):
+
+
+class BlacklistProfile(ProfileBase):
+
+    binary = True
+
+    @property
+    def peaks_task(self):
+        return BlacklistedRegions(genome_version=self.genome_version)
+
+    @property
+    def friendly_name(self):
+        return 'blacklist'
+
+class MacsProfile(GenomicProfileBase):
 
     broad = MacsPeaks.broad
 
@@ -125,12 +172,13 @@ class MacsProfile(ProfileBase):
                      pretrim_reads=self.pretrim_reads,
                      broad=self.broad)
 
-class RsegProfile(ProfileBase):
+class RsegProfile(GenomicProfileBase):
 
     width_of_kmers = RsegPeaks.width_of_kmers
     prefix_length = RsegPeaks.prefix_length
 
     number_of_iterations = RsegPeaks.number_of_iterations
+
 
     @property
     def peaks_task(self):

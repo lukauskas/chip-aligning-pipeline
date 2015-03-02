@@ -10,6 +10,7 @@ import sh
 from genome_alignment import BowtieAlignmentTask
 from peak_calling.base import PeaksBase
 import tempfile
+from util import temporary_directory
 
 
 class MacsPeaks(PeaksBase):
@@ -18,7 +19,7 @@ class MacsPeaks(PeaksBase):
 
     @property
     def parameters(self):
-        parameters = super(PeaksBase, self).parameters
+        parameters = super(MacsPeaks, self).parameters
         parameters.append('broad' if self.broad else 'narrow')
 
         return parameters
@@ -28,8 +29,6 @@ class MacsPeaks(PeaksBase):
         from command_line_applications.macs import macs2
         logger = logging.getLogger('Peaks')
 
-        temporary_directory = tempfile.mkdtemp(prefix='tmp-peaks')
-        current_directory = os.getcwd()
 
         bam_input_file, __ = self.input()[0]
         bam_input_abspath = os.path.abspath(bam_input_file.path)
@@ -53,9 +52,7 @@ class MacsPeaks(PeaksBase):
 
         logger.debug('Calling peaks for {}'.format(bam_input_abspath))
 
-        try:
-            os.chdir(temporary_directory)
-            logger.debug('Working in {}'.format(temporary_directory))
+        with temporary_directory(prefix='tmp-macs-', logger=logger):
             logger.debug('Running macs')
 
             stderr_output = 'output.txt'
@@ -81,9 +78,6 @@ class MacsPeaks(PeaksBase):
                 shutil.move('NA_peaks.broadPeak', bed_output_abspath)
             else:
                 shutil.move('NA_peaks.narrowPeak', bed_output_abspath)
-        finally:
-            os.chdir(current_directory)
-            shutil.rmtree(temporary_directory)
 
 if __name__ == '__main__':
     logging.getLogger('Peaks').setLevel(logging.DEBUG)

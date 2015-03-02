@@ -197,7 +197,7 @@ class RsegPeaks(PeaksBase):
 
     @property
     def parameters(self):
-        parameters = super(PeaksBase, self).parameters
+        parameters = super(RsegPeaks, self).parameters
         parameters.append('k{}'.format(self.width_of_kmers))
         parameters.append('i{}'.format(self.number_of_iterations))
         return parameters
@@ -211,6 +211,8 @@ class RsegPeaks(PeaksBase):
         logger = logging.getLogger('RsegPeaks')
         from command_line_applications.bedtools import bamToBed
         from command_line_applications.rseg import rseg
+        from command_line_applications.common import sort
+
         import pybedtools
 
         alignments_abspath = os.path.abspath(self.alignment_task.output()[0].path)
@@ -221,9 +223,14 @@ class RsegPeaks(PeaksBase):
         stdout_output_abspath = os.path.abspath(stdout_output.path)
 
         with temporary_directory(prefix='tmp-rseg-peaks', logger=logger):
+            unsorted_bed_alignments_file = 'unsorted_alignments.bed'
+            logger.debug('Dumping reads to {}'.format(unsorted_bed_alignments_file))
+            bamToBed('-i', alignments_abspath, _out=unsorted_bed_alignments_file)
+
             bed_alignments_file = 'alignments.bed'
-            logger.debug('Dumping reads to {}'.format(bed_alignments_file))
-            bamToBed('-i', alignments_abspath, _out=bed_alignments_file)
+
+            logger.debug('Sorting reads')
+            sort('-k1,1', '-k3,3n', '-k2,2n', '-k6,6r', '-o', bed_alignments_file, unsorted_bed_alignments_file)
 
             deadzones_file = 'deadzones.bed'
             logger.debug('Gunzipping deadzones to {}'.format(deadzones_file))
@@ -234,34 +241,32 @@ class RsegPeaks(PeaksBase):
 
             chromsizes_file = 'chromsizes.bed'
             logger.debug('Getting chromosome sizes to {}'.format(chromsizes_file))
-            chromsizes = pybedtools.chromsizes(self.genome_version)
+            try:
+                chromsizes = pybedtools.chromsizes(self.genome_version)
 
-            with open(chromsizes_file, 'w') as cf:
-                for chrom, (__, size) in chromsizes.iteritems():
-                    if '_' in chrom:
-                        continue  # RSEG cocks up if _random and other chromosomes included
-                    cf.write('{}\t{}\t{}\n'.format(chrom, 1, size))
+                with open(chromsizes_file, 'w') as cf:
+                    for chrom, (__, size) in chromsizes.iteritems():
+                        if '_' in chrom:
+                            continue  # RSEG cocks up if _random and other chromosomes included
+                        cf.write('{}\t{}\t{}\n'.format(chrom, 1, size))
+            finally:
+                pybedtools.cleanup()
 
-            output_directory = 'output'
-            os.makedirs(output_directory)
             logger.debug('Running RSEG')
+            domains_file = 'domains.bed'
 
             stdout_file = 'stdout'
             rseg('-c', chromsizes_file,
                  '-i', self.number_of_iterations,
-                 '-o', output_directory,
+                 '-o', domains_file,
                  '-d', deadzones_file,
                  '-v',
                  bed_alignments_file,
                  _err=stdout_file)
 
-            logger.debug('Looking for domains file')
-            domains_file = filter(lambda x: x.endswith('-domains.bed'), os.listdir(output_directory))[0]
-            logger.debug('Found {}'.format(domains_file))
-
             logger.debug('Filtering the output for enriched regions')
             filtered_domains_file = 'filtered-domains.bed'
-            with open(os.path.join(output_directory, domains_file), 'r') as in_:
+            with open(domains_file, 'r') as in_:
                 with open(filtered_domains_file, 'w') as out:
                     for line in in_:
                         if 'ENRICHED' in line:

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import gzip
+import logging
 
 import luigi
 import luigi.format
@@ -50,3 +50,6 @@ class Task(luigi.Task):
     def output(self):
         return luigi.File(self.__full_path)
 
+    @classmethod
+    def logger(cls):
+        return logging.getLogger(cls.__name__)
