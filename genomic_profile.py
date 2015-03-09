@@ -123,7 +123,10 @@ class ProfileBase(Task):
         logger = logging.getLogger('Profile')
 
         windows_task_output = self._genome_windows_task.output()
-        peaks_task_output, __ = self.peaks_task.output()
+        if isinstance(self.peaks_task.output(), list) and len(self.peaks_task.output()) == 2:
+            peaks_task_output = self.peaks_task.output()[0]
+        else:
+            peaks_task_output = self.peaks_task.output()
         if isinstance(peaks_task_output, list):
             assert len(peaks_task_output) == 2
             peaks_task_output = peaks_task_output[0]

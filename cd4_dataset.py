@@ -19,6 +19,8 @@ import pandas as pd
 import itertools
 
 # SRA000206
+from tss import TssProfile
+
 METHYLATIONS = [
     #dict(experiment_accession='SRX000138', experiment_alias='CTCF', study_accession='SRP000201'),
     dict(experiment_accession='SRX000139', experiment_alias='H2A.Z', study_accession='SRP000201'),
@@ -127,6 +129,11 @@ def tasks_for_genome(genome_version, binarisation_method):
 
     yield BlacklistProfile(genome_version=genome_version,
                            window_size=WINDOW_SIZE)
+
+    yield TssProfile(genome_version=genome_version,
+                     extend_5_to_3=4000,
+                     extend_3_to_5=2000,
+                     window_size=WINDOW_SIZE)
 
 def _number_of_windows(genome_assembly, window_size):
     from pybedtools import chromsizes as pybedtools_chromsizes

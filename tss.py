@@ -12,6 +12,7 @@ import tempfile
 import shutil
 
 from task import Task, luigi, GzipOutputFile
+from genomic_profile import ProfileBase
 
 
 def _ensembl_to_ucsc_chrom_name(chromosome):
@@ -174,6 +175,22 @@ class BedTranscriptionStartSites(Task):
         finally:
             logger.debug('Cleaning up')
             pybedtools.cleanup()
+
+class TssProfile(ProfileBase):
+    binary = True
+
+    extend_5_to_3 = BedTranscriptionStartSites.extend_5_to_3
+    extend_3_to_5 = BedTranscriptionStartSites.extend_3_to_5
+
+    @property
+    def peaks_task(self):
+        return BedTranscriptionStartSites(genome_version=self.genome_version,
+                                          extend_5_to_3=self.extend_5_to_3,
+                                          extend_3_to_5=self.extend_3_to_5)
+
+    @property
+    def friendly_name(self):
+        return 'near_tss'
 
 if __name__ == '__main__':
     TranscriptionStartSites.logger().setLevel(logging.DEBUG)
