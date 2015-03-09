@@ -4,8 +4,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import StringIO
 import logging
+import os
+import pybedtools
 import requests
 import pandas as pd
+import tempfile
+import shutil
 
 from task import Task, luigi, GzipOutputFile
 
@@ -24,7 +28,6 @@ def _ensembl_to_ucsc_chrom_name(chromosome):
 class TranscriptionStartSites(Task):
 
     genome_version = luigi.Parameter()
-    format = luigi.Parameter('csv')
 
     __ENSEMBL_FRONTENDS = {#'hg19': 'http://grch37.ensembl.org/biomart/martservice',
                            #'hg18': 'http://may2009.ensembl.org/biomart/martservice',
@@ -66,17 +69,9 @@ class TranscriptionStartSites(Task):
     def parameters(self):
         return [self.genome_version]
 
-    def output(self):
-        return GzipOutputFile(super(TranscriptionStartSites, self).output().path)
-
     @property
     def _extension(self):
-        if self.format == 'csv':
-            return 'csv.gz'
-        elif self.format == 'bed':
-            return 'bed.gz'
-        else:
-            raise ValueError('unsupported format {}'.format(self.format))
+        return 'csv.gz'
 
     def run(self):
         logger = self.logger()
@@ -116,31 +111,72 @@ class TranscriptionStartSites(Task):
                                     inplace=True)
         logger.debug('Number of TSS after duplicate removal: {}'.format(len(parsed_data)))
 
-        if self.format == 'csv':
-            logger.debug('Writing to csv')
-            # Were done for csv export
-            with self.output().open('w') as f:
-                parsed_data.to_csv(f, index=False)
-            return
-        elif self.format == 'bed':
-            logger.debug('Writing out to bed')
-            with self.output().open('w') as f:
-                for ix, row in parsed_data.iterrows():
-                    bed_row = []
-                    bed_row.append(row['chromosome_name'])
-                    bed_row.append(row['transcription_start_site'])
-                    bed_row.append(row['transcription_start_site'] + 1)
-                    bed_row.append(row['external_gene_name'])
-                    bed_row.append('0')   # score
-                    bed_row.append(row['strand'])
+        logger.debug('Writing to csv')
+        # Were done for csv export
+        with self.output().open('w') as f:
+            parsed_data.to_csv(f, index=False)
 
-                    bed_row = '\t'.join(map(str, bed_row)) + '\n'
-                    f.write(bed_row)
-        else:
-            raise ValueError('Don\'t know how to convert to format {}'.format(self.format))
+class BedTranscriptionStartSites(Task):
 
+    genome_version = TranscriptionStartSites.genome_version
+
+    extend_5_to_3 = luigi.IntParameter(default=0)
+    extend_3_to_5 = luigi.IntParameter(default=0)
+
+    def requires(self):
+        return TranscriptionStartSites(genome_version=self.genome_version)
+
+    @property
+    def parameters(self):
+        params = self.requires().parameters
+        params.append('d{}'.format(self.extend_5_to_3))
+        params.append('u{}'.format(self.extend_3_to_5))
+        return params
+
+    @property
+    def _extension(self):
+        return 'bed.gz'
+
+    def run(self):
+        logger = self.logger()
+
+        logger.debug('Reading CSV')
+        with self.input().open('r') as f:
+            tss_data = pd.read_csv(f)
+
+        def _to_bed_format(df):
+            for ix, row in df.iterrows():
+                bed_row = []
+                bed_row.append(row['chromosome_name'])
+                bed_row.append(row['transcription_start_site'])
+                bed_row.append(row['transcription_start_site'] + 1)
+                bed_row.append(row['external_gene_name'])
+                bed_row.append('0')   # score
+                bed_row.append(row['strand'])
+
+                yield tuple(bed_row)
+
+        try:
+            logger.debug('Parsing TSS csv')
+            tss_bed = pybedtools.BedTool(list(_to_bed_format(tss_data)))
+            logger.debug('Number of TSSs: {}'.format(len(tss_bed)))
+            logger.debug('First item: {}'.format(tss_bed[0]))
+            logger.debug('Getting chromsizes')
+            tss_bed = tss_bed.set_chromsizes(pybedtools.chromsizes(self.genome_version))
+            logger.debug('bedtools.slop')
+            tss_bed = tss_bed.slop(l=self.extend_3_to_5, r=self.extend_5_to_3, s=True)
+            logger.debug('First item after slop: {}'.format(tss_bed[0]))
+            logger.debug('Writing to output')
+            with self.output().open('w') as out_:
+                for line in tss_bed:
+                    out_.write(str(line))
+
+        finally:
+            logger.debug('Cleaning up')
+            pybedtools.cleanup()
 
 if __name__ == '__main__':
     TranscriptionStartSites.logger().setLevel(logging.DEBUG)
+    BedTranscriptionStartSites.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
-    luigi.run(main_task_cls=TranscriptionStartSites)
+    luigi.run()

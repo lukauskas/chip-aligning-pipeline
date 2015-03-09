@@ -12,7 +12,7 @@ import numpy as np
 import luigi
 import pysam
 import time
-from genomic_profile import MacsProfile, RsegProfile, BlacklistProfile
+from genomic_profile import MacsProfile, RsegProfile, BlacklistProfile, RawProfile
 from itertools import imap, ifilterfalse
 from collections import Counter
 import pandas as pd
@@ -83,29 +83,39 @@ WINDOW_SIZE = 200
 WIDTH_OF_KMERS=20
 NUMBER_OF_RSEG_ITERATIONS=20
 
-def tasks_for_genome(genome_version):
+def tasks_for_genome(genome_version, binarisation_method):
     MARKS_MACS_FAILS_FOR ={'H4R3me2', 'H2AK5ac',
                             'H2BK12ac', 'H3K14ac', 'H3K23ac', 'H3K36ac',
                             'H3K9ac', 'H4K5ac', 'H4K8ac'}
 
     for data_dict in METHYLATIONS + ACETYLATIONS:
 
-        if data_dict['experiment_alias'] not in MARKS_MACS_FAILS_FOR:
-            yield MacsProfile(genome_version=genome_version,
-                          pretrim_reads=True,
-                          broad=True,
-                          window_size=WINDOW_SIZE,
-                          binary=True,
-                          **data_dict)
-        # else:
-        #     yield RsegProfile(genome_version=genome_version,
-        #                       pretrim_reads=True,
-        #                       window_size=WINDOW_SIZE,
-        #                       binary=True,
-        #                       width_of_kmers=WIDTH_OF_KMERS,
-        #                       number_of_iterations=NUMBER_OF_RSEG_ITERATIONS,
-        #                       **data_dict
-        #                      )
+        if binarisation_method == 'macs':
+            if data_dict['experiment_alias'] not in MARKS_MACS_FAILS_FOR:
+                yield MacsProfile(genome_version=genome_version,
+                              pretrim_reads=True,
+                              broad=True,
+                              window_size=WINDOW_SIZE,
+                              binary=True,
+                              **data_dict)
+        elif binarisation_method == 'rseg':
+            yield RsegProfile(genome_version=genome_version,
+                              pretrim_reads=True,
+                              window_size=WINDOW_SIZE,
+                              binary=True,
+                              width_of_kmers=WIDTH_OF_KMERS,
+                              number_of_iterations=NUMBER_OF_RSEG_ITERATIONS,
+                              **data_dict
+                             )
+        elif binarisation_method == 'raw':
+            yield RawProfile(genome_version=genome_version,
+                              pretrim_reads=True,
+                              window_size=WINDOW_SIZE,
+                              binary=False,
+                              **data_dict
+                             )
+        else:
+            raise NotImplementedError('Binarisation method {!r} not implemented'.format(binarisation_method))
 
     for data_dict in TRANSCRIPTION_FACTORS:
         yield MacsProfile(genome_version=genome_version,
@@ -226,12 +236,13 @@ def _to_pd_series_unstarred(x):
 class CD4MasterTask(luigi.Task):
 
     genome_version = luigi.Parameter()
+    binarisation_method = luigi.Parameter()
 
     def requires(self):
-        return list(tasks_for_genome(self.genome_version))
+        return list(tasks_for_genome(self.genome_version, binarisation_method=self.binarisation_method))
 
     def output(self):
-        return luigi.File('cd4_profile.{}.csv.gz'.format(self.genome_version))
+        return luigi.File('cd4_profile.{}.{}.csv.gz'.format(self.binarisation_method, self.genome_version))
 
     def run(self):
         logger = logging.getLogger('CD4MasterTask')

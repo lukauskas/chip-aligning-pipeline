@@ -8,6 +8,7 @@ import logging
 import luigi
 import pybedtools
 from blacklist import BlacklistedRegions
+from genome_alignment import BowtieAlignmentTask
 
 from genome_windows import NonOverlappingWindows
 from peak_calling.macs import MacsPeaks
@@ -41,7 +42,7 @@ def _intersection_counts_to_wiggle(output_file_handle,
             count = 1 if count > 0 else 0
 
         output_file_handle.write('{0}\t{1}\n'.format(start, count))
-
+from sklearn.linear_model import ElasticNetCV
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
                     output, window_size, binarise, wigfile_name,  logger=None):
 
@@ -53,8 +54,13 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
         windows = pybedtools.BedTool(windows_task_output_abspath)
         peaks = pybedtools.BedTool(peaks_task_output_abspath)
 
-        _debug('Sorting peaks')
+        __, peaks_ext = os.path.splitext(peaks_task_output_abspath)
+        if peaks_ext == '.bam':
+            _debug('Peaks are in BAM format, converting to bed')
+            # This is needed as peaks.sort() doesn't work for BAMs
+            peaks = peaks.bam_to_bed()
 
+        _debug('Sorting peaks')
         peaks = peaks.sort()
 
         _debug('Computing the intersection')
@@ -117,7 +123,7 @@ class ProfileBase(Task):
         logger = logging.getLogger('Profile')
 
         windows_task_output = self._genome_windows_task.output()
-        peaks_task_output = self.peaks_task.output()
+        peaks_task_output, __ = self.peaks_task.output()
         if isinstance(peaks_task_output, list):
             assert len(peaks_task_output) == 2
             peaks_task_output = peaks_task_output[0]
@@ -157,6 +163,17 @@ class BlacklistProfile(ProfileBase):
     @property
     def friendly_name(self):
         return 'blacklist'
+
+class RawProfile(GenomicProfileBase):
+
+    @property
+    def peaks_task(self):
+        return BowtieAlignmentTask(genome_version=self.genome_version,
+                                   experiment_accession=self.experiment_accession,
+                                   study_accession=self.study_accession,
+                                   experiment_alias=self.experiment_alias,
+                                   bowtie_seed=self.bowtie_seed,
+                                   pretrim_reads=self.pretrim_reads)
 
 class MacsProfile(GenomicProfileBase):
 
