@@ -57,6 +57,9 @@ class ProfileBase(Task):
     def requires(self):
         return [self._genome_windows_task, self.peaks_task]
 
+    def _compute_profile_kwargs(self):
+        return dict(operation='count', null_value=0)
+
     def run(self):
         logger = logging.getLogger('Profile')
 
@@ -69,14 +72,14 @@ class ProfileBase(Task):
             assert len(peaks_task_output) == 2
             peaks_task_output = peaks_task_output[0]
 
-
         compute_profile(os.path.abspath(windows_task_output.path),
                         os.path.abspath(peaks_task_output.path),
                         self.output(),
                         self.window_size,
                         self.binary,
                         self.friendly_name,
-                        logger=logger
+                        logger=logger,
+                        **self._compute_profile_kwargs()
                         )
 
 
