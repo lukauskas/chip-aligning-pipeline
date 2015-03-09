@@ -12,7 +12,7 @@ import tempfile
 import shutil
 
 from task import Task, luigi, GzipOutputFile
-from genomic_profile import ProfileBase
+from profile.base import ProfileBase
 
 
 def _ensembl_to_ucsc_chrom_name(chromosome):

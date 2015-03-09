@@ -12,7 +12,9 @@ import numpy as np
 import luigi
 import pysam
 import time
-from genomic_profile import MacsProfile, RsegProfile, BlacklistProfile, RawProfile
+from profile.blacklist import BlacklistProfile
+from profile.raw import RawProfile
+from profile.peak_caller import MacsProfile, RsegProfile
 from itertools import imap, ifilterfalse
 from collections import Counter
 import pandas as pd
