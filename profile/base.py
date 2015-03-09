@@ -81,7 +81,8 @@ class ProfileBase(Task):
 
 
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
-                    output, window_size, binarise, wigfile_name,  logger=None):
+                    output, window_size, binarise, wigfile_name, logger=None,
+                    operation='count', column=None, null_value=None):
 
     def _debug(*args, **kwargs):
         if logger:
@@ -101,16 +102,31 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
         peaks = peaks.sort()
 
         _debug('Computing the intersection')
-        intersection = windows.intersect(peaks, c=True, sorted=True)
+
+        if operation == 'count':
+            null_value = 0 if null_value is None else null_value
+            column = 5
+        elif operation in ['sum', 'min', 'max', 'absmin', 'absmax', 'mean', 'median', 'antimode']:
+            column = 5 if column is None else column
+            null_value = '.' if null_value is None else null_value
+        else:
+            raise ValueError('Unsupported Operation')
+
+        map_ = windows.map(peaks, o=operation, null=null_value, c=column)
+
+        transform_function = None
+
+        if binarise:
+            transform_function = lambda x: 1 if x > 0 else 0
 
         _debug('Outputting to {}'.format(output.path))
         with output.open('w') as output_file:
             _intersection_counts_to_wiggle(output_file,
-                                           intersection,
+                                           map_,
                                            name=wigfile_name,
                                            description=os.path.basename(output.path),
                                            window_size=window_size,
-                                           binarise=binarise
+                                           transform_function=transform_function
                                            )
     finally:
         pybedtools.cleanup()
@@ -121,7 +137,7 @@ def _intersection_counts_to_wiggle(output_file_handle,
                                    name,
                                    description,
                                    window_size,
-                                   binarise=False):
+                                   transform_function=None):
     output_file_handle.write('track type=wiggle_0 name="{0}" description="{1}"\n'.format(
         name,
         description
@@ -138,7 +154,7 @@ def _intersection_counts_to_wiggle(output_file_handle,
         # Add +1 to start as wig locations are 1-based
         start = row.start + 1
         count = row.count
-        if binarise:
-            count = 1 if count > 0 else 0
+        if transform_function:
+            count = transform_function(count)
 
         output_file_handle.write('{0}\t{1}\n'.format(start, count))
