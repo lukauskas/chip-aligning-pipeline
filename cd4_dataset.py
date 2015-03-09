@@ -170,8 +170,98 @@ class CD4HistoneModifications(Task):
         with gzip.GzipFile(self.output().path, 'w') as f:
             df.to_csv(f)
 
+class CD4NormalisedHistoneModifications(Task):
+
+    genome_version = luigi.Parameter()
+
+    rolling_window_size = luigi.IntParameter(default=50)
+    normalisation_method = luigi.Parameter(default='median')
+    additive_smoothing_constant = luigi.Parameter(default=0.1)
+
+    def requires(self):
+        return CD4HistoneModifications(genome_version=self.genome_version, binarisation_method='raw')
+
+    @property
+    def _extension(self):
+        return 'csv.gz'
+
+    @property
+    def parameters(self):
+        return [self.genome_version, self.normalisation_method, 'w{}'.format(self.rolling_window_size), 's{}'.format(self.additive_smoothing_constant)]
+
+
+    def run(self):
+        logger = self.logger()
+
+        logger.debug('Reading the CSV from input')
+        histone_modification_data = pd.read_csv(self.input().path, compression='gzip').set_index(['chromosome', 'window_id'])
+
+        logger.debug('Adding pseudocount')
+        histone_modification_data += self.additive_smoothing_constant
+
+        logger.debug('Rolling means over data')
+        histone_modification_data = histone_modification_data.groupby(level='chromosome').apply(lambda x: pd.rolling_mean(x, self.rolling_window_size, center=True))
+        histone_modification_data = histone_modification_data.dropna()
+
+        logger.debug('Normalising data using {}'.format(self.normalisation_method))
+        if self.normalisation_method == 'median':
+            histone_modification_data /= histone_modification_data.median()
+        elif self.normalisation_method == 'mean':
+            histone_modification_data /= histone_modification_data.mean()
+        elif self.normalisation_method == 'sum':
+            histone_modification_data /= histone_modification_data.sum()
+        elif self.normalisation_method == 'none' or self.normalisation_method is None \
+                or self.normalisation_method == 'None':
+            pass
+        else:
+            raise Exception("Unsupported normalisation method {}".format(self.normalisation_method))
+
+        logger.debug('Dumping to CSV')
+        with self.output().open('w') as output:
+            histone_modification_data.to_csv(output, index=True, header=True)
+
+        logger.debug('Done')
+
+class CD4InputEstimate(Task):
+
+    genome_version = CD4NormalisedHistoneModifications.genome_version
+    rolling_window_size = CD4NormalisedHistoneModifications.rolling_window_size
+    normalisation_method = CD4NormalisedHistoneModifications.normalisation_method
+    additive_smoothing_constant = CD4NormalisedHistoneModifications.additive_smoothing_constant
+
+    def _normalised_histone_mods_task(self):
+        return CD4NormalisedHistoneModifications(genome_version=self.genome_version,
+                                                 rolling_window_size=self.rolling_window_size,
+                                                 normalisation_method=self.normalisation_method,
+                                                 additive_smoothing_constant=self.additive_smoothing_constant)
+    def requires(self):
+        return self._normalised_histone_mods_task()
+
+    @property
+    def parameters(self):
+        return self._normalised_histone_mods_task().parameters
+
+    @property
+    def _extension(self):
+        return 'csv.gz'
+
+    def run(self):
+        normalised_histone_modification_data = pd.read_csv(self.input().path, compression='gzip').set_index(['chromosome', 'window_id'])
+
+        logger = self.logger()
+
+        logger.debug('Taking the median of means')
+        median_of_rolling_means = normalised_histone_modification_data.median(axis=1)
+
+        logger.debug('Dumping to CSV')
+        with self.output().open('w') as output:
+            median_of_rolling_means.to_csv(output, index=True, header=True)
+
+        logger.debug('Done')
 
 if __name__ == '__main__':
-    CD4HistoneModifications.logger().setLevel(logging.DEBUG)
+    for class_ in [CD4NormalisedHistoneModifications, CD4HistoneModifications, CD4InputEstimate]:
+        class_.logger().setLevel(logging.DEBUG)
+
     logging.basicConfig()
     luigi.run()

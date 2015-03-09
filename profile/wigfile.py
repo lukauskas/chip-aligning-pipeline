@@ -40,7 +40,7 @@ class WigFile(GzipOutputFile):
         self._window_size = window_size
         super(WigFile, self).__init__(path=path)
 
-    def to_numpy(self, chromosomes):
+    def to_numpy(self, chromosomes, dtype=float):
         window_size = self._window_size
         number_of_windows = _number_of_windows(self._genome_assembly, window_size)
 
@@ -69,7 +69,7 @@ class WigFile(GzipOutputFile):
 
                     current_chromosome = chromosome
                     array_size = number_of_windows[chromosome]
-                    current_array = np.zeros(array_size, dtype=int)
+                    current_array = np.zeros(array_size, dtype=dtype)
                 else:
                     position, value = line.split('\t')
                     position = int(position)
@@ -100,7 +100,7 @@ class WigFile(GzipOutputFile):
 
             for chrom in chromosomes:
                 if chrom not in filtered_data:
-                    filtered_data[chrom] = np.zeros(number_of_windows[chrom])
+                    filtered_data[chrom] = np.zeros(number_of_windows[chrom], dtype=dtype)
 
             return filtered_data
 

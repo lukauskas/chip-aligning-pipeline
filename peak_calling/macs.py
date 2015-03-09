@@ -16,11 +16,14 @@ from util import temporary_directory
 class MacsPeaks(PeaksBase):
 
     broad = luigi.BooleanParameter()
+    macs_q_value_threshold = luigi.FloatParameter(default=0.01)
 
     @property
     def parameters(self):
         parameters = super(MacsPeaks, self).parameters
         parameters.append('broad' if self.broad else 'narrow')
+        if self.macs_q_value_threshold != 0.01:
+            parameters.append('q{}'.format(self.macs_q_value_threshold))
 
         return parameters
 
@@ -64,6 +67,7 @@ class MacsPeaks(PeaksBase):
             macs2_args = ['callpeak',
                           '-t', bam_input_abspath,
                           '-f', 'BAM',
+                          '-q', self.macs_q_value_threshold,
                           '-g', 'hs'] + broad_params
             try:
                 macs2(*macs2_args,

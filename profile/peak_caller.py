@@ -11,6 +11,8 @@ from profile.aligned_reads_base import AlignedReadsProfileBase
 class MacsProfile(AlignedReadsProfileBase):
 
     broad = MacsPeaks.broad
+    macs_q_value_threshold = MacsPeaks.macs_q_value_threshold
+
     profile_mode = luigi.Parameter(default='count')
 
     __MODES = {'count': dict(operation='count', null_value=0),
@@ -37,7 +39,8 @@ class MacsProfile(AlignedReadsProfileBase):
                      experiment_alias=self.experiment_alias,
                      bowtie_seed=self.bowtie_seed,
                      pretrim_reads=self.pretrim_reads,
-                     broad=self.broad)
+                     broad=self.broad,
+                     macs_q_value_threshold=self.macs_q_value_threshold)
 
 
 class RsegProfile(AlignedReadsProfileBase):
