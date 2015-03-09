@@ -3,22 +3,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import logging
-import multiprocessing
-import os
-import re
 import gzip
-import numpy as np
 
 import luigi
-import pysam
 import time
-from profile.blacklist import BlacklistProfile
 from profile.raw import RawProfile
 from profile.peak_caller import MacsProfile, RsegProfile
-from itertools import imap, ifilterfalse
-from collections import Counter
 import pandas as pd
-import itertools
+from task import Task
 
 # SRA000206
 from tss import TssProfile
@@ -87,9 +79,9 @@ WINDOW_SIZE = 200
 WIDTH_OF_KMERS=20
 NUMBER_OF_RSEG_ITERATIONS=20
 
-VALID_CHROMOSOMES = {'chr{}'.format(x) for x in [range(1, 23) + 'X' + 'Y']}
+VALID_CHROMOSOMES = {'chr{}'.format(x) for x in range(1, 23) + ['X', 'Y']}
 
-def tasks_for_genome(genome_version, binarisation_method):
+def _tasks_for_genome(genome_version, binarisation_method):
     MARKS_MACS_FAILS_FOR ={'H4R3me2', 'H2AK5ac',
                             'H2BK12ac', 'H3K14ac', 'H3K23ac', 'H3K36ac',
                             'H3K9ac', 'H4K5ac', 'H4K8ac'}
@@ -123,35 +115,24 @@ def tasks_for_genome(genome_version, binarisation_method):
         else:
             raise NotImplementedError('Binarisation method {!r} not implemented'.format(binarisation_method))
 
-    for data_dict in TRANSCRIPTION_FACTORS:
-        yield MacsProfile(genome_version=genome_version,
-                      pretrim_reads=True,
-                      broad=False,
-                      window_size=WINDOW_SIZE,
-                      binary=True,
-                      **data_dict)
-
-    yield BlacklistProfile(genome_version=genome_version,
-                           window_size=WINDOW_SIZE)
-
-    yield TssProfile(genome_version=genome_version,
-                     extend_5_to_3=4000,
-                     extend_3_to_5=2000,
-                     window_size=WINDOW_SIZE)
-
-class CD4MasterTask(luigi.Task):
+class CD4HistoneModifications(Task):
 
     genome_version = luigi.Parameter()
     binarisation_method = luigi.Parameter()
 
     def requires(self):
-        return list(tasks_for_genome(self.genome_version, binarisation_method=self.binarisation_method))
+        return list(_tasks_for_genome(self.genome_version, binarisation_method=self.binarisation_method))
 
-    def output(self):
-        return luigi.File('cd4_profile.{}.{}.csv.gz'.format(self.binarisation_method, self.genome_version))
+    @property
+    def extension(self):
+        return 'csv.gz'
+
+    @property
+    def parameters(self):
+        return [self.binarisation_method, self.genome_version]
 
     def run(self):
-        logger = logging.getLogger('CD4MasterTask')
+        logger = self.logger()
 
         df = pd.DataFrame()
 
@@ -190,8 +171,7 @@ class CD4MasterTask(luigi.Task):
             df.to_csv(f)
 
 
-
 if __name__ == '__main__':
-    logging.getLogger('CD4MasterTask').setLevel(logging.DEBUG)
+    CD4HistoneModifications.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
     luigi.run()
