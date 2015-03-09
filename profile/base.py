@@ -64,7 +64,8 @@ class ProfileBase(Task):
         logger = logging.getLogger('Profile')
 
         windows_task_output = self._genome_windows_task.output()
-        if isinstance(self.peaks_task.output(), list) and len(self.peaks_task.output()) == 2:
+
+        if isinstance(self.peaks_task.output(), tuple) and len(self.peaks_task.output()) == 2:
             peaks_task_output = self.peaks_task.output()[0]
         else:
             peaks_task_output = self.peaks_task.output()
@@ -129,7 +130,7 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
                                            name=wigfile_name,
                                            description=os.path.basename(output.path),
                                            window_size=window_size,
-                                           transform_function=transform_function
+                                           transform_function=transform_function,
                                            )
     finally:
         pybedtools.cleanup()
@@ -147,7 +148,8 @@ def _intersection_counts_to_wiggle(output_file_handle,
     ))
     previous_chromosome = None
     for row in intersection_with_counts_bed:
-        if row.count == 0:
+        value = float(row.name)  # They write counts/map values into name column
+        if value == 0:
             continue
 
         if row.chrom != previous_chromosome:
@@ -156,8 +158,8 @@ def _intersection_counts_to_wiggle(output_file_handle,
 
         # Add +1 to start as wig locations are 1-based
         start = row.start + 1
-        count = row.count
-        if transform_function:
-            count = transform_function(count)
 
-        output_file_handle.write('{0}\t{1}\n'.format(start, count))
+        if transform_function:
+            value = transform_function(value)
+
+        output_file_handle.write('{0}\t{1}\n'.format(start, value))

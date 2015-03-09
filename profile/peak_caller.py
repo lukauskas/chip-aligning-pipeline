@@ -11,7 +11,7 @@ from profile.aligned_reads_base import AlignedReadsProfileBase
 class MacsProfile(AlignedReadsProfileBase):
 
     broad = MacsPeaks.broad
-    mode = luigi.Parameter(default='count')
+    profile_mode = luigi.Parameter(default='count')
 
     __MODES = {'count': dict(operation='count', null_value=0),
                'max_qvalue': dict(operation='max', null_value=0, column=9)}
@@ -19,15 +19,15 @@ class MacsProfile(AlignedReadsProfileBase):
     @property
     def parameters(self):
         params = super(MacsProfile, self).parameters
-        if self.mode == 'count':
+        if self.profile_mode == 'count':
             return params
-        elif self.mode in self.__MODES:
-            return params + [self.mode]
+        elif self.profile_mode in self.__MODES:
+            return params + [self.profile_mode]
         else:
             raise ValueError('Unknown mode')
 
     def _compute_profile_kwargs(self):
-        return self.__MODES[self.mode]
+        return self.__MODES[self.profile_mode]
 
     @property
     def peaks_task(self):
@@ -59,3 +59,9 @@ class RsegProfile(AlignedReadsProfileBase):
                          width_of_kmers=self.width_of_kmers,
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
+
+if __name__ == '__main__':
+    import logging
+    MacsProfile.logger().setLevel(logging.DEBUG)
+    logging.basicConfig()
+    luigi.run()

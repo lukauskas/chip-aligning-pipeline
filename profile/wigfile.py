@@ -71,12 +71,14 @@ class WigFile(GzipOutputFile):
                     array_size = number_of_windows[chromosome]
                     current_array = np.zeros(array_size, dtype=int)
                 else:
-                    position, count = map(int, line.split('\t'))
+                    position, value = line.split('\t')
+                    position = int(position)
+                    value = float(value)
                     array_index = (position - 1) / window_size
                     assert (position - 1) % window_size == 0, 'expected positions at start of intervals'
 
                     try:
-                        current_array[array_index] = count
+                        current_array[array_index] = value
                     except IndexError:
                         if array_index >= len(current_array):
                             raise ValueError('Position {0!r} is invalid as it is mapped to {1!r}th cell '
