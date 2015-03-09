@@ -87,6 +87,8 @@ WINDOW_SIZE = 200
 WIDTH_OF_KMERS=20
 NUMBER_OF_RSEG_ITERATIONS=20
 
+VALID_CHROMOSOMES = {'chr{}'.format(x) for x in [range(1, 23) + 'X' + 'Y']}
+
 def tasks_for_genome(genome_version, binarisation_method):
     MARKS_MACS_FAILS_FOR ={'H4R3me2', 'H2AK5ac',
                             'H2BK12ac', 'H3K14ac', 'H3K23ac', 'H3K36ac',
@@ -137,111 +139,6 @@ def tasks_for_genome(genome_version, binarisation_method):
                      extend_3_to_5=2000,
                      window_size=WINDOW_SIZE)
 
-def _number_of_windows(genome_assembly, window_size):
-    from pybedtools import chromsizes as pybedtools_chromsizes
-
-    chromsizes = pybedtools_chromsizes(genome_assembly)
-
-    number_of_windows = {}
-    for chromosome, chromsize in chromsizes.iteritems():
-
-        start, end = chromsize
-        length = end - start
-
-        number_of_windows_for_chromosome = length / window_size
-        if length % window_size:
-            number_of_windows_for_chromosome += 1
-
-        number_of_windows[chromosome] = number_of_windows_for_chromosome
-
-    return number_of_windows
-
-
-def _parse_wigfile(wigfile_handle, window_size, number_of_windows, chromosomes):
-    data = {}
-    current_chromosome = None
-    current_array = None
-
-    for line in wigfile_handle:
-        if line.startswith('track'):
-            continue
-        if line.startswith('variableStep'):
-            match = re.match('variableStep chrom=(chr\w+) span=(\d+)', line)
-            if not match:
-                raise Exception("Cannot parse variableStep line {0!r}".format(line))
-
-            chromosome, span = match.group(1), match.group(2)
-            span = int(span)
-
-            assert span == window_size, 'Span does not match the window size'
-
-            if current_chromosome == chromosome or chromosome in data:
-                raise Exception('Duplicate variableStep line for chromosome')
-            elif current_chromosome is not None:
-                data[current_chromosome] = current_array
-
-            current_chromosome = chromosome
-            array_size = number_of_windows[chromosome]
-            current_array = np.zeros(array_size, dtype=int)
-        else:
-            position, count = map(int, line.split('\t'))
-            array_index = (position - 1) / window_size
-            assert (position - 1) % window_size == 0, 'expected positions at start of intervals'
-
-            try:
-                current_array[array_index] = count
-            except IndexError:
-                if array_index >= len(current_array):
-                    raise ValueError('Position {0!r} is invalid as it is mapped to {1!r}th cell '
-                                     'when only {2!r} cells are available'.format(position,
-                                                                                  array_index,
-                                                                                  len(current_array)))
-                else:
-                    raise
-
-        if current_chromosome is not None:
-            data[current_chromosome] = current_array
-
-    filtered_data = {}
-
-    for chrom, d in data.iteritems():
-        if chrom not in chromosomes:
-            continue
-        filtered_data[chrom] = d
-
-    for chrom in chromosomes:
-        if chrom not in filtered_data:
-            filtered_data[chrom] = np.zeros(number_of_windows[chrom])
-
-    return filtered_data
-
-def _to_pd_series(output, alias, number_of_windows):
-
-    VALID_CHROMOSOMES = {'chr{}'.format(x) for x in xrange(1, 23)}
-    VALID_CHROMOSOMES.add('chrX')
-    VALID_CHROMOSOMES.add('chrY')
-
-    with output.open('r') as output_handle:
-        parsed_output = _parse_wigfile(output_handle, WINDOW_SIZE, number_of_windows,
-                                       chromosomes=VALID_CHROMOSOMES)
-
-    full_data = []
-    index = []
-
-    for chromosome, data in sorted(parsed_output.items(), key=lambda x: x[0]):
-        if chromosome not in VALID_CHROMOSOMES:
-            continue
-
-        full_data.extend(data)
-        index.extend(zip(itertools.repeat(chromosome), xrange(len(data))))
-
-    index = pd.MultiIndex.from_tuples(index, names=('chromosome', 'window_id'))
-
-    return index, full_data
-
-def _to_pd_series_unstarred(x):
-    return _to_pd_series(*x)
-
 class CD4MasterTask(luigi.Task):
 
     genome_version = luigi.Parameter()
@@ -255,22 +152,18 @@ class CD4MasterTask(luigi.Task):
 
     def run(self):
         logger = logging.getLogger('CD4MasterTask')
-        number_of_windows = _number_of_windows(self.genome_version, WINDOW_SIZE)
-
-        tasks = []
-        for profile_task in self.requires():
-            alias = profile_task.friendly_name
-            output = profile_task.output()
-            tasks.append((output, alias, number_of_windows))
 
         df = pd.DataFrame()
 
         index = None
         logger.debug('Compiling to dataframe')
 
-        for output, alias, number_of_windows in tasks:
+        for task in self.requires():
+            output = task.output()
+            alias = task.friendly_name
             logger.debug('Start {}'.format(alias))
-            ix, s = _to_pd_series(output, alias, number_of_windows)
+            series = output.to_pandas_series(VALID_CHROMOSOMES)
+            ix = series.index
             logger.debug('Finished parsing series')
             if index is None:
                 index = ix
@@ -286,7 +179,7 @@ class CD4MasterTask(luigi.Task):
                     raise AssertionError('indices don\'t match')
 
             start_time = time.time()
-            df[alias] = s
+            df[alias] = series.values
             end_time = time.time()
             logger.debug('End {}, took: {}s'.format(alias, end_time - start_time))
 
@@ -296,52 +189,9 @@ class CD4MasterTask(luigi.Task):
         with gzip.GzipFile(self.output().path, 'w') as f:
             df.to_csv(f)
 
-class CD4AlignedReadLengthSummary(luigi.Task):
 
-    genome_version = luigi.Parameter()
-
-    def alignment_tasks(self):
-        alignment_tasks = []
-        profile_tasks = tasks_for_genome(self.genome_version)
-        for profile_task in profile_tasks:
-            alignment_task = profile_task.peaks_task.alignment_task
-            alignment_tasks.append(alignment_task)
-        return alignment_tasks
-
-    def requires(self):
-        return self.alignment_tasks()
-
-    def output(self):
-        return luigi.File('cd4_{}_query_length_counts.csv'.format(self.genome_version))
-
-    def run(self):
-        logger = logging.getLogger('CD4AlignedReadLengthSummary')
-        df = []
-        number_of_alignment_tasks = len(self.alignment_tasks())
-        for i, alignment_task in enumerate(self.alignment_tasks(), start=1):
-            bam_file = alignment_task.output()[0].path
-            logger.debug('[{}/{}] Processing: {}'.format(i, number_of_alignment_tasks, bam_file))
-
-            samfile_handle = pysam.Samfile(bam_file)
-
-            mapped_reads = ifilterfalse(lambda x: x.is_unmapped, samfile_handle)
-            query_lengths = imap(lambda x: x.query_length, mapped_reads)
-            query_length_histogram = Counter(query_lengths)
-
-            for key, value in query_length_histogram.iteritems():
-                d = {'filename': os.path.basename(bam_file),
-                     'query_length': key,
-                     'count': value}
-                df.append(d)
-
-        df = pd.DataFrame(df)
-        df = df.set_index('filename')
-
-        with self.output().open('w') as f:
-            df.to_csv(f)
 
 if __name__ == '__main__':
-    logging.getLogger('CD4AlignedReadLengthSummary').setLevel(logging.DEBUG)
     logging.getLogger('CD4MasterTask').setLevel(logging.DEBUG)
     logging.basicConfig()
     luigi.run()

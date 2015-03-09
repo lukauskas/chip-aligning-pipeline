@@ -8,7 +8,8 @@ import luigi
 import pybedtools
 from genome_windows import NonOverlappingWindows
 from peak_calling.macs import MacsPeaks
-from task import Task, GzipOutputFile
+from profile.wigfile import WigFile
+from task import Task
 
 class ProfileBase(Task):
     """
@@ -51,7 +52,7 @@ class ProfileBase(Task):
 
     def output(self):
         super_output_path = super(ProfileBase, self).output().path
-        return GzipOutputFile(super_output_path)
+        return WigFile(genome_assembly=self.genome_version, window_size=self.window_size, path=super_output_path)
 
     def requires(self):
         return [self._genome_windows_task, self.peaks_task]

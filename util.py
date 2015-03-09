@@ -4,10 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from contextlib import contextmanager
+from functools import wraps
 import tempfile
 import os
 import shutil
-
 
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs):
@@ -41,3 +41,27 @@ def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs
     # No exception case - remove always
     logger.debug('Removing {}'.format(temp_dir))
     shutil.rmtree(temp_dir)
+
+
+def memoised(f):
+    """
+    A wrapper that memoises the answer of function `f` and therefore does execute it only once
+
+    :param f:
+    :return:
+    """
+    function_cache = f.__memoisation_cache__ = {}
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        key = tuple(args), frozenset(kwargs)
+        try:
+            return function_cache[key]
+        except KeyError:
+            pass
+
+        ans = f(*args, **kwargs)
+        function_cache[key] = ans
+        return ans
+
+    return wrapper
