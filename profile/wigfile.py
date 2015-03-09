@@ -40,7 +40,16 @@ class WigFile(GzipOutputFile):
         self._window_size = window_size
         super(WigFile, self).__init__(path=path)
 
-    def to_numpy(self, chromosomes, dtype=float):
+    def to_numpy(self, chromosomes=None, dtype=float):
+        """
+        Convert wigfile to a dictionary of numpy arrays for each chromosome
+        :param chromosomes: A set of chromosomes to return, defaults to chr1-22 + chrX + chrY
+        :param dtype: the `dtype` of array returned
+        :return:
+        """
+        if chromosomes is None:
+            chromosomes = {'chr{}'.format(x) for x in range(1, 23) + ['X', 'Y']}
+
         window_size = self._window_size
         number_of_windows = _number_of_windows(self._genome_assembly, window_size)
 
@@ -104,8 +113,12 @@ class WigFile(GzipOutputFile):
 
             return filtered_data
 
-    def to_pandas_series(self, chromosomes):
-
+    def to_pandas_series(self, chromosomes=None):
+        """
+        Convert the wigfile to pandas series with appropriate multiindex for chromosome and window id
+        :param chromosomes: chromosomes to return. Defaults to chr1-chr22 + chrX + chrY
+        :return:
+        """
         parsed_output = self.to_numpy(chromosomes=chromosomes)
 
         full_data = []
