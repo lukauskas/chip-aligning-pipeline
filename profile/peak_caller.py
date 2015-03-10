@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import luigi
+from peak_calling.fseq import FseqPeaks
 from peak_calling.macs import MacsPeaks
 from peak_calling.rseg import RsegPeaks
 from profile.aligned_reads_base import AlignedReadsProfileBase
@@ -63,6 +64,18 @@ class RsegProfile(AlignedReadsProfileBase):
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
 
+class FseqProfile(AlignedReadsProfileBase):
+
+    @property
+    def peaks_task(self):
+        return FseqPeaks(genome_version=self.genome_version,
+                         experiment_accession=self.experiment_accession,
+                         study_accession=self.study_accession,
+                         experiment_alias=self.experiment_alias,
+                         bowtie_seed=self.bowtie_seed,
+                         pretrim_reads=self.pretrim_reads)
+
+    
 if __name__ == '__main__':
     import logging
     MacsProfile.logger().setLevel(logging.DEBUG)
