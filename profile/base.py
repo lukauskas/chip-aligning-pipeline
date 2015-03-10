@@ -23,6 +23,7 @@ class ProfileBase(Task):
     genome_version = MacsPeaks.genome_version
     window_size = NonOverlappingWindows.window_size
     binary = luigi.BooleanParameter()
+    extend_to_length = luigi.Parameter(default=None)
 
     @property
     def peaks_task(self):
@@ -38,6 +39,8 @@ class ProfileBase(Task):
         parameters.append('w{}'.format(self.window_size))
         if self.binary:
             parameters.append('b')
+        if self.extend_to_length is not None:
+            parameters.append('e{}'.format(self.extend_to_length))
 
         return parameters
 
@@ -79,14 +82,38 @@ class ProfileBase(Task):
                         self.window_size,
                         self.binary,
                         self.friendly_name,
+                        self.genome_version,
                         logger=logger,
                         **self._compute_profile_kwargs()
                         )
 
+def extend_intervals_to_length_in_5to3_direction(intervals, target_length, chromsizes):
+    target_length = int(target_length)
+
+    new_intervals = []
+    for interval in intervals:
+        interval_length = interval.length
+        extend_by = target_length - interval_length
+        if extend_by < 0:
+            raise Exception('Interval {} is already longer than target length {}'.format(interval, target_length))
+
+        if interval.strand == '+':
+            interval.end = min(interval.end + extend_by, chromsizes[interval.chrom][1])
+        elif interval.strand == '-':
+            interval.start = max(interval.start - extend_by, chromsizes[interval.chrom][0])
+        else:
+            raise Exception('Unknown strand for interval {}'.format(interval))
+
+        new_intervals.append(interval)
+
+    return pybedtools.BedTool(new_intervals)
 
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
-                    output, window_size, binarise, wigfile_name, logger=None,
-                    operation='count', column=None, null_value=None):
+                    output, window_size, binarise, wigfile_name,
+                    genome_version,
+                    logger=None,
+                    operation='count', column=None, null_value=None,
+                    extend_to_length=None):
 
     def _debug(*args, **kwargs):
         if logger:
@@ -102,6 +129,10 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             # This is needed as peaks.sort() doesn't work for BAMs
             peaks = peaks.bam_to_bed()
 
+        if extend_to_length is not None:
+            peaks = extend_intervals_to_length_in_5to3_direction(peaks,
+                                                                 extend_to_length,
+                                                                 pybedtools.chromsizes(genome_version))
         _debug('Sorting peaks')
         peaks = peaks.sort()
 
