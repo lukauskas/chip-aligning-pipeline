@@ -75,7 +75,7 @@ class FseqProfile(AlignedReadsProfileBase):
                          bowtie_seed=self.bowtie_seed,
                          pretrim_reads=self.pretrim_reads)
 
-    
+
 if __name__ == '__main__':
     import logging
     MacsProfile.logger().setLevel(logging.DEBUG)
