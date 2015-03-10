@@ -59,7 +59,7 @@ class BowtieAlignmentTask(Task):
         return bam_output, stdout_output
 
     def run(self):
-        logger = logging.getLogger('BowtieAlignmentTask')
+        logger = self.logger()
 
         from command_line_applications.archiving import unzip, tar
         from command_line_applications.bowtie import bowtie2
@@ -163,6 +163,6 @@ class BowtieAlignmentTask(Task):
 
 
 if __name__ == '__main__':
-    logging.getLogger('BowtieAlignmentTask').setLevel(logging.DEBUG)
+    BowtieAlignmentTask.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
-    luigi.run()
+    luigi.run(main_task_cls=BowtieAlignmentTask)
