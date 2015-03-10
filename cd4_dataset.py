@@ -75,6 +75,11 @@ TRANSCRIPTION_FACTORS = [
          study_accession='PRJNA149083')
     ]
 
+OPEN_CHROMATIN = [
+    # DNase-seq
+    dict(experiment_accession='SRX100962', experiment_alias='DS17329', study_accession='PRJNA34535')
+]
+
 WINDOW_SIZE = 200
 WIDTH_OF_KMERS=20
 NUMBER_OF_RSEG_ITERATIONS=20

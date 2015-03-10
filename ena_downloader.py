@@ -52,7 +52,7 @@ class ShortReadsForExperiment(Task):
         return 'tar.bz2'
 
     def run(self):
-        logger = logging.getLogger('ena_downloader.ShortReadsForExperiment.run')
+        logger = ShortReadsForExperiment.logger()
 
         from command_line_applications.archiving import tar
 
@@ -99,6 +99,6 @@ class ShortReadsForExperiment(Task):
 
 
 if __name__ == '__main__':
-    logging.getLogger('ena_downloader.ShortReadsForExperiment.run').setLevel(logging.DEBUG)
+    ShortReadsForExperiment.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
-    luigi.run()
+    luigi.run(main_task_cls=ShortReadsForExperiment)
