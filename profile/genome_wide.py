@@ -22,13 +22,14 @@ def _intersection_counts_to_wiggle(output_file_handle,
     ))
     previous_chromosome = None
     for row in intersection_with_counts_bed:
-        value = float(row.name)  # They write counts/map values into name column
+        value = row.value
         if value == 0:
+            # Do not need to write zeroes to wiggles
             continue
 
-        if row.chrom != previous_chromosome:
-            output_file_handle.write('variableStep chrom={0} span={1}\n'.format(row.chrom, window_size))
-            previous_chromosome = row.chrom
+        if row.chromosome != previous_chromosome:
+            output_file_handle.write('variableStep chrom={0} span={1}\n'.format(row.chromosome, window_size))
+            previous_chromosome = row.chromosome
 
         # Add +1 to start as wig locations are 1-based
         start = row.start + 1

@@ -74,7 +74,7 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
         map_ = windows.map(peaks, o=operation, null=null_value, c=column)
 
         def _to_df_dict(bed_row):
-            d = {'chrom': bed_row.chrom,
+            d = {'chromosome': bed_row.chrom,
                   'start': bed_row.start,
                   'end': bed_row.end,
                  }
@@ -99,7 +99,7 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
         _debug('Creating dataframe')
         df = pd.DataFrame(map(_to_df_dict, map_))
         # Force column order
-        df = df[['chrom', 'start', 'end', 'name', 'score', 'strand', 'value']]
+        df = df[['chromosome', 'start', 'end', 'name', 'score', 'strand', 'value']]
         return df
 
     finally:
