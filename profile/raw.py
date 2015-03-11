@@ -2,17 +2,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from genome_alignment import BowtieAlignmentTask
-from profile.aligned_reads_base import AlignedReadsGenomeWideProfileBase
+
+from profile.aligned_reads_mixin import AlignedReadsMixin
+from profile.genome_wide import GenomeWideProfileBase
 
 
-class RawProfile(AlignedReadsGenomeWideProfileBase):
-
-    @property
-    def features_to_map_task(self):
-        return BowtieAlignmentTask(genome_version=self.genome_version,
-                                   experiment_accession=self.experiment_accession,
-                                   study_accession=self.study_accession,
-                                   experiment_alias=self.experiment_alias,
-                                   bowtie_seed=self.bowtie_seed,
-                                   pretrim_reads=self.pretrim_reads)
+class RawProfile(GenomeWideProfileBase, AlignedReadsMixin):
+    # Mixin will handle the rest
+    pass

@@ -128,15 +128,15 @@ class ProfileBase(Task):
         areas_to_map_task_output = self.areas_to_map_to_task.output()
 
         if isinstance(self.features_to_map_task.output(), tuple) and len(self.features_to_map_task.output()) == 2:
-            peaks_task_output = self.features_to_map_task.output()[0]
+            features_to_map_task_output = self.features_to_map_task.output()[0]
         else:
-            peaks_task_output = self.features_to_map_task.output()
-        if isinstance(peaks_task_output, list):
-            assert len(peaks_task_output) == 2
-            peaks_task_output = peaks_task_output[0]
+            features_to_map_task_output = self.features_to_map_task.output()
+        if isinstance(features_to_map_task_output, list):
+            assert len(features_to_map_task_output) == 2
+            features_to_map_task_output = features_to_map_task_output[0]
 
         map_df = compute_profile(os.path.abspath(areas_to_map_task_output.path),
-                        os.path.abspath(peaks_task_output.path),
+                        os.path.abspath(features_to_map_task_output.path),
                         self.binary,
                         self.genome_version,
                         logger=logger,

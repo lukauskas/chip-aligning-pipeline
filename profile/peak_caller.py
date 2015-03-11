@@ -6,10 +6,12 @@ import luigi
 from peak_calling.fseq import FseqPeaks
 from peak_calling.macs import MacsPeaks
 from peak_calling.rseg import RsegPeaks
-from profile.aligned_reads_base import AlignedReadsGenomeWideProfileBase
+
+from profile.aligned_reads_mixin import AlignedReadsMixin
+from profile.genome_wide import GenomeWideProfileBase
 
 
-class MacsProfile(AlignedReadsGenomeWideProfileBase):
+class MacsProfile(GenomeWideProfileBase, AlignedReadsMixin):
 
     broad = MacsPeaks.broad
     macs_q_value_threshold = MacsPeaks.macs_q_value_threshold
@@ -44,7 +46,7 @@ class MacsProfile(AlignedReadsGenomeWideProfileBase):
                      macs_q_value_threshold=self.macs_q_value_threshold)
 
 
-class RsegProfile(AlignedReadsGenomeWideProfileBase):
+class RsegProfile(GenomeWideProfileBase, AlignedReadsMixin):
 
     width_of_kmers = RsegPeaks.width_of_kmers
     prefix_length = RsegPeaks.prefix_length
@@ -64,7 +66,7 @@ class RsegProfile(AlignedReadsGenomeWideProfileBase):
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
 
-class FseqProfile(AlignedReadsGenomeWideProfileBase):
+class FseqProfile(GenomeWideProfileBase, AlignedReadsMixin):
 
     @property
     def features_to_map_task(self):

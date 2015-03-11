@@ -124,6 +124,8 @@ class BedTranscriptionStartSites(Task):
     extend_5_to_3 = luigi.IntParameter(default=0)
     extend_3_to_5 = luigi.IntParameter(default=0)
 
+    merge = luigi.Parameter(default=False)  # don't merge if false, else merge=d
+
     def requires(self):
         return TranscriptionStartSites(genome_version=self.genome_version)
 
@@ -132,6 +134,10 @@ class BedTranscriptionStartSites(Task):
         params = self.requires().parameters
         params.append('d{}'.format(self.extend_5_to_3))
         params.append('u{}'.format(self.extend_3_to_5))
+
+        if self.merge is not False:
+            params.append('m{}'.format(self.merge))
+
         return params
 
     @property
@@ -152,7 +158,7 @@ class BedTranscriptionStartSites(Task):
                 bed_row.append(row['transcription_start_site'])
                 bed_row.append(row['transcription_start_site'] + 1)
                 bed_row.append(row['external_gene_name'])
-                bed_row.append('0')   # score
+                bed_row.append(row['transcript_count'])  # use transcript count as score
                 bed_row.append(row['strand'])
 
                 yield tuple(bed_row)
@@ -167,6 +173,20 @@ class BedTranscriptionStartSites(Task):
             logger.debug('bedtools.slop')
             tss_bed = tss_bed.slop(l=self.extend_3_to_5, r=self.extend_5_to_3, s=True)
             logger.debug('First item after slop: {}'.format(tss_bed[0]))
+
+            if self.merge is not False:
+                if self.merge is True:
+                    max_distance = 0
+                else:
+                    max_distance = int(self.merge)
+
+                logger.debug('bedtools.merge')
+                logger.debug('Number of TSS before: {}'.format(len(tss_bed)))
+
+                tss_bed = tss_bed.merge(d=max_distance, o='max,collapse,collapse', c='5,4,6')
+
+                logger.debug('Number of TSS after: {}'.format(len(tss_bed)))
+
             logger.debug('Writing to output')
             with self.output().open('w') as out_:
                 for line in tss_bed:
