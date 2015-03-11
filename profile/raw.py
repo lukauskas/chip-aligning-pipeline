@@ -3,13 +3,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from genome_alignment import BowtieAlignmentTask
-from profile.aligned_reads_base import AlignedReadsProfileBase
+from profile.aligned_reads_base import AlignedReadsGenomeWideProfileBase
 
 
-class RawProfile(AlignedReadsProfileBase):
+class RawProfile(AlignedReadsGenomeWideProfileBase):
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return BowtieAlignmentTask(genome_version=self.genome_version,
                                    experiment_accession=self.experiment_accession,
                                    study_accession=self.study_accession,

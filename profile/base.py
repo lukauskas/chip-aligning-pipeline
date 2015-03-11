@@ -2,90 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import logging
 import os
-import luigi
+
 import pybedtools
-from genome_windows import NonOverlappingWindows
-from peak_calling.macs import MacsPeaks
-from profile.wigfile import WigFile
+import pandas as pd
+
 from task import Task
 
-class ProfileBase(Task):
-    """
-    A base task that generates the profile of the peaks_task output over the
-    range of non-overlapping genome windows of size window_size.
-
-    If binary is set to False, the number of overlapping peaks_task outputs will be counted
-    whereas if it is set to True, only a binary yes/no response will be returned.
-    """
-
-    genome_version = MacsPeaks.genome_version
-    window_size = NonOverlappingWindows.window_size
-    binary = luigi.BooleanParameter()
-    extend_to_length = luigi.Parameter(default=None)
-
-    @property
-    def peaks_task(self):
-        raise NotImplementedError
-
-    @property
-    def friendly_name(self):
-        raise NotImplementedError
-
-    @property
-    def parameters(self):
-        parameters = self.peaks_task.parameters
-        parameters.append('w{}'.format(self.window_size))
-        if self.binary:
-            parameters.append('b')
-        if self.extend_to_length is not None:
-            parameters.append('e{}'.format(self.extend_to_length))
-
-        return parameters
-
-    @property
-    def _extension(self):
-        return 'wig.gz'
-
-    @property
-    def _genome_windows_task(self):
-        return NonOverlappingWindows(genome_version=self.genome_version,
-                                     window_size=self.window_size)
-
-    def output(self):
-        super_output_path = super(ProfileBase, self).output().path
-        return WigFile(genome_assembly=self.genome_version, window_size=self.window_size, path=super_output_path)
-
-    def requires(self):
-        return [self._genome_windows_task, self.peaks_task]
-
-    def _compute_profile_kwargs(self):
-        return dict(operation='count', null_value=0)
-
-    def run(self):
-        logger = logging.getLogger('Profile')
-
-        windows_task_output = self._genome_windows_task.output()
-
-        if isinstance(self.peaks_task.output(), tuple) and len(self.peaks_task.output()) == 2:
-            peaks_task_output = self.peaks_task.output()[0]
-        else:
-            peaks_task_output = self.peaks_task.output()
-        if isinstance(peaks_task_output, list):
-            assert len(peaks_task_output) == 2
-            peaks_task_output = peaks_task_output[0]
-
-        compute_profile(os.path.abspath(windows_task_output.path),
-                        os.path.abspath(peaks_task_output.path),
-                        self.output(),
-                        self.window_size,
-                        self.binary,
-                        self.friendly_name,
-                        self.genome_version,
-                        logger=logger,
-                        **self._compute_profile_kwargs()
-                        )
 
 def extend_intervals_to_length_in_5to3_direction(intervals, target_length, chromsizes):
     target_length = int(target_length)
@@ -109,7 +32,7 @@ def extend_intervals_to_length_in_5to3_direction(intervals, target_length, chrom
     return pybedtools.BedTool(new_intervals)
 
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
-                    output, window_size, binarise, wigfile_name,
+                    binarise,
                     genome_version,
                     logger=None,
                     operation='count', column=None, null_value=None,
@@ -130,6 +53,7 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             peaks = peaks.bam_to_bed()
 
         if extend_to_length is not None:
+            _debug('Extending intervals to {}'.format(extend_to_length))
             peaks = extend_intervals_to_length_in_5to3_direction(peaks,
                                                                  extend_to_length,
                                                                  pybedtools.chromsizes(genome_version))
@@ -149,48 +73,86 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
 
         map_ = windows.map(peaks, o=operation, null=null_value, c=column)
 
-        transform_function = None
+        def _to_df_dict(bed_row):
+            d = {'chrom': bed_row.chrom,
+                  'start': bed_row.start,
+                  'end': bed_row.end,
+                 }
 
-        if binarise:
-            transform_function = lambda x: 1 if x > 0 else 0
+            value = float(bed_row.fields[-1])   # .count forces an int
 
-        _debug('Outputting to {}'.format(output.path))
-        with output.open('w') as output_file:
-            _intersection_counts_to_wiggle(output_file,
-                                           map_,
-                                           name=wigfile_name,
-                                           description=os.path.basename(output.path),
-                                           window_size=window_size,
-                                           transform_function=transform_function,
-                                           )
+            if binarise:
+                value = 1 if value > 0 else 0
+
+            d['value'] = value
+
+            if len(bed_row.fields) > 4:
+                d['name'] = bed_row.name
+
+            if len(bed_row.fields) > 5:
+                d['score'] = bed_row.score
+
+            if len(bed_row.fields) > 6:
+                d['strand'] = bed_row.strand
+
+            return d
+        _debug('Creating dataframe')
+        df = pd.DataFrame(map(_to_df_dict, map_))
+        # Force column order
+        df = df[['chrom', 'start', 'end', 'name', 'score', 'strand', 'value']]
+        return df
+
     finally:
         pybedtools.cleanup()
 
+class ProfileBase(Task):
 
-def _intersection_counts_to_wiggle(output_file_handle,
-                                   intersection_with_counts_bed,
-                                   name,
-                                   description,
-                                   window_size,
-                                   transform_function=None):
-    output_file_handle.write('track type=wiggle_0 name="{0}" description="{1}"\n'.format(
-        name,
-        description
-    ))
-    previous_chromosome = None
-    for row in intersection_with_counts_bed:
-        value = float(row.name)  # They write counts/map values into name column
-        if value == 0:
-            continue
+    @property
+    def features_to_map_task(self):
+        raise NotImplementedError
 
-        if row.chrom != previous_chromosome:
-            output_file_handle.write('variableStep chrom={0} span={1}\n'.format(row.chrom, window_size))
-            previous_chromosome = row.chrom
+    @property
+    def areas_to_map_to_task(self):
+        raise NotImplementedError
 
-        # Add +1 to start as wig locations are 1-based
-        start = row.start + 1
+    def requires(self):
+        return [self.areas_to_map_to_task, self.features_to_map_task]
 
-        if transform_function:
-            value = transform_function(value)
+    @property
+    def _extension(self):
+        return 'csv.gz'
 
-        output_file_handle.write('{0}\t{1}\n'.format(start, value))
+    def _create_output(self):
+        logger = self.logger()
+
+        areas_to_map_task_output = self.areas_to_map_to_task.output()
+
+        if isinstance(self.features_to_map_task.output(), tuple) and len(self.features_to_map_task.output()) == 2:
+            peaks_task_output = self.features_to_map_task.output()[0]
+        else:
+            peaks_task_output = self.features_to_map_task.output()
+        if isinstance(peaks_task_output, list):
+            assert len(peaks_task_output) == 2
+            peaks_task_output = peaks_task_output[0]
+
+        map_df = compute_profile(os.path.abspath(areas_to_map_task_output.path),
+                        os.path.abspath(peaks_task_output.path),
+                        self.binary,
+                        self.genome_version,
+                        logger=logger,
+                        extend_to_length=self.extend_to_length,
+                        **self._compute_profile_kwargs()
+                        )
+
+        return map_df
+
+    def _save_output(self, output):
+        logger = self.logger()
+        logger.debug('Writing output')
+
+        with self.output().open('w') as o:
+            output.to_csv(o)
+
+    def run(self):
+        output = self._create_output()
+        self._save_output(output)

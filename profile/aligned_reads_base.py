@@ -3,10 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from peak_calling.macs import MacsPeaks
-from profile.base import ProfileBase
+from profile.genome_wide import GenomeWideProfileBase
 
 
-class AlignedReadsProfileBase(ProfileBase):
+class AlignedReadsGenomeWideProfileBase(GenomeWideProfileBase):
     experiment_accession = MacsPeaks.experiment_accession
     study_accession = MacsPeaks.study_accession
     experiment_alias = MacsPeaks.experiment_alias

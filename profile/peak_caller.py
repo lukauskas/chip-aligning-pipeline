@@ -6,10 +6,10 @@ import luigi
 from peak_calling.fseq import FseqPeaks
 from peak_calling.macs import MacsPeaks
 from peak_calling.rseg import RsegPeaks
-from profile.aligned_reads_base import AlignedReadsProfileBase
+from profile.aligned_reads_base import AlignedReadsGenomeWideProfileBase
 
 
-class MacsProfile(AlignedReadsProfileBase):
+class MacsProfile(AlignedReadsGenomeWideProfileBase):
 
     broad = MacsPeaks.broad
     macs_q_value_threshold = MacsPeaks.macs_q_value_threshold
@@ -33,7 +33,7 @@ class MacsProfile(AlignedReadsProfileBase):
         return self.__MODES[self.profile_mode]
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return MacsPeaks(genome_version=self.genome_version,
                      experiment_accession=self.experiment_accession,
                      study_accession=self.study_accession,
@@ -44,7 +44,7 @@ class MacsProfile(AlignedReadsProfileBase):
                      macs_q_value_threshold=self.macs_q_value_threshold)
 
 
-class RsegProfile(AlignedReadsProfileBase):
+class RsegProfile(AlignedReadsGenomeWideProfileBase):
 
     width_of_kmers = RsegPeaks.width_of_kmers
     prefix_length = RsegPeaks.prefix_length
@@ -53,7 +53,7 @@ class RsegProfile(AlignedReadsProfileBase):
 
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return RsegPeaks(genome_version=self.genome_version,
                          experiment_accession=self.experiment_accession,
                          study_accession=self.study_accession,
@@ -64,10 +64,10 @@ class RsegProfile(AlignedReadsProfileBase):
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
 
-class FseqProfile(AlignedReadsProfileBase):
+class FseqProfile(AlignedReadsGenomeWideProfileBase):
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return FseqPeaks(genome_version=self.genome_version,
                          experiment_accession=self.experiment_accession,
                          study_accession=self.study_accession,

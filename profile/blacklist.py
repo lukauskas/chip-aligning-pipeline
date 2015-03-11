@@ -3,15 +3,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from blacklist import BlacklistedRegions
-from profile.base import ProfileBase
+from profile.genome_wide import GenomeWideProfileBase
 
 
-class BlacklistProfile(ProfileBase):
+class BlacklistGenomeWideProfile(GenomeWideProfileBase):
 
     binary = True
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return BlacklistedRegions(genome_version=self.genome_version)
 
     @property

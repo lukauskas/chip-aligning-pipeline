@@ -13,7 +13,7 @@ import pandas as pd
 from task import Task
 
 # SRA000206
-from tss import TssProfile
+from tss import TssGenomeWideProfile
 
 METHYLATIONS = [
     #dict(experiment_accession='SRX000138', experiment_alias='CTCF', study_accession='SRP000201'),
@@ -115,6 +115,7 @@ def _tasks_for_genome(genome_version, binarisation_method):
                               pretrim_reads=True,
                               window_size=WINDOW_SIZE,
                               binary=False,
+                              extend_to_length=150,
                               **data_dict
                              )
         else:

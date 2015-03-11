@@ -12,7 +12,7 @@ import tempfile
 import shutil
 
 from task import Task, luigi, GzipOutputFile
-from profile.base import ProfileBase
+from profile.genome_wide import GenomeWideProfileBase
 
 
 def _ensembl_to_ucsc_chrom_name(chromosome):
@@ -176,14 +176,14 @@ class BedTranscriptionStartSites(Task):
             logger.debug('Cleaning up')
             pybedtools.cleanup()
 
-class TssProfile(ProfileBase):
+class TssGenomeWideProfile(GenomeWideProfileBase):
     binary = True
 
     extend_5_to_3 = BedTranscriptionStartSites.extend_5_to_3
     extend_3_to_5 = BedTranscriptionStartSites.extend_3_to_5
 
     @property
-    def peaks_task(self):
+    def features_to_map_task(self):
         return BedTranscriptionStartSites(genome_version=self.genome_version,
                                           extend_5_to_3=self.extend_5_to_3,
                                           extend_3_to_5=self.extend_3_to_5)
