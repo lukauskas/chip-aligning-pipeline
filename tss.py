@@ -183,7 +183,7 @@ class BedTranscriptionStartSites(Task):
                 logger.debug('bedtools.merge')
                 logger.debug('Number of TSS before: {}'.format(len(tss_bed)))
 
-                tss_bed = tss_bed.merge(d=max_distance, o='max,collapse,collapse', c='5,4,6')
+                tss_bed = tss_bed.merge(d=max_distance, o='collapse,max,collapse', c='4,5,6')
 
                 logger.debug('Number of TSS after: {}'.format(len(tss_bed)))
 

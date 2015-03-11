@@ -45,10 +45,7 @@ class GenomeWideProfileBase(ProfileBase):
     whereas if it is set to True, only a binary yes/no response will be returned.
     """
 
-    genome_version = MacsPeaks.genome_version
     window_size = NonOverlappingWindows.window_size
-    binary = luigi.BooleanParameter()
-    extend_to_length = luigi.Parameter(default=None)
 
     @property
     def parameters(self):
@@ -78,9 +75,6 @@ class GenomeWideProfileBase(ProfileBase):
     def output(self):
         super_output_path = super(ProfileBase, self).output().path
         return WigFile(genome_assembly=self.genome_version, window_size=self.window_size, path=super_output_path)
-
-    def _compute_profile_kwargs(self):
-        return dict(operation='count', null_value=0)
 
     def _save_output(self, output):
         logger = self.logger()

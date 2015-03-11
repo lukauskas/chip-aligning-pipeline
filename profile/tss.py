@@ -2,17 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import luigi
+
 from profile.aligned_reads_mixin import AlignedReadsMixin
 from profile.base import ProfileBase
 from tss import BedTranscriptionStartSites
 
 
-class ReadsPerTss(ProfileBase, AlignedReadsMixin):
+class ReadsPerTss(AlignedReadsMixin, ProfileBase):
 
     extend_5_to_3 = BedTranscriptionStartSites.extend_5_to_3
     extend_3_to_5 = BedTranscriptionStartSites.extend_3_to_5
     merge = BedTranscriptionStartSites.merge
+
+
 
     @property
     def areas_to_map_to_task(self):
@@ -29,5 +31,10 @@ class ReadsPerTss(ProfileBase, AlignedReadsMixin):
         return features_parameters + areas_to_map_parameters
 
 
+if __name__ == '__main__':
+    import logging
+    ReadsPerTss.logger().setLevel(logging.DEBUG)
+    logging.basicConfig()
 
-
+    import luigi
+    luigi.run()

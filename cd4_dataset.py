@@ -10,6 +10,7 @@ import time
 from profile.raw import RawProfile
 from profile.peak_caller import MacsProfile, RsegProfile
 import pandas as pd
+from profile.tss import ReadsPerTss
 from task import Task
 
 # SRA000206
@@ -264,6 +265,54 @@ class CD4InputEstimate(Task):
             median_of_rolling_means.to_csv(output, index=True, header=True)
 
         logger.debug('Done')
+
+class CD4TssCountsDataFrame(Task):
+
+    genome_version = luigi.Parameter()
+
+    extend_5_to_3 = luigi.IntParameter(default=2000)
+    extend_3_to_5 = luigi.IntParameter(default=2000)
+    merge = luigi.BooleanParameter(default=0)
+
+    pretrim_reads = luigi.BooleanParameter(default=True)
+
+    @property
+    def _extension(self):
+        return 'csv.gz'
+
+    def requires(self):
+        reqs = []
+
+        for d in ACETYLATIONS + METHYLATIONS + OPEN_CHROMATIN + TRANSCRIPTION_FACTORS:
+            task = ReadsPerTss(genome_version=self.genome_version,
+                               extend_5_to_3=self.extend_5_to_3,
+                               extend_3_to_5=self.extend_3_to_5,
+                               merge=self.merge,
+                               binary=False,
+                               pretrim_reads=self.pretrim_reads,
+                               **d)
+            reqs.append(task)
+
+        return reqs
+
+    @property
+    def parameters(self):
+        return [self.genome_version, self.extend_5_to_3, self.extend_3_to_5, self.merge]
+
+    def run(self):
+        series_list = []
+
+        for task in self.requires():
+            d = pd.read_csv(task.output().path, compression='gzip')
+            series = d.set_index(['chromosome', 'start', 'end', 'name', 'score'])['value']
+            series.name = task.experiment_alias
+
+            series_list.append(series)
+
+        df = pd.concat(series_list, axis=1).reset_index()
+
+        with self.output().open('w') as f:
+            df.to_csv(f)
 
 if __name__ == '__main__':
     for class_ in [CD4NormalisedHistoneModifications, CD4HistoneModifications, CD4InputEstimate]:

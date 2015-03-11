@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
+import luigi
 
 import pybedtools
 import pandas as pd
@@ -107,6 +108,10 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
 
 class ProfileBase(Task):
 
+    binary = luigi.BooleanParameter()
+    genome_version = luigi.Parameter()
+    extend_to_length = luigi.Parameter(default=None)
+
     @property
     def features_to_map_task(self):
         raise NotImplementedError
@@ -121,6 +126,10 @@ class ProfileBase(Task):
     @property
     def _extension(self):
         return 'csv.gz'
+
+    def _compute_profile_kwargs(self):
+        return dict(operation='count', null_value=0)
+
 
     def _create_output(self):
         logger = self.logger()
@@ -151,7 +160,7 @@ class ProfileBase(Task):
         logger.debug('Writing output')
 
         with self.output().open('w') as o:
-            output.to_csv(o)
+            output.to_csv(o, index=False)
 
     def run(self):
         output = self._create_output()

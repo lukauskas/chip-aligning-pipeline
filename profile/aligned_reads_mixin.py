@@ -18,7 +18,6 @@ class AlignedReadsMixin(object):
     def friendly_name(self):
         return self.experiment_alias
 
-
     @property
     def features_to_map_task(self):
         return BowtieAlignmentTask(genome_version=self.genome_version,

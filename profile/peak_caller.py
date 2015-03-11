@@ -11,7 +11,7 @@ from profile.aligned_reads_mixin import AlignedReadsMixin
 from profile.genome_wide import GenomeWideProfileBase
 
 
-class MacsProfile(GenomeWideProfileBase, AlignedReadsMixin):
+class MacsProfile(AlignedReadsMixin, GenomeWideProfileBase):
 
     broad = MacsPeaks.broad
     macs_q_value_threshold = MacsPeaks.macs_q_value_threshold
@@ -46,7 +46,7 @@ class MacsProfile(GenomeWideProfileBase, AlignedReadsMixin):
                      macs_q_value_threshold=self.macs_q_value_threshold)
 
 
-class RsegProfile(GenomeWideProfileBase, AlignedReadsMixin):
+class RsegProfile(AlignedReadsMixin, GenomeWideProfileBase):
 
     width_of_kmers = RsegPeaks.width_of_kmers
     prefix_length = RsegPeaks.prefix_length
@@ -66,7 +66,7 @@ class RsegProfile(GenomeWideProfileBase, AlignedReadsMixin):
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
 
-class FseqProfile(GenomeWideProfileBase, AlignedReadsMixin):
+class FseqProfile(AlignedReadsMixin, GenomeWideProfileBase):
 
     @property
     def features_to_map_task(self):
