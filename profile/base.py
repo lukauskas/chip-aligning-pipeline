@@ -124,6 +124,10 @@ class ProfileBase(Task):
         return [self.areas_to_map_to_task, self.features_to_map_task]
 
     @property
+    def parameters(self):
+        return [self.genome_version, self.binary, self.extend_to_length]
+
+    @property
     def _extension(self):
         return 'csv.gz'
 

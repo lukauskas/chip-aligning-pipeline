@@ -41,11 +41,14 @@ class ShortReadsForExperiment(Task):
 
     experiment_accession = luigi.Parameter()
     study_accession = luigi.Parameter()
-    experiment_alias = luigi.Parameter()
+
+    cell_type = luigi.Parameter()
+    data_track = luigi.Parameter()
 
     @property
     def parameters(self):
-        return [self.study_accession, self.experiment_accession, self.experiment_alias]
+        return [self.cell_type, self.data_track,
+                self.study_accession, self.experiment_accession]
 
     @property
     def _extension(self):
@@ -56,7 +59,7 @@ class ShortReadsForExperiment(Task):
 
         from command_line_applications.archiving import tar
 
-        logger.debug('Fetching runs for {}'.format(self.experiment_accession))
+        logger.debug('Fetching runs for {}-{}'.format(self.study_accession, self.experiment_accession))
         runs = _fetch_run_data_for_experiment(self.experiment_accession)
         logger.debug('Got {} runs'.format(len(runs)))
 
@@ -64,10 +67,13 @@ class ShortReadsForExperiment(Task):
             # Validation of data
             if run['study_accession'] != self.study_accession:
                 raise ValueError('Run study accession {!r} from ENA does not match study accession {!r}'.format(run['study_accession'], self.study_accession))
-            if run['experiment_alias'] != self.experiment_alias:
-                raise ValueError('Run experiment alias {!r} from ENA does not match experiment alias {!r}'.format(run['experiment_alias'], self.experiment_alias))
 
         abspath_for_output = os.path.abspath(self.output().path)
+        try:
+            os.makedirs(os.path.dirname(abspath_for_output))
+        except OSError:
+            if not os.path.isdir(os.path.dirname(abspath_for_output)):
+                raise
 
         current_directory = os.getcwdu()
         temp_directory = tempfile.mkdtemp()

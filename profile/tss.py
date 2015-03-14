@@ -25,10 +25,11 @@ class ReadsPerTss(AlignedReadsMixin, ProfileBase):
 
     @property
     def parameters(self):
+        super_parameters = super(ReadsPerTss, self).parameters
         features_parameters = self.features_to_map_task.parameters
         areas_to_map_parameters = self.areas_to_map_to_task.parameters
 
-        return features_parameters + areas_to_map_parameters
+        return super_parameters + features_parameters + areas_to_map_parameters
 
 
 if __name__ == '__main__':

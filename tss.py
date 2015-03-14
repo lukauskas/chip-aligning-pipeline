@@ -40,11 +40,12 @@ class TranscriptionStartSites(Task):
 <Query  virtualSchemaName = "default" formatter = "CSV" header = "0" uniqueRows = "0" count = "" datasetConfigVersion = "0.6" >
 
 	<Dataset name = "hsapiens_gene_ensembl" interface = "default" >
-	    <Filter name = "chromosome_name" value = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,MT,X,Y"/>
-		<Filter name = "status" value = "KNOWN"/>
+	   <Filter name = "status" value = "KNOWN"/>
+		<Filter name = "chromosome_name" value = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X,Y,MT"/>
+		<Filter name = "transcript_gencode_basic" excluded = "0"/>
 		<Filter name = "transcript_biotype" value = "protein_coding"/>
 		<Filter name = "transcript_status" value = "KNOWN"/>
-		<Filter name = "with_tra_gencode_basic" excluded = "0"/>
+		<Filter name = "biotype" value = "protein_coding"/>
 		{attributes_xml}
 	</Dataset>
 </Query>'''

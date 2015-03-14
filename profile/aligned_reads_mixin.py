@@ -9,20 +9,23 @@ class AlignedReadsMixin(object):
     genome_version = BowtieAlignmentTask.genome_version
     experiment_accession = BowtieAlignmentTask.experiment_accession
     study_accession = BowtieAlignmentTask.study_accession
-    experiment_alias = BowtieAlignmentTask.experiment_alias
+    cell_type = BowtieAlignmentTask.cell_type
+    data_track = BowtieAlignmentTask.data_track
+
 
     bowtie_seed = BowtieAlignmentTask.bowtie_seed
     pretrim_reads = BowtieAlignmentTask.pretrim_reads
 
     @property
     def friendly_name(self):
-        return self.experiment_alias
+        return '{}-{}'.format(self.cell_type, self.data_track)
 
     @property
     def features_to_map_task(self):
         return BowtieAlignmentTask(genome_version=self.genome_version,
                                    experiment_accession=self.experiment_accession,
                                    study_accession=self.study_accession,
-                                   experiment_alias=self.experiment_alias,
+                                   cell_type=self.cell_type,
+                                   data_track=self.data_track,
                                    bowtie_seed=self.bowtie_seed,
                                    pretrim_reads=self.pretrim_reads)

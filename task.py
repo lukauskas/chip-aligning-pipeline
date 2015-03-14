@@ -31,10 +31,9 @@ class Task(luigi.Task):
 
     @property
     def _basename(self):
-        class_name = self.__class__.__name__
         parameters = self.parameters
 
-        basename_components = [class_name] + parameters
+        basename_components = parameters
         basename_components = map(_file_safe_string, basename_components)
         basename = u'.'.join(basename_components)
         return basename
@@ -45,7 +44,9 @@ class Task(luigi.Task):
 
     @property
     def __full_path(self):
-        return os.path.join(_OUTPUT_DIR, u'.'.join([self._basename, self._extension]))
+        class_name = self.__class__.__name__
+        return os.path.join(_OUTPUT_DIR, class_name,
+                            u'.'.join([self._basename, self._extension]))
 
     def output(self):
         if self._extension.endswith('.gz'):

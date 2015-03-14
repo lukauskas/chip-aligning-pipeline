@@ -17,7 +17,9 @@ class BowtieAlignmentTask(Task):
     genome_version = GenomeIndex.genome_version
     experiment_accession = ShortReadsForExperiment.experiment_accession
     study_accession = ShortReadsForExperiment.study_accession
-    experiment_alias = ShortReadsForExperiment.experiment_alias
+
+    cell_type = ShortReadsForExperiment.cell_type
+    data_track = ShortReadsForExperiment.data_track
 
     bowtie_seed = luigi.IntParameter(default=0)
 
@@ -25,19 +27,22 @@ class BowtieAlignmentTask(Task):
 
     number_of_processes = luigi.IntParameter(default=int(cpu_count()/8), significant=False)
 
+    @property
+    def short_reads_task(self):
+        return ShortReadsForExperiment(experiment_accession=self.experiment_accession,
+                                        study_accession=self.study_accession,
+                                        cell_type=self.cell_type,
+                                        data_track=self.data_track)
+
     def requires(self):
         return [GenomeIndex(genome_version=self.genome_version),
-                ShortReadsForExperiment(experiment_accession=self.experiment_accession,
-                                        study_accession=self.study_accession,
-                                        experiment_alias=self.experiment_alias)]
+                self.short_reads_task]
 
 
     @property
     def parameters(self):
-        params = [self.study_accession,
-                  self.experiment_accession,
-                  self.experiment_alias,
-                  self.genome_version]
+        params = self.short_reads_task.parameters
+        params.append(self.genome_version)
 
         if self.bowtie_seed != 0:
             params.append(self.bowtie_seed)

@@ -105,12 +105,10 @@ class GenomeIndex(Task):
         if self.genome_version in self._DOWNLOADABLE_INDICES:
             with self.output().open('w') as output_file:
                 fetch(self._DOWNLOADABLE_INDICES[self.genome_version], output_file)
-        elif self.genome_version in self._GENOME_SEQUENCES:
+        else:
             sequence_filename = os.path.abspath(self._genome_sequence_task.output().path)
             with self.output().open('w') as output_file:
                 _build_index(sequence_filename, self.genome_version, output_file)
-        else:
-            raise ValueError('Unsupported genome version: {0!r}'.format(self.genome_version))
 
 
 if __name__ == '__main__':
