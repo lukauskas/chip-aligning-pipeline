@@ -268,17 +268,16 @@ H1_DATASETS = [
     {'cell_type': u'H1', 'experiment_accession': 'SRX056722', 'study_accession': 'PRJNA34535', 'data_track': 'H3K27ac'},
     # renlab.H3K27ac.hESC.H1.03.01
     # -- Sample SAMN00855416 -----
-    {'cell_type': u'H1', 'experiment_accession': 'SRX142115', 'study_accession': 'PRJNA34535',
-     'data_track': 'mRNA-Seq'},  # polyA-RNA-seq_h1_r1a
-    # -- Sample SAMN00855417 -----
-    {'cell_type': u'H1', 'experiment_accession': 'SRX142116', 'study_accession': 'PRJNA34535',
-     'data_track': 'mRNA-Seq'},  # polyA-RNA-seq_h1_r2a
+    # {'cell_type': u'H1', 'experiment_accession': 'SRX142115', 'study_accession': 'PRJNA34535',
+    #  'data_track': 'mRNA-Seq'},  # polyA-RNA-seq_h1_r1a
+    # # -- Sample SAMN00855417 -----
+    # {'cell_type': u'H1', 'experiment_accession': 'SRX142116', 'study_accession': 'PRJNA34535',
+    #  'data_track': 'mRNA-Seq'},  # polyA-RNA-seq_h1_r2a
     # -- Sample SAMN02232068 -----
     {'cell_type': u'H1', 'experiment_accession': 'SRX322086', 'study_accession': 'PRJNA34535',
      'data_track': 'H3K27me3'},  # renlab.H3K27me3.hESC.H1.02.01
 
 ]
-
 
 class AlignedH1Task(luigi.Task):
     genome_version = luigi.Parameter()

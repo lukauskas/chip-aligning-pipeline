@@ -20,8 +20,21 @@ class FseqPeaks(PeaksBase):
 
         input_file_abspath = os.path.abspath(self.alignment_task.output()[0].path)
         bed_output, stdout_output = self.output()
+
         bed_output_abspath = os.path.abspath(bed_output.path)
         stdout_output_abspath = os.path.abspath(stdout_output.path)
+
+        try:
+            os.makedirs(os.path.dirname(bed_output_abspath))
+        except OSError:
+            if not os.path.isdir(os.path.dirname(bed_output_abspath)):
+                raise
+
+        try:
+            os.makedirs(os.path.dirname(stdout_output_abspath))
+        except OSError:
+            if not os.path.isdir(os.path.dirname(stdout_output_abspath)):
+                raise
 
         with temporary_directory(prefix='fseq-peaks', cleanup_on_exception=False, logger=logger):
             logger.debug('Converting bam to bed')

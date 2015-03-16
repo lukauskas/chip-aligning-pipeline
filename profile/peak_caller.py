@@ -11,7 +11,7 @@ from profile.aligned_reads_mixin import AlignedReadsMixin
 from profile.genome_wide import GenomeWideProfileBase
 
 
-class MacsProfile(AlignedReadsMixin, GenomeWideProfileBase):
+class MacsProfileMixin(object):
 
     broad = MacsPeaks.broad
     macs_q_value_threshold = MacsPeaks.macs_q_value_threshold
@@ -21,13 +21,11 @@ class MacsProfile(AlignedReadsMixin, GenomeWideProfileBase):
     __MODES = {'count': dict(operation='count', null_value=0),
                'max_qvalue': dict(operation='max', null_value=0, column=9)}
 
-    @property
-    def parameters(self):
-        params = super(MacsProfile, self).parameters
+    def additional_parameters(self):
         if self.profile_mode == 'count':
-            return params
+            return []
         elif self.profile_mode in self.__MODES:
-            return params + [self.profile_mode]
+            return [self.profile_mode]
         else:
             raise ValueError('Unknown mode')
 
@@ -45,6 +43,13 @@ class MacsProfile(AlignedReadsMixin, GenomeWideProfileBase):
                      pretrim_reads=self.pretrim_reads,
                      broad=self.broad,
                      macs_q_value_threshold=self.macs_q_value_threshold)
+
+class MacsProfile(AlignedReadsMixin, GenomeWideProfileBase, MacsProfileMixin):
+
+    @property
+    def parameters(self):
+        params = super(MacsProfile, self).parameters
+        return params + self._additional_parameters()
 
 
 class RsegProfile(AlignedReadsMixin, GenomeWideProfileBase):
@@ -68,8 +73,7 @@ class RsegProfile(AlignedReadsMixin, GenomeWideProfileBase):
                          prefix_length=self.prefix_length,
                          number_of_iterations=self.number_of_iterations)
 
-class FseqProfile(AlignedReadsMixin, GenomeWideProfileBase):
-
+class FseqProfileMixin(object):
     @property
     def features_to_map_task(self):
         return FseqPeaks(genome_version=self.genome_version,
@@ -79,6 +83,11 @@ class FseqProfile(AlignedReadsMixin, GenomeWideProfileBase):
                          data_track=self.data_track,
                          bowtie_seed=self.bowtie_seed,
                          pretrim_reads=self.pretrim_reads)
+
+class FseqProfile(FseqProfileMixin, AlignedReadsMixin, GenomeWideProfileBase):
+    pass
+
+
 
 
 if __name__ == '__main__':

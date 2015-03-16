@@ -42,7 +42,9 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
     def _debug(*args, **kwargs):
         if logger:
             logger.debug(*args, **kwargs)
-
+    def _warn(*args, **kwargs):
+        if logger:
+            logger.warn(*args, **kwargs)
     try:
         windows = pybedtools.BedTool(windows_task_output_abspath)
         peaks = pybedtools.BedTool(peaks_task_output_abspath)
@@ -58,47 +60,59 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             peaks = extend_intervals_to_length_in_5to3_direction(peaks,
                                                                  extend_to_length,
                                                                  pybedtools.chromsizes(genome_version))
-        _debug('Sorting peaks')
-        peaks = peaks.sort()
+        _debug('Number of peaks: {}'.format(len(peaks)))
 
-        _debug('Computing the intersection')
+        def _to_df_dict(bed_row, value=None):
+                d = {'chromosome': bed_row.chrom,
+                      'start': bed_row.start,
+                      'end': bed_row.end,
+                     }
 
-        if operation == 'count':
-            null_value = 0 if null_value is None else null_value
-            column = 5
-        elif operation in ['sum', 'min', 'max', 'absmin', 'absmax', 'mean', 'median', 'antimode']:
-            column = 5 if column is None else column
-            null_value = '.' if null_value is None else null_value
+                if value is None:
+                    value = float(bed_row.fields[-1])   # .count forces an int
+
+                    if binarise:
+                        value = 1 if value > 0 else 0
+                    has_value_column = 1
+                else:
+                    has_value_column = 0
+
+                d['value'] = value
+
+                if len(bed_row.fields) > 3 + has_value_column:
+                    d['name'] = bed_row.name
+
+                if len(bed_row.fields) > 4 + has_value_column:
+                    d['score'] = bed_row.score
+
+                if len(bed_row.fields) > 5 + has_value_column:
+                    d['strand'] = bed_row.strand
+
+                return d
+
+        if len(peaks) == 0:
+            _warn('No peaks found!')
+            _debug('Windows heads: {}'.format(windows.head()))
+            df = pd.DataFrame(map(lambda x: _to_df_dict(x, value=0), windows))
         else:
-            raise ValueError('Unsupported Operation')
+            _debug('Sorting peaks')
+            peaks = peaks.sort()
 
-        map_ = windows.map(peaks, o=operation, null=null_value, c=column)
+            _debug('Computing the intersection')
 
-        def _to_df_dict(bed_row):
-            d = {'chromosome': bed_row.chrom,
-                  'start': bed_row.start,
-                  'end': bed_row.end,
-                 }
+            if operation == 'count':
+                null_value = 0 if null_value is None else null_value
+                column = 5
+            elif operation in ['sum', 'min', 'max', 'absmin', 'absmax', 'mean', 'median', 'antimode']:
+                column = 5 if column is None else column
+                null_value = '.' if null_value is None else null_value
+            else:
+                raise ValueError('Unsupported Operation')
 
-            value = float(bed_row.fields[-1])   # .count forces an int
+            map_ = windows.map(peaks, o=operation, null=null_value, c=column)
 
-            if binarise:
-                value = 1 if value > 0 else 0
-
-            d['value'] = value
-
-            if len(bed_row.fields) > 4:
-                d['name'] = bed_row.name
-
-            if len(bed_row.fields) > 5:
-                d['score'] = bed_row.score
-
-            if len(bed_row.fields) > 6:
-                d['strand'] = bed_row.strand
-
-            return d
-        _debug('Creating dataframe')
-        df = pd.DataFrame(map(_to_df_dict, map_))
+            _debug('Creating dataframe')
+            df = pd.DataFrame(map(_to_df_dict, map_))
         # Force column order
         df = df[['chromosome', 'start', 'end', 'name', 'score', 'strand', 'value']]
         return df

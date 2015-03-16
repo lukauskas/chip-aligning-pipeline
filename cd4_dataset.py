@@ -10,7 +10,7 @@ import time
 from profile.raw import RawProfile
 from profile.peak_caller import MacsProfile, RsegProfile
 import pandas as pd
-from profile.tss import ReadsPerTss
+from profile.tss import ReadsPerTss, MacsPeaksPerTss, FseqPeaksPerTss
 from task import Task
 
 # SRA000206
@@ -91,11 +91,11 @@ WIDTH_OF_KMERS=20
 NUMBER_OF_RSEG_ITERATIONS=20
 
 VALID_CHROMOSOMES = {'chr{}'.format(x) for x in range(1, 23) + ['X', 'Y']}
-
-def _tasks_for_genome(genome_version, binarisation_method):
-    MARKS_MACS_FAILS_FOR ={'H4R3me2', 'H2AK5ac',
+MARKS_MACS_FAILS_FOR ={'H4R3me2', 'H2AK5ac',
                             'H2BK12ac', 'H3K14ac', 'H3K23ac', 'H3K36ac',
                             'H3K9ac', 'H4K5ac', 'H4K8ac'}
+def _tasks_for_genome(genome_version, binarisation_method):
+
 
     for data_dict in methylations() + acetylations():
 
@@ -273,7 +273,7 @@ class CD4InputEstimate(Task):
             median_of_rolling_means.to_csv(output, index=True, header=True)
 
         logger.debug('Done')
-
+from sklearn.linear_model import ElasticNetCV
 class CD4TssCountsDataFrame(Task):
 
     genome_version = luigi.Parameter()
@@ -285,31 +285,59 @@ class CD4TssCountsDataFrame(Task):
     pretrim_reads = luigi.BooleanParameter(default=True)
     extend_to_length = luigi.IntParameter(150)
 
+    method = luigi.Parameter(default='raw')
+
     @property
     def _extension(self):
         return 'csv.gz'
 
     def requires(self):
+        logger = self.logger()
         reqs = []
 
         for d in acetylations() + methylations() + open_chromatin() + transcription_factors():
-            task = ReadsPerTss(genome_version=self.genome_version,
-                               extend_5_to_3=self.extend_5_to_3,
-                               extend_3_to_5=self.extend_3_to_5,
-                               merge=self.merge,
-                               binary=False,
-                               pretrim_reads=self.pretrim_reads,
-                               extend_to_length=self.extend_to_length,
-                               cell_type='CD4+',
-                               **d)
-            reqs.append(task)
+            track_params = d
+            standard_params = dict(genome_version=self.genome_version,
+                                   extend_5_to_3=self.extend_5_to_3,
+                                   extend_3_to_5=self.extend_3_to_5,
+                                   merge=self.merge,
+                                   pretrim_reads=self.pretrim_reads,
+                                   cell_type='CD4+')
+
+            if self.method == 'raw':
+                method_specific_params = dict(binary=False,
+                                              extend_to_length=self.extend_to_length)
+                class_ = ReadsPerTss
+            elif self.method == 'peaks':
+                if d['data_track'] == 'DNase':
+                    class_ = FseqPeaksPerTss
+                    method_specific_params = dict(binary=True)
+                else:
+                    if d['data_track'] in MARKS_MACS_FAILS_FOR:
+                        logger.warn('Skipping {} as MACS is known to fail for this dataset'.format(d['data_track']))
+                        continue
+
+                    # TODO: this should check for all transcription_factors not only BRD4 (hardcoded)
+                    if d['data_track'] == 'BRD4':
+                        broad = False
+                    else:
+                        broad = True
+                    method_specific_params = dict(broad=broad, binary=True)
+                    class_ = MacsPeaksPerTss
+            else:
+                raise Exception('Unknown method: {!r}'.format(self.method))
+
+            track_params.update(standard_params)
+            track_params.update(method_specific_params)
+
+            reqs.append(class_(**track_params))
 
         return reqs
 
     @property
     def parameters(self):
         return [self.genome_version, self.extend_5_to_3, self.extend_3_to_5, self.merge,
-                self.pretrim_reads, self.extend_to_length]
+                self.pretrim_reads, self.extend_to_length, self.method]
 
     def run(self):
         series_list = []
@@ -317,7 +345,7 @@ class CD4TssCountsDataFrame(Task):
         for task in self.requires():
             d = pd.read_csv(task.output().path, compression='gzip')
             series = d.set_index(['chromosome', 'start', 'end', 'name', 'score'])['value']
-            series.name = task.experiment_alias
+            series.name = task.data_track
 
             series_list.append(series)
 
