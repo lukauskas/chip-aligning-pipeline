@@ -8,6 +8,8 @@ import luigi
 from task import Task
 import pybedtools
 import tempfile
+from util import ensure_directory_exists_for_file
+
 
 class NonOverlappingWindows(Task):
 
@@ -23,6 +25,8 @@ class NonOverlappingWindows(Task):
         return 'bed.gz'
 
     def run(self):
+        ensure_directory_exists_for_file(self.output().path)
+
         try:
             windows = pybedtools.BedTool().window_maker(w=self.window_size,
                                                         g=pybedtools.chromsizes(self.genome_version))

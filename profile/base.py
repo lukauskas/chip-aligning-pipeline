@@ -32,12 +32,80 @@ def extend_intervals_to_length_in_5to3_direction(intervals, target_length, chrom
 
     return pybedtools.BedTool(new_intervals)
 
+def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):
+
+    def _interval_a_grouped_iterator(intersection):
+        previous_interval_a = None
+        group_ = None
+
+        for row in intersection:
+            interval_a = row[:3]
+            rest = row[3:]
+
+            if interval_a != previous_interval_a:
+                if previous_interval_a is not None:
+                    yield previous_interval_a, group_
+                previous_interval_a = interval_a
+                group_ = []
+
+            group_.append(rest)
+
+        if previous_interval_a is not None:
+            yield previous_interval_a, group_
+
+    def _arithmetic_mean(data):
+        weighed_sum = 0
+        total_weight = 0
+        for value, weight in data:
+            weighed_sum += value * weight
+            total_weight += weight
+
+        return weighed_sum / total_weight
+
+    if mean_function is None:
+        mean_function = _arithmetic_mean
+
+    for interval_a, interval_bs in _interval_a_grouped_iterator(intersection):
+        chr_a, start_a, end_a = interval_a
+        start_a = int(start_a)
+        end_a = int(end_a)
+
+        a_length = end_a - start_a
+
+        sum_parts = []
+
+        last_b = None
+        for interval_b in interval_bs:
+            start_b = int(interval_b[1])
+            if start_b == -1:
+                continue
+
+            if last_b is not None and start_b < last_b:
+                raise Exception('overlapping intervals in b')
+
+            end_b = int(interval_b[2])
+            last_b = end_b
+
+            bases_explained_by_b = min(end_a, end_b) - max(start_a, start_b)
+            score = float(interval_b[column - 1])
+            sum_parts.append((score, bases_explained_by_b))
+
+        unexplained_bases = a_length - sum([w for __, w in sum_parts])
+        sum_parts.append((null_value, unexplained_bases))
+
+        yield (chr_a, start_a, end_a, mean_function(sum_parts))
+
+def weighted_means(sorted_a, sorted_b, column, null_value, mean_function=None):
+    intersection = sorted_a.intersect(sorted_b, loj=True, sorted=True)
+    return weighted_means_from_intersection(intersection, column, null_value, mean_function=mean_function)
+
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
                     binarise,
                     genome_version,
                     logger=None,
                     operation='count', column=None, null_value=None,
-                    extend_to_length=None):
+                    extend_to_length=None,
+                    weighted_mean_function=None):
 
     def _debug(*args, **kwargs):
         if logger:
@@ -103,13 +171,19 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             if operation == 'count':
                 null_value = 0 if null_value is None else null_value
                 column = 5
+                map_function = lambda x: windows.map(x, o=operation, null_value=null_value, c=column)
             elif operation in ['sum', 'min', 'max', 'absmin', 'absmax', 'mean', 'median', 'antimode']:
                 column = 5 if column is None else column
                 null_value = '.' if null_value is None else null_value
+                map_function = lambda x: windows.map(x, o=operation, null_value=null_value, c=column)
+            elif operation == 'weighted_mean':
+                column = 4 if column is None else column
+                null_value = 0 if null_value is None else null_value
+                map_function = lambda x: weighted_means(windows, x, column=column, null_value=null_value, mean_function=weighted_mean_function)
             else:
                 raise ValueError('Unsupported Operation')
 
-            map_ = windows.map(peaks, o=operation, null=null_value, c=column)
+            map_ = map_function(peaks)
 
             _debug('Creating dataframe')
             df = pd.DataFrame(map(_to_df_dict, map_))

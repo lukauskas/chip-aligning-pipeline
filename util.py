@@ -9,6 +9,20 @@ import tempfile
 import os
 import shutil
 
+def ensure_directory_exists_for_file(filename):
+    """
+    Ensures that the directory for filename exists. Creates the directory if it doesn't.
+
+    :param filename: filename to ensure the directory is created for
+    """
+    dir_ = os.path.dirname(filename)
+    try:
+        os.makedirs(dir_)
+    except OSError:
+        if not os.path.isdir(dir_):
+            raise
+
+
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs):
     """

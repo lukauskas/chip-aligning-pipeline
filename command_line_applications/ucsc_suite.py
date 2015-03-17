@@ -7,3 +7,8 @@ try:
     from sh import twoBitToFa
 except ImportError:
     raise ImportError('Cannot import twoBitToFa. Ensure ucsc kent genome tools suite is installed in your system')
+
+try:
+    from sh import bigWigToBedGraph
+except ImportError:
+    raise ImportError('Cannot import bigWigToBedGraph. Ensure ucsc kent genome tools suite is installed in your system')
