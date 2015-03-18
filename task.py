@@ -71,7 +71,7 @@ class Task(luigi.Task):
 class MetaTask(luigi.Task):
 
     def complete(self):
-        return self.requires().complete
+        return self.requires().complete()
 
     def output(self):
         return self.requires().output()
