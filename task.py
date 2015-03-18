@@ -81,3 +81,7 @@ class MetaTask(luigi.Task):
 
     def run(self):
         raise Exception('MetaTasks should never be run as they are completed when requires task is complete')
+
+    @property
+    def parameters(self):
+        return self.requires().parameters

@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from multiprocessing import cpu_count
 import luigi
+import pybedtools
 from fastq_sequence import FastqSequence
 from genome_browser import GenomeSequence
 from task import Task, MetaTask
@@ -341,9 +342,134 @@ class AlignedReads(MetaTask):
 
         return class_(genome_version=self.genome_version, srr_identifier=self.srr_identifier)
 
+    def bam_output(self):
+        return self.output()[0]
+
+def _remove_duplicates_from_bed(bedtools_object):
+
+    def _key_for_row(row):
+        if row.strand == '+':
+            return row.strand, row.chrom, row.start
+        elif row.strand == '-':
+            return row.strand, row.chrom, row.end
+        else:
+            raise Exception('No strand information for {!r}'.format(bed_row))
+
+    seen_once = set({})
+    seen_more_than_once = set({})
+
+    for bed_row in bedtools_object:
+
+        key = _key_for_row(bed_row)
+
+        if key in seen_once:
+            seen_more_than_once.add(key)
+
+        seen_once.add(key)
+
+    del seen_once  # Just in case we need to free up some memory
+
+    filtered_data = filter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
+    return pybedtools.BedTool(filtered_data)
+
+def _truncate_reads(bedtools_object, truncate_to_length):
+
+    def _truncation_function(row):
+        length = row.end - row.start
+        subtraction = length - truncate_to_length
+
+        if subtraction < 0:
+            raise Exception('Read {} is already shorter than {}'.format(row, truncate_to_length))
+
+        if row.strand == '+':
+            row.end -= subtraction
+        elif row.strand == '-':
+            row.start += subtraction
+        else:
+            raise Exception('Data without strand information provided to _truncate_reads')
+
+        return row
+
+    new_data = map(_truncation_function, bedtools_object)
+    return pybedtools.BedTool(new_data)
+
+class FilteredReads(Task):
+
+    genome_version = AlignedReads.genome_version
+    srr_identifier = AlignedReads.srr_identifier
+    aligner = AlignedReads.aligner
+
+    truncated_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
+    remove_duplicates = luigi.BooleanParameter(default=True)  # Also true for roadmap epigenome
+    sort = luigi.BooleanParameter(default=True)  # Sort the reads?
+
+    @property
+    def _alignment_task(self):
+        return AlignedReads(genome_version=self.genome_version,
+                            srr_identifier=self.srr_identifier,
+                            aligner=self.aligner)
+
+    def requires(self):
+        return self._alignment_task
+
+    @property
+    def _filtering_parameters(self):
+        return ['unique' if self.remove_duplicates else 'non-unique',
+                't{}'.format(self.truncated_length) if self.truncated_length > 0 else 'untruncated',
+                'sorted' if self.sort else 'unsorted'
+                ]
+
+    @property
+    def parameters(self):
+        alignment_parameters = self._alignment_task.parameters
+        filtering_parameters = self._filtering_parameters
+        return alignment_parameters + filtering_parameters
+
+    @property
+    def _extension(self):
+        return 'tagAlign.gz'
+
+    def run(self):
+        logger = self.logger()
+
+        bam_output = self._alignment_task.bam_output().path
+
+        try:
+            logger.debug('Loading {}'.format(bam_output))
+            mapped_reads = pybedtools.BedTool(bam_output)
+            logger.debug('Converting BAM to BED')
+            mapped_reads = mapped_reads.bam_to_bed()
+
+            if self.remove_duplicates:
+                logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
+                mapped_reads = _remove_duplicates_from_bed(mapped_reads)
+                logger.debug('Done removing duplicates. Length after: {}'.format(len(mapped_reads)))
+            if self.truncated_length > 0:
+                logger.debug('Truncating reads to {} base pairs'.format(self.truncated_length))
+                mapped_reads = _truncate_reads(mapped_reads, truncate_to_length=self.truncated_length)
+            if self.sort:
+                logger.debug('Sorting reads')
+                mapped_reads = mapped_reads.sort()
+
+            logger.debug('Writing to file')
+            with self.output().open('w') as f:
+
+                for row in mapped_reads:
+                    row.name = 'N'  # The alignments from roadmap have this
+                    row.score = '1000'  # And this... for some reason
+                    f.write(str(row))
+
+        finally:
+            pybedtools.cleanup()
+
+
 if __name__ == '__main__':
-    BowtieAlignmentTask.logger().setLevel(logging.DEBUG)
-    AlignedReadsBowtie.logger().setLevel(logging.DEBUG)
-    AlignedReadsPash.logger().setLevel(logging.DEBUG)
+    import inspect
+    import sys
+    task_classes = inspect.getmembers(sys.modules[__name__],
+                                      lambda x: inspect.isclass(x) and issubclass(x, Task) and x != Task)
+    for __, task_class in task_classes:
+        task_class.logger().setLevel(logging.DEBUG)
+
     logging.basicConfig()
-    luigi.run(main_task_cls=AlignedReads)
+    luigi.run()
