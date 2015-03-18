@@ -334,7 +334,7 @@ class AlignedReads(MetaTask):
     def requires(self):
         if self.aligner == 'bowtie2':
             class_ = AlignedReadsBowtie
-        elif self.aligner == 'pash':
+        elif self.aligner == 'pash3':
             class_ = AlignedReadsPash
         else:
             raise Exception('Aligner {} is not supported'.format(self.aligner))
