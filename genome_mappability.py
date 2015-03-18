@@ -6,9 +6,56 @@ import os
 import luigi
 import tarfile
 import shutil
+import tempfile
 from task import Task
 from downloader import fetch
 import numpy as np
+import logging
+from util import temporary_directory
+
+
+class MappabilityTrack(object):
+
+    __lookup_dict = None
+
+    def __init__(self, lookup_dict):
+        self.__lookup_dict = lookup_dict
+
+    def is_uniquely_mappable(self, locus, strand):
+        pass
+
+
+class MappabilityInfoFile(luigi.File):
+
+    def dump(self, data, verify=True):
+        logger = logging.getLogger('MappabilityInfoFile.dump')
+
+        __, tmp_location_for_archive = tempfile.mkstemp(suffix='.npz')
+
+        try:
+            logger.debug('Dumping the data to npz archive')
+            np.savez_compressed(tmp_location_for_archive, **data)
+
+            if verify:
+                logger.debug('Verifying data was written correctly')
+                processed_tracks_loaded = np.load(tmp_location_for_archive)
+
+                if sorted(processed_tracks_loaded.keys()) != sorted(data.keys()):
+                    raise IOError('Problem dumping tracks to archive. Keys don\'t match')
+
+                for key in data.keys():
+                    if not np.equal(data[key], processed_tracks_loaded[key]).all():
+                        raise IOError('Problem dumping tracks to archive. Data for {} does not match'.format(key))
+
+            logger.debug('Moving file to correct location')
+            shutil.move(tmp_location_for_archive, self.path)
+        finally:
+            try:
+                os.unlink(tmp_location_for_archive)
+            except OSError:
+                if os.path.isfile(tmp_location_for_archive):
+                    raise
+
 
 class GenomeMappabilityTrack(Task):
 
@@ -27,19 +74,24 @@ class GenomeMappabilityTrack(Task):
 
     @property
     def parameters(self):
-        return [self.genome_version, self.read_length]
+        return [self.genome_version, 'k{}'.format(self.read_length)]
 
     @property
     def _extension(self):
         return 'npz'
 
+    def output(self):
+        super_output = super(GenomeMappabilityTrack, self).output()
+        return MappabilityInfoFile(super_output.path)
+
     def run(self):
         logger = self.logger()
 
         self.ensure_output_directory_exists()
-        output_abspath = os.path.abspath(self.output().path)
 
-        with self.temporary_directory(dir='/home/saulius'):
+        processed_tracks = {}
+
+        with self.temporary_directory():
             uri = self._track_uri
 
             logger.debug('Fetching the mappability data from {}'.format(uri))
@@ -48,8 +100,6 @@ class GenomeMappabilityTrack(Task):
                 fetch(uri, buffer)
 
             logger.debug('Processing {}'.format(track_file))
-
-            processed_tracks = {}
 
             with tarfile.open(track_file) as tar:
                 for member in tar.getmembers():
@@ -74,26 +124,11 @@ class GenomeMappabilityTrack(Task):
 
                     processed_tracks[chromosome] = mappability_track
 
-            logger.debug('Dumping the data to npz archive')
-            tmp_location_for_archive = 'mappability.npz'
-            np.savez_compressed(tmp_location_for_archive, **processed_tracks)
-
-            logger.debug('Verifying data was written correctly')
-            processed_tracks_loaded = np.load(tmp_location_for_archive)
-
-            if sorted(processed_tracks_loaded.keys()) != sorted(processed_tracks.keys()):
-                raise IOError('Problem dumping tracks to archive. Keys dont match')
-
-            for key in processed_tracks.keys():
-                if not np.equal(processed_tracks[key], processed_tracks_loaded[key]).all():
-                    raise IOError('Problem dumping tracks to archive. Data for {} does not match'.format(key))
-
-            logger.debug('Moving file to correct location')
-            shutil.move(tmp_location_for_archive, output_abspath)
+        logger.debug('Saving output')
+        self.output().dump(processed_tracks)
 
 
 if __name__ == '__main__':
-    import logging
     GenomeMappabilityTrack.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
     luigi.run(main_task_cls=GenomeMappabilityTrack)
