@@ -21,9 +21,17 @@ class MappabilityTrack(object):
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
 
-    def is_uniquely_mappable(self, locus, strand):
-        pass
+    def is_uniquely_mappable(self, chromosome, start, end, strand):
+        chromosome_lookup = self.__lookup_dict[chromosome]
 
+        if strand == '+':
+            anchor_locus = int(start)
+        elif strand == '-':
+            anchor_locus = int(end-1)
+        else:
+            raise Exception('Unknown read directionality. Cannot infer if it is uniquely mappable')
+
+        return chromosome_lookup[anchor_locus]
 
 class MappabilityInfoFile(luigi.File):
 
@@ -55,6 +63,10 @@ class MappabilityInfoFile(luigi.File):
             except OSError:
                 if os.path.isfile(tmp_location_for_archive):
                     raise
+
+    def load(self):
+        data = np.load(self.path)
+        return MappabilityTrack(data)
 
 
 class GenomeMappabilityTrack(Task):

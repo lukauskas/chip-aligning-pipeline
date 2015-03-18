@@ -7,6 +7,7 @@ import luigi
 import pybedtools
 from fastq_sequence import FastqSequence
 from genome_browser import GenomeSequence
+from genome_mappability import GenomeMappabilityTrack
 from task import Task, MetaTask
 from ena_downloader import ShortReadsForExperiment
 from genome_index import GenomeIndex
@@ -393,6 +394,9 @@ def _truncate_reads(bedtools_object, truncate_to_length):
     new_data = map(_truncation_function, bedtools_object)
     return pybedtools.BedTool(new_data)
 
+def _filter_uniquely_mappable(mappability_track, reads):
+    return pybedtools.BedTool(filter(lambda x: mappability_track.is_uniquely_mappable(x.chrom, x.start, x.end, x.strand), reads))
+
 class FilteredReads(Task):
 
     genome_version = AlignedReads.genome_version
@@ -400,6 +404,7 @@ class FilteredReads(Task):
     aligner = AlignedReads.aligner
 
     truncated_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
+    filter_uniquely_mappable_for_truncated_length = luigi.BooleanParameter(default=True)
     remove_duplicates = luigi.BooleanParameter(default=True)  # Also true for roadmap epigenome
     sort = luigi.BooleanParameter(default=True)  # Sort the reads?
 
@@ -409,13 +414,27 @@ class FilteredReads(Task):
                             srr_identifier=self.srr_identifier,
                             aligner=self.aligner)
 
+    @property
+    def _mappability_task(self):
+        if self.truncated_length > 0:
+            return GenomeMappabilityTrack(genome_version=self.genome_version,
+                                          read_length=self.truncated_length)
+        else:
+            if self.filter_uniquely_mappable_for_truncated_length:
+                raise Exception('Filtering uniquely mappable makes sense only when truncation is used')
+            return None
+
     def requires(self):
-        return self._alignment_task
+        reqs = [self._alignment_task]
+        if self._mappability_task is not None:
+            reqs.append(self._mappability_task)
+        return reqs
 
     @property
     def _filtering_parameters(self):
         return ['unique' if self.remove_duplicates else 'non-unique',
                 't{}'.format(self.truncated_length) if self.truncated_length > 0 else 'untruncated',
+                'filtered' if self.filter_uniquely_mappable_for_truncated_length else 'unfiltered',
                 'sorted' if self.sort else 'unsorted'
                 ]
 
@@ -447,6 +466,11 @@ class FilteredReads(Task):
             if self.truncated_length > 0:
                 logger.debug('Truncating reads to {} base pairs'.format(self.truncated_length))
                 mapped_reads = _truncate_reads(mapped_reads, truncate_to_length=self.truncated_length)
+
+                if self.filter_uniquely_mappable_for_truncated_length:
+                    logger.debug('Filtering uniquely mappable')
+                    mapped_reads = _filter_uniquely_mappable(self._mappability_task.output().load(), mapped_reads)
+                    
             if self.sort:
                 logger.debug('Sorting reads')
                 mapped_reads = mapped_reads.sort()
