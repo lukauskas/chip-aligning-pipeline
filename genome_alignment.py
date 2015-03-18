@@ -332,9 +332,9 @@ class AlignedReads(MetaTask):
     aligner = luigi.Parameter()
 
     def requires(self):
-        if self.aligner == 'bowtie2':
+        if self.aligner == 'bowtie':
             class_ = AlignedReadsBowtie
-        elif self.aligner == 'pash3':
+        elif self.aligner == 'pash':
             class_ = AlignedReadsPash
         else:
             raise Exception('Aligner {} is not supported'.format(self.aligner))
