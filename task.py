@@ -60,10 +60,10 @@ class Task(luigi.Task):
     def logger(cls):
         return logging.getLogger(cls.__name__)
 
-
-    def temporary_directory(self, cleanup_on_exception=False):
-        return temporary_directory(logger=self.logger(), prefix='tmp-{}'.format(self.__class__.__name__),
-                                   cleanup_on_exception=cleanup_on_exception)
+    def temporary_directory(self, **kwargs):
+        prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
+        cleanup_on_exception = kwargs.pop('cleanup_on_exception', False)
+        return temporary_directory(logger=self.logger(), prefix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
 
     def ensure_output_directory_exists(self):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))
