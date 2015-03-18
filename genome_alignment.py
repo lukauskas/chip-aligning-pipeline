@@ -4,13 +4,17 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from multiprocessing import cpu_count
 import luigi
-from task import Task
+from fastq_sequence import FastqSequence
+from genome_browser import GenomeSequence
+from task import Task, MetaTask
 from ena_downloader import ShortReadsForExperiment
 from genome_index import GenomeIndex
 import logging
 import os
 import tempfile
 import shutil
+from util import ensure_directory_exists_for_file
+
 
 class BowtieAlignmentTask(Task):
 
@@ -166,8 +170,180 @@ class BowtieAlignmentTask(Task):
             os.chdir(current_working_directory)
             shutil.rmtree(temporary_directory)
 
+class AlignedReadsBase(Task):
+    genome_version = GenomeIndex.genome_version
+    srr_identifier = FastqSequence.srr_identifier
+
+    @property
+    def fastq_task(self):
+        return FastqSequence(srr_identifier=self.srr_identifier)
+
+    @property
+    def index_task(self):
+        raise NotImplementedError
+
+    def requires(self):
+        return [self.fastq_task, self.index_task]
+
+    @property
+    def parameters(self):
+        fastq_parameters = self.fastq_task.parameters
+        genome_index_parameters = self.index_task.parameters
+
+        aligner_parameters = self.aligner_parameters
+
+        return fastq_parameters + genome_index_parameters + aligner_parameters
+
+    @property
+    def aligner_parameters(self):
+        raise NotImplementedError
+
+    @property
+    def _extension(self):
+        return 'bam'
+
+
+    def output(self):
+        bam_output = super(AlignedReadsBase, self).output()
+        stdout_output = luigi.File(bam_output.path + '.stdout')
+        return bam_output, stdout_output
+
+    def _output_abspaths(self, ensure_directory_exists=True):
+
+        bam_output, stdout_output = self.output()
+        stdout_output_abspath = os.path.abspath(stdout_output.path)
+        bam_output_abspath = os.path.abspath(bam_output.path)
+
+        if ensure_directory_exists:
+            ensure_directory_exists_for_file(stdout_output_abspath)
+            ensure_directory_exists_for_file(bam_output_abspath)
+
+        return bam_output_abspath, stdout_output_abspath
+
+class AlignedReadsBowtie(AlignedReadsBase):
+
+    number_of_processes = luigi.IntParameter(default=1, significant=False)
+    seed = luigi.IntParameter(default=0)
+
+    @property
+    def aligner_parameters(self):
+        bowtie_parameters = ['s{}'.format(self.seed)]
+        return bowtie_parameters
+
+    @property
+    def index_task(self):
+        return GenomeIndex(genome_version=self.genome_version)
+
+    def run(self):
+
+        logger = self.logger()
+
+        from command_line_applications.archiving import unzip, tar
+        from command_line_applications.bowtie import bowtie2
+        from command_line_applications.samtools import samtools
+
+        bam_output_abspath, stdout_output_abspath = self._output_abspaths()
+
+        index_output_abspath = os.path.abspath(self.index_task.output().path)
+        fastq_sequence_abspath = os.path.abspath(self.fastq_task.output().path)
+
+        with self.temporary_directory():
+            logger.debug('Unzipping index')
+            unzip(index_output_abspath)
+
+            sam_output_filename = 'alignments.sam'
+            bam_output_filename = 'alignments.bam'
+            stdout_filename = 'stats.txt'
+
+            logger.debug('Running bowtie')
+            bowtie2('-U', fastq_sequence_abspath,
+                    '-x', self.genome_version,
+                    '-p', self.number_of_processes,
+                    '--seed', self.seed,
+                    '-S', sam_output_filename,
+                    '--mm',
+                    _err=stdout_filename
+                    )
+
+            logger.debug('Converting SAM to BAM')
+            samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
+
+            logger.debug('Moving files to correct locations')
+            shutil.move(stdout_filename, stdout_output_abspath)
+            shutil.move(bam_output_filename, bam_output_abspath)
+            logger.debug('Done')
+
+class AlignedReadsPash(AlignedReadsBase):
+
+    genome_version = GenomeIndex.genome_version
+    srr_identifier = FastqSequence.srr_identifier
+
+    @property
+    def aligner_parameters(self):
+        return []
+
+    @property
+    def index_task(self):
+        return GenomeSequence(genome_version=self.genome_version)
+
+    def run(self):
+        from command_line_applications.ucsc_suite import twoBitToFa
+        from command_line_applications.pash import pash3
+        from command_line_applications.samtools import samtools
+
+        logger = self.logger()
+
+        bam_output_abspath, stdout_output_abspath = self._output_abspaths()
+
+        index_abspath = os.path.abspath(self.index_task.output().path)
+        fastq_abspath = os.path.abspath(self.fastq_task.output().path)
+
+        with self.temporary_directory():
+
+            logger.debug('Dumping 2bit sequence to fa format')
+            index_fa = 'index.fa'
+            twoBitToFa(index_abspath, index_fa)
+
+            output_file = 'alignments.sam'
+
+            stdout_filename = 'stdout'
+
+            logger.debug('Running Pash')
+            pash3('-N', 1,                 # maximum one match per read
+                  '-g', index_fa,          # reference genome
+                  '-r', fastq_abspath,
+                  '-o', output_file,
+                  _err=stdout_filename)
+
+            logger.debug('Converting SAM to BAM')
+            output_file_bam = 'alignments.bam'
+            samtools('view', '-b', output_file, _out=output_file_bam)
+
+            logger.debug('Moving files to correct locations')
+            shutil.move(stdout_filename, stdout_output_abspath)
+            shutil.move(output_file_bam, bam_output_abspath)
+            logger.debug('Done')
+
+class AlignedReads(MetaTask):
+
+    genome_version = GenomeIndex.genome_version
+    srr_identifier = FastqSequence.srr_identifier
+
+    aligner = luigi.Parameter()
+
+    def requires(self):
+        if self.aligner == 'bowtie2':
+            class_ = AlignedReadsBowtie
+        elif self.aligner == 'pash':
+            class_ = AlignedReadsPash
+        else:
+            raise Exception('Aligner {} is not supported'.format(self.aligner))
+
+        return class_(genome_version=self.genome_version, srr_identifier=self.srr_identifier)
 
 if __name__ == '__main__':
     BowtieAlignmentTask.logger().setLevel(logging.DEBUG)
+    AlignedReadsBowtie.logger().setLevel(logging.DEBUG)
+    AlignedReadsPash.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
-    luigi.run(main_task_cls=BowtieAlignmentTask)
+    luigi.run(main_task_cls=AlignedReads)

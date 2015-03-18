@@ -11,7 +11,8 @@ class GenomeSequence(Task):
     _DOWNLOAD_URIS = {
         'hg18': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg18/bigZips/hg18.2bit',
         'hg38': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit',
-        'dm6': 'http://hgdownload.cse.ucsc.edu/goldenPath/dm6/bigZips/dm6.2bit'
+        'dm6': 'http://hgdownload.cse.ucsc.edu/goldenPath/dm6/bigZips/dm6.2bit',
+        'sacCer3': 'http://hgdownload.cse.ucsc.edu/goldenPath/sacCer3/bigZips/sacCer3.2bit'
     }
 
     genome_version = luigi.Parameter()

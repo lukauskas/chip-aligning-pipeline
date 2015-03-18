@@ -8,6 +8,8 @@ from functools import wraps
 import tempfile
 import os
 import shutil
+import logging
+
 
 def ensure_directory_exists_for_file(filename):
     """
@@ -39,6 +41,10 @@ def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs
     """
     current_working_directory = os.getcwd()
     temp_dir = tempfile.mkdtemp(*args, **kwargs)
+
+    if logger is None:
+        logger = logging.getLogger('temporary_directory')
+
     try:
         logger.debug('Working on: {}'.format(temp_dir))
         os.chdir(temp_dir)

@@ -9,6 +9,7 @@ import luigi.format
 
 import re
 import os
+from util import temporary_directory, ensure_directory_exists_for_file
 
 _OUTPUT_DIR = 'data/' # TODO: make this readable from config
 
@@ -49,11 +50,34 @@ class Task(luigi.Task):
                             u'.'.join([self._basename, self._extension]))
 
     def output(self):
+        path = self.__full_path
         if self._extension.endswith('.gz'):
-            return GzipOutputFile(self.__full_path)
+            return GzipOutputFile(path)
         else:
-            return luigi.File(self.__full_path)
+            return luigi.File(path)
 
     @classmethod
     def logger(cls):
         return logging.getLogger(cls.__name__)
+
+
+    def temporary_directory(self, cleanup_on_exception=False):
+        return temporary_directory(logger=self.logger(), prefix='tmp-{}'.format(self.__class__.__name__),
+                                   cleanup_on_exception=cleanup_on_exception)
+
+    def ensure_output_directory_exists(self):
+        ensure_directory_exists_for_file(os.path.abspath(self.output().path))
+
+class MetaTask(luigi.Task):
+
+    def complete(self):
+        return self.requires().complete
+
+    def output(self):
+        return self.requires().output()
+
+    def requires(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise Exception('MetaTasks should never be run as they are completed when requires task is complete')
