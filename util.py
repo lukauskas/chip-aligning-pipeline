@@ -10,7 +10,7 @@ import os
 import shutil
 import logging
 
-from task import _OUTPUT_DIR
+_OUTPUT_DIR = 'data/' # TODO: make this readable from config
 
 def ensure_directory_exists_for_file(filename):
     """

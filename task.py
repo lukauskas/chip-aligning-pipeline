@@ -9,9 +9,7 @@ import luigi.format
 
 import re
 import os
-from util import temporary_directory, ensure_directory_exists_for_file
-
-_OUTPUT_DIR = 'data/' # TODO: make this readable from config
+from util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR
 
 def _file_safe_string(value):
     value = unicode(value)
