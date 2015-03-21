@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from itertools import imap
 import logging
 import os
 import luigi
@@ -10,9 +11,10 @@ from peak_calling.macs import MacsPeaks
 from profile.base import compute_profile, ProfileBase
 from profile.wigfile import WigFile
 from task import Task
+import pandas as pd
 
 def _intersection_counts_to_wiggle(output_file_handle,
-                                   intersection_with_counts_bed,
+                                   intersection_with_counts,
                                    name,
                                    description,
                                    window_size):
@@ -21,8 +23,18 @@ def _intersection_counts_to_wiggle(output_file_handle,
         description
     ))
     previous_chromosome = None
-    for row in intersection_with_counts_bed:
-        value = row.value
+
+    if isinstance(intersection_with_counts, pd.DataFrame):
+        iterator = imap(lambda x: x[1], intersection_with_counts.iterrows())
+    else:
+        iterator = intersection_with_counts
+
+    for row in iterator:
+        try:
+            value = row.value
+        except Exception:
+            logging.error('Row that errored: {!r}'.format(row))
+            raise
         if value == 0:
             # Do not need to write zeroes to wiggles
             continue
@@ -84,6 +96,6 @@ class GenomeWideProfileBase(ProfileBase):
             _intersection_counts_to_wiggle(output_file,
                                            output,
                                            name=self.friendly_name,
-                                           description=os.path.basename(output.path),
+                                           description=os.path.basename(self.output().path),
                                            window_size=self.window_size
                                            )

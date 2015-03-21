@@ -84,7 +84,7 @@ def _log10_weighted_mean(data):
     weights = 0
 
     for value, weight in data:
-        value = np.pow(10, -value)
+        value = np.power(10.0, -value)
         weighted_sum += value * weight
         weights += weight
 

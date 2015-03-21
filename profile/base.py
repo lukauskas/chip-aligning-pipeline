@@ -170,16 +170,16 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
 
             if operation == 'count':
                 null_value = 0 if null_value is None else null_value
-                column = 5
-                map_function = lambda x: windows.map(x, o=operation, null_value=null_value, c=column)
+                column = 5 if column is None else column
+                map_function = lambda x: windows.map(x, o=operation, null=null_value, c=column)
             elif operation in ['sum', 'min', 'max', 'absmin', 'absmax', 'mean', 'median', 'antimode']:
                 column = 5 if column is None else column
                 null_value = '.' if null_value is None else null_value
-                map_function = lambda x: windows.map(x, o=operation, null_value=null_value, c=column)
+                map_function = lambda x: windows.map(x, o=operation, null=null_value, c=column)
             elif operation == 'weighted_mean':
                 column = 4 if column is None else column
                 null_value = 0 if null_value is None else null_value
-                map_function = lambda x: weighted_means(windows, x, column=column, null_value=null_value, mean_function=weighted_mean_function)
+                map_function = lambda x: pybedtools.BedTool(weighted_means(windows, x, column=column, null_value=null_value, mean_function=weighted_mean_function))
             else:
                 raise ValueError('Unsupported Operation')
 
@@ -188,7 +188,7 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             _debug('Creating dataframe')
             df = pd.DataFrame(map(_to_df_dict, map_))
         # Force column order
-        df = df[['chromosome', 'start', 'end', 'name', 'score', 'strand', 'value']]
+        #df = df[['chromosome', 'start', 'end', 'name', 'score', 'strand', 'value']]
         return df
 
     finally:
@@ -256,4 +256,5 @@ class ProfileBase(Task):
 
     def run(self):
         output = self._create_output()
+        self.logger().debug(output.head())
         self._save_output(output)
