@@ -2,16 +2,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from itertools import imap
 import os
 import luigi
 import tarfile
 import shutil
 import tempfile
+import pybedtools
+from genome_windows import NonOverlappingWindows
 from task import Task
 from downloader import fetch
 import numpy as np
 import logging
-from util import temporary_directory
 
 
 class MappabilityTrack(object):
@@ -20,6 +22,66 @@ class MappabilityTrack(object):
 
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
+
+    def filter_uniquely_mappables(self, bedtool):
+        logger = logging.getLogger(self.__class__.__name__)
+        chromosomes = set(imap(lambda x: x.chrom, bedtool))
+
+        answer = []
+        for chromosome in chromosomes:
+            logger.debug('Processing {}'.format(chromosome))
+            chromosome_lookup = self.__lookup_dict[chromosome]
+
+            reads_for_chromosome = filter(lambda x: x.chrom == chromosome, bedtool)
+
+            logger.debug('Processing {} reads'.format(len(reads_for_chromosome)))
+            isunique = lambda x: chromosome_lookup[x.start if x.strand == '+' else x.end -1]
+            chromosome_answer = filter(isunique, reads_for_chromosome)
+
+            logger.debug('Done. Extending answer')
+            answer.extend(chromosome_answer)
+            logger.debug('Done')
+
+        return pybedtools.BedTool(answer)
+
+    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length, shift_length):
+        logger = logging.getLogger(self.__class__.__name__)
+
+        chromosomes = set(imap(lambda x: x.chrom, bins_bed))
+
+        answer = []
+        for chromosome in chromosomes:
+            logger.debug('Processing {}'.format(chromosome))
+            chromosome_lookup = self.__lookup_dict[chromosome]
+            chromosome_length = len(chromosome_lookup)
+
+            bins_for_chromosome = filter(lambda x: x.chrom == chromosome, bins_bed)
+
+            for bin in bins_for_chromosome:
+
+                # Positive strand
+                min_anchor_location = bin.start - shift_length - read_length + 1  # (inclusive)
+                max_anchor_location = bin.end - shift_length  # (not inclusive)
+
+                min_anchor_location = max(0, min_anchor_location)
+                max_anchor_location = min(chromosome_length, max_anchor_location)
+
+                uniquely_mappable_per_bin = np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
+
+                # Negative strand
+                # ``+ read_length - 1`` added as per http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
+                min_anchor_location = bin.start + shift_length - read_length + 1 + (read_length - 1)  # (inclusive)
+                max_anchor_location = bin.end + shift_length + (read_length - 1)  # (not inclusive)
+
+                min_anchor_location = max(0, min_anchor_location)
+                max_anchor_location = min(chromosome_length, max_anchor_location)
+
+                uniquely_mappable_per_bin += np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
+
+                answer.append((bin.chrom, bin.start, bin.end, uniquely_mappable_per_bin))
+
+        return pybedtools.BedTool(answer)
+
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
         chromosome_lookup = self.__lookup_dict[chromosome]
@@ -139,11 +201,65 @@ class GenomeMappabilityTrack(Task):
         logger.debug('Saving output')
         self.output().dump(processed_tracks)
 
+class MappabilityOfGenomicWindows(Task):
+    genome_version = NonOverlappingWindows.genome_version
+    chromosomes = NonOverlappingWindows.chromosomes
+    window_size = NonOverlappingWindows.window_size
+
+    read_length = GenomeMappabilityTrack.read_length
+
+    shift_size = luigi.IntParameter()
+
+    @property
+    def non_overlapping_windows_task(self):
+        return NonOverlappingWindows(genome_version=self.genome_version,
+                                     window_size=self.window_size,
+                                     chromosomes=self.chromosomes)
+
+    @property
+    def mappability_track_task(self):
+        return GenomeMappabilityTrack(genome_version=self.genome_version,
+                                      read_length=self.read_length)
+
+    def requires(self):
+        return [self.non_overlapping_windows_task, self.mappability_track_task]
+
+    @property
+    def parameters(self):
+        non_overlapping_windows_task_params = self.non_overlapping_windows_task.parameters
+        mappability_track_task_params = self.mappability_track_task.parameters
+
+        specific_parameters = ['shift{}'.format(self.shift_size)]
+
+        return non_overlapping_windows_task_params + mappability_track_task_params + specific_parameters
+
+    @property
+    def _extension(self):
+        return 'bed.gz'
+
+    def run(self):
+        logger = self.logger()
+        genomic_windows = pybedtools.BedTool(self.non_overlapping_windows_task.output().path)
+        mappability = self.mappability_track_task.output().load()
+
+        logger.debug('Computing mappability')
+        number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(genomic_windows,
+                                                                                                   read_length=self.read_length,
+                                                                                                   shift_length=self.shift_size)
+
+        logger.debug('Writing output')
+        with self.output().open('w') as output:
+            for row in number_of_uniquely_mappable_per_bin:
+                output.write(row)
+
 
 if __name__ == '__main__':
     GenomeMappabilityTrack.logger().setLevel(logging.DEBUG)
+    MappabilityOfGenomicWindows.logger().setLevel(logging.DEBUG)
+    logging.getLogger(MappabilityTrack.__class__.__name__).setLevel(logging.DEBUG)
+
     logging.basicConfig()
-    luigi.run(main_task_cls=GenomeMappabilityTrack)
+    luigi.run()
 
 
 
