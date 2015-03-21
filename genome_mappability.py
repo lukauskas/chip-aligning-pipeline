@@ -250,7 +250,7 @@ class MappabilityOfGenomicWindows(Task):
         logger.debug('Writing output')
         with self.output().open('w') as output:
             for row in number_of_uniquely_mappable_per_bin:
-                output.write(row)
+                output.write(str(row))
 
 
 if __name__ == '__main__':
