@@ -10,6 +10,7 @@ import os
 import shutil
 import logging
 
+from task import _OUTPUT_DIR
 
 def ensure_directory_exists_for_file(filename):
     """
@@ -26,7 +27,7 @@ def ensure_directory_exists_for_file(filename):
 
 
 @contextmanager
-def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs):
+def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     """
     A context manager to change the current working directory to a temporary directory,
     and change it back, removing the temporary directory afterwards
@@ -35,12 +36,21 @@ def temporary_directory(logger=None, cleanup_on_exception=False, *args, **kwargs
     :type logger: :class:`logging.Logger`
     :param cleanup_on_exception: If set to true, the temporary directory will be removed even when exception occurs
     :type cleanup_on_exception: bool
-    :param args: args to pass to :func:`tempfile.mkdtemp`
     :param kwargs: kwargs to pass to :func:`tempfile.mkdtemp`
     :return:
     """
     current_working_directory = os.getcwd()
-    temp_dir = tempfile.mkdtemp(*args, **kwargs)
+
+    # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
+    dir_ = kwargs.pop('dir', os.path.join(_OUTPUT_DIR, '.tmp'))
+    # Encsure this directory exists
+    try:
+        os.makedirs(dir_)
+    except OSError:
+        if not os.path.isdir(dir_):
+            raise
+
+    temp_dir = tempfile.mkdtemp(dir=dir_, **kwargs)
 
     if logger is None:
         logger = logging.getLogger('temporary_directory')
