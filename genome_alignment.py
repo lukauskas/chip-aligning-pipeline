@@ -459,18 +459,21 @@ class FilteredReads(Task):
             logger.debug('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
 
-            if self.remove_duplicates:
-                logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
-                mapped_reads = _remove_duplicates_from_bed(mapped_reads)
-                logger.debug('Done removing duplicates. Length after: {}'.format(len(mapped_reads)))
+            mapped_reads = pybedtools.BedTool(filter(lambda x: x.chrom == 'chr20', mapped_reads))
+
             if self.truncated_length > 0:
                 logger.debug('Truncating reads to {} base pairs'.format(self.truncated_length))
                 mapped_reads = _truncate_reads(mapped_reads, truncate_to_length=self.truncated_length)
 
-                if self.filter_uniquely_mappable_for_truncated_length:
-                    logger.debug('Filtering uniquely mappable')
-                    mapped_reads = _filter_uniquely_mappable(self._mappability_task.output().load(), mapped_reads)
-                    
+            if self.remove_duplicates:
+                logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
+                mapped_reads = _remove_duplicates_from_bed(mapped_reads)
+                logger.debug('Done removing duplicates. Length after: {}'.format(len(mapped_reads)))
+
+            if self.filter_uniquely_mappable_for_truncated_length:
+                logger.debug('Filtering uniquely mappable')
+                mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads)
+
             if self.sort:
                 logger.debug('Sorting reads')
                 mapped_reads = mapped_reads.sort()
@@ -494,6 +497,8 @@ if __name__ == '__main__':
                                       lambda x: inspect.isclass(x) and issubclass(x, Task) and x != Task)
     for __, task_class in task_classes:
         task_class.logger().setLevel(logging.DEBUG)
+
+    logging.getLogger('MappabilityTrack').setLevel(logging.DEBUG)
 
     logging.basicConfig()
     luigi.run()
