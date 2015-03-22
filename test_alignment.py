@@ -41,65 +41,6 @@ class TestFiltering(unittest.TestCase):
 
 class TestResizing(unittest.TestCase):
 
-    def sample_input(self):
-
-        data = [
-            ('chr1', '10', '30', 'a', '99', '+'),
-            ('chr1', '18', '68', 'b', '99', '-'),
-            ('chr1', '10', '40', 'c', '99', '+'),
-            ('chr2', '50', '80', 'h', '99', '-'),
-            ('chr1', '550', '600', 'e', '99', '+'),
-            ('chr2', '0', '50', 'f', '99', '-')
-        ]
-        input_ = pybedtools.BedTool(data)
-
-        return input_
-
-    def sample_data(self, new_length):
-
-        chromsizes = {'chr1': (0, 600),
-                      'chr2': (0, 500)}
-
-        data = [
-            ('chr1', '10', '30', 'a', '99', '+'),
-            ('chr1', '18', '68', 'b', '99', '-'),
-            ('chr1', '10', '40', 'c', '99', '+'),
-            ('chr2', '50', '80', 'h', '99', '-'),
-            ('chr1', '550', '600', 'e', '99', '+'),
-            ('chr2', '0', '50', 'f', '99', '-')
-        ]
-        input_ = pybedtools.BedTool(data)
-
-        expected_output = [
-            ('chr1',
-                '10',
-                min(30 - (30-10-new_length), chromsizes['chr1'][1]),
-                'a', '99', '+'),
-            ('chr1',
-                max(chromsizes['chr1'][0], 18 + (68-18-new_length)),
-                '68',
-                'b', '99', '-'),
-            ('chr1',
-                '10',
-                min(40 - (40-10-new_length), chromsizes['chr2'][1]),
-                'c', '99', '+'),
-            ('chr2',
-                max(chromsizes['chr2'][0], (50 + (80-50-new_length))),
-                '80',
-                'h', '99', '-'),
-            ('chr1',
-                '550',
-                min(600 - (600-550-new_length), chromsizes['chr2'][1]),
-                'e', '99', '+'),
-            ('chr2',
-                max(chromsizes['chr2'][0], (0 + (50-0-new_length))),
-                '50',
-                'h', '99', '-'),
-        ]
-        output_ = pybedtools.BedTool(expected_output)
-
-        return input_, output_, chromsizes
-
 
     def test_resizing_produces_correct_length(self):
 
