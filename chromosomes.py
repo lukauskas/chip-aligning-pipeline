@@ -18,12 +18,13 @@ class Chromosomes(Task):
     genome_version = luigi.Parameter()
     collection = luigi.Parameter('all')  # All, male/female
 
+    @property
     def parameters(self):
         return [self.genome_version, self.collection]
 
     @property
     def _extension(self):
-        return '.list'
+        return 'list'
 
     def output(self):
         super_output_path = super(Chromosomes, self).output().path
