@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from multiprocessing import cpu_count
 import luigi
 import pybedtools
+from chromosomes import Chromosomes
 from fastq_sequence import FastqSequence
 from genome_browser import GenomeSequence
 from genome_mappability import GenomeMappabilityTrack
@@ -414,11 +415,18 @@ class FilteredReads(Task):
     remove_duplicates = luigi.BooleanParameter(default=True)  # Also true for roadmap epigenome
     sort = luigi.BooleanParameter(default=True)  # Sort the reads?
 
+    chromosomes = Chromosomes.collection
+
     @property
     def _alignment_task(self):
         return AlignedReads(genome_version=self.genome_version,
                             srr_identifier=self.srr_identifier,
                             aligner=self.aligner)
+
+    @property
+    def _chromosomes_task(self):
+        return Chromosomes(genome_version=self.genome_version,
+                           collection=self.chromosomes)
 
     @property
     def _mappability_task(self):
@@ -431,7 +439,7 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        reqs = [self._alignment_task]
+        reqs = [self._alignment_task, self._chromosomes_task]
         if self._mappability_task is not None:
             reqs.append(self._mappability_task)
         return reqs
@@ -448,7 +456,7 @@ class FilteredReads(Task):
     def parameters(self):
         alignment_parameters = self._alignment_task.parameters
         filtering_parameters = self._filtering_parameters
-        return alignment_parameters + filtering_parameters
+        return alignment_parameters + filtering_parameters + [self.chromosomes]
 
     @property
     def _extension(self):
@@ -459,17 +467,22 @@ class FilteredReads(Task):
 
         bam_output = self._alignment_task.bam_output().path
 
+        chromsizes = self._chromosomes_task.output().load()
+
         try:
             logger.debug('Loading {}'.format(bam_output))
             mapped_reads = pybedtools.BedTool(bam_output)
             logger.debug('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
 
+            logger.debug('Leaving only chromosomes in chromsizes')
+            mapped_reads = pybedtools.BedTool(filter(lambda x: x.chrom in chromsizes, mapped_reads))
+
             if self.resized_length > 0:
                 logger.debug('Truncating reads to {} base pairs'.format(self.resized_length))
                 mapped_reads = _resize_reads(mapped_reads,
                                              new_length=self.resized_length,
-                                             chromsizes=pybedtools.chromsizes(self.genome_version),
+                                             chromsizes=chromsizes,
                                              can_shorten=True,
                                              # According to the Roadmap protocol
                                              # this should be false

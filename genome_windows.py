@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import gzip
 import os
 import luigi
+from chromosomes import Chromosomes
 from task import Task
 import pybedtools
 import tempfile
@@ -16,7 +17,7 @@ class NonOverlappingWindows(Task):
     genome_version = luigi.Parameter()
     window_size = luigi.IntParameter()
 
-    chromosomes = luigi.Parameter(default='all')  # 'all', 'male', 'female'
+    chromosomes = Chromosomes.collection
 
     @property
     def parameters(self):
@@ -31,19 +32,12 @@ class NonOverlappingWindows(Task):
     def _extension(self):
         return 'bed.gz'
 
+    def requires(self):
+        return Chromosomes(genome_version=self.genome_version, colelction=self.chromosomes)
+
     def _chromosomes_filter(self):
-        if self.chromosomes == 'all':
-            return lambda x: True
-
-        female_chromosomes = {'chr{}'.format(x) for x in (range(1, 23) + ['X'])}
-        male_chromosomes = female_chromosomes | {'Y'}
-
-        if self.chromosomes == 'female':
-            return lambda x: x.chrom in female_chromosomes
-        elif self.chromosomes == 'male':
-            return lambda x: x.chrom in male_chromosomes
-        else:
-            raise ValueError('Unsupported chromosomes type: {!r}'.format(self.chromosomes))
+        chromosomes = self.chromosomes.output().load()
+        return lambda x: x.chrom in chromosomes
 
     def run(self):
         ensure_directory_exists_for_file(self.output().path)
