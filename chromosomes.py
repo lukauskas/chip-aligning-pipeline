@@ -11,7 +11,7 @@ class YamlFile(luigi.File):
 
     def load(self):
         with self.open('r') as f:
-            yaml.load(f)
+            return yaml.load(f)
 
 class Chromosomes(Task):
 
