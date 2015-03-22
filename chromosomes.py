@@ -6,11 +6,11 @@ import yaml
 class YamlFile(luigi.File):
 
     def dump(self, data):
-        with self.output().open('w') as f:
+        with self.open('w') as f:
             yaml.dump(data, f)
 
     def load(self):
-        with self.output().open('r') as f:
+        with self.open('r') as f:
             yaml.load(f)
 
 class Chromosomes(Task):
