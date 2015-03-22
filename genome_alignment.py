@@ -465,8 +465,6 @@ class FilteredReads(Task):
             logger.debug('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
 
-            mapped_reads = pybedtools.BedTool(filter(lambda x: x.chrom == 'chr20', mapped_reads))
-
             if self.resized_length > 0:
                 logger.debug('Truncating reads to {} base pairs'.format(self.resized_length))
                 mapped_reads = _resize_reads(mapped_reads,
