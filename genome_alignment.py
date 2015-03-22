@@ -409,7 +409,7 @@ class FilteredReads(Task):
     srr_identifier = AlignedReads.srr_identifier
     aligner = AlignedReads.aligner
 
-    truncated_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
+    resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
     filter_uniquely_mappable_for_truncated_length = luigi.BooleanParameter(default=True)
     remove_duplicates = luigi.BooleanParameter(default=True)  # Also true for roadmap epigenome
     sort = luigi.BooleanParameter(default=True)  # Sort the reads?
@@ -422,9 +422,9 @@ class FilteredReads(Task):
 
     @property
     def _mappability_task(self):
-        if self.truncated_length > 0:
+        if self.resized_length > 0:
             return GenomeMappabilityTrack(genome_version=self.genome_version,
-                                          read_length=self.truncated_length)
+                                          read_length=self.resized_length)
         else:
             if self.filter_uniquely_mappable_for_truncated_length:
                 raise Exception('Filtering uniquely mappable makes sense only when truncation is used')
@@ -439,7 +439,7 @@ class FilteredReads(Task):
     @property
     def _filtering_parameters(self):
         return ['unique' if self.remove_duplicates else 'non-unique',
-                't{}'.format(self.truncated_length) if self.truncated_length > 0 else 'untruncated',
+                't{}'.format(self.resized_length) if self.resized_length > 0 else 'untruncated',
                 'filtered' if self.filter_uniquely_mappable_for_truncated_length else 'unfiltered',
                 'sorted' if self.sort else 'unsorted'
                 ]
@@ -467,9 +467,19 @@ class FilteredReads(Task):
 
             mapped_reads = pybedtools.BedTool(filter(lambda x: x.chrom == 'chr20', mapped_reads))
 
-            if self.truncated_length > 0:
-                logger.debug('Truncating reads to {} base pairs'.format(self.truncated_length))
-                mapped_reads = _resize_reads(mapped_reads, new_length=self.truncated_length)
+            if self.resized_length > 0:
+                logger.debug('Truncating reads to {} base pairs'.format(self.resized_length))
+                mapped_reads = _resize_reads(mapped_reads,
+                                             new_length=self.resized_length,
+                                             chromsizes=pybedtools.chromsizes(self.genome_version),
+                                             can_shorten=True,
+                                             # According to the Roadmap protocol
+                                             # this should be false
+                                             # but since the reads they are pre-processing are 200 bp long
+                                             # and we are working with raw reads, some datasets actually have shorter
+                                             # ones. Meaning their mappability unification routine is a bit off.
+                                             can_extend=True,
+                                             )
 
             if self.remove_duplicates:
                 logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
