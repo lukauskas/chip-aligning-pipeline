@@ -45,5 +45,7 @@ class Chromosomes(Task):
         else:
             raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
 
+        self.output().dump(chromsizes)
+
 if __name__ == '__main__':
     luigi.run(main_task_cls=Chromosomes)
