@@ -373,25 +373,31 @@ def _remove_duplicates_from_bed(bedtools_object):
     filtered_data = filter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
     return pybedtools.BedTool(filtered_data)
 
-def _truncate_reads(bedtools_object, truncate_to_length):
+def _resize_reads(bedtools_object, new_length, chromsizes,
+                  can_extend=True,
+                  can_shorten=True):
 
-    def _truncation_function(row):
+    def _resizing_function(row):
+        min_value, max_value = chromsizes[row.chrom]
+
         length = row.end - row.start
-        subtraction = length - truncate_to_length
+        difference = new_length - length
 
-        if subtraction < 0:
-            raise Exception('Read {} is already shorter than {}'.format(row, truncate_to_length))
+        if not can_extend and difference > 0:
+            raise Exception('Read {} is already shorter than {}'.format(row, new_length))
+        if not can_shorten and difference < 0:
+            raise Exception('Read {} is already longer than {}'.format(row, new_length))
 
         if row.strand == '+':
-            row.end -= subtraction
+            row.end = min(row.end + difference, max_value)
         elif row.strand == '-':
-            row.start += subtraction
+            row.start = max(min_value, row.start - difference)
         else:
             raise Exception('Data without strand information provided to _truncate_reads')
 
         return row
 
-    new_data = map(_truncation_function, bedtools_object)
+    new_data = map(_resizing_function, bedtools_object)
     return pybedtools.BedTool(new_data)
 
 def _filter_uniquely_mappable(mappability_track, reads):
@@ -463,7 +469,7 @@ class FilteredReads(Task):
 
             if self.truncated_length > 0:
                 logger.debug('Truncating reads to {} base pairs'.format(self.truncated_length))
-                mapped_reads = _truncate_reads(mapped_reads, truncate_to_length=self.truncated_length)
+                mapped_reads = _resize_reads(mapped_reads, new_length=self.truncated_length)
 
             if self.remove_duplicates:
                 logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
