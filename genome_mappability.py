@@ -23,7 +23,7 @@ class MappabilityTrack(object):
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
 
-    def filter_uniquely_mappables(self, bedtool, ignore_strand=False):
+    def filter_uniquely_mappables(self, bedtool):
         logger = logging.getLogger(self.__class__.__name__)
         chromosomes = set(imap(lambda x: x.chrom, bedtool))
 
@@ -36,14 +36,12 @@ class MappabilityTrack(object):
 
             logger.debug('Processing {} reads'.format(len(reads_for_chromosome)))
 
-            if ignore_strand:
-                anchor_point = lambda x: x.start
-            else:
-                anchor_point = lambda x: x.start if x.strand == '+' else x.end -1
+            # Now the start coordinate is the one we need to check, irregardless of strand
+            # this is how one should interpret the README
+            # http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
+            is_unique = lambda x: chromosome_lookup[x.start]
 
-            isunique = lambda x: chromosome_lookup[anchor_point(x)]
-
-            chromosome_answer = filter(isunique, reads_for_chromosome)
+            chromosome_answer = filter(is_unique, reads_for_chromosome)
 
             logger.debug('Done. Extending answer')
             answer.extend(chromosome_answer)
@@ -64,11 +62,11 @@ class MappabilityTrack(object):
 
             bins_for_chromosome = filter(lambda x: x.chrom == chromosome, bins_bed)
 
-            for bin in bins_for_chromosome:
+            for bin_ in bins_for_chromosome:
 
                 # Positive strand
-                min_anchor_location = bin.start - shift_length - read_length + 1  # (inclusive)
-                max_anchor_location = bin.end - shift_length  # (not inclusive)
+                min_anchor_location = bin_.start - shift_length - read_length + 1  # (inclusive)
+                max_anchor_location = bin_.end - shift_length  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
                 max_anchor_location = min(chromosome_length, max_anchor_location)
@@ -76,16 +74,15 @@ class MappabilityTrack(object):
                 uniquely_mappable_per_bin = np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
 
                 # Negative strand
-                # ``+ read_length - 1`` added as per http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
-                min_anchor_location = bin.start + shift_length - read_length + 1 + (read_length - 1)  # (inclusive)
-                max_anchor_location = bin.end + shift_length + (read_length - 1)  # (not inclusive)
+                min_anchor_location = bin_.start + shift_length - read_length + 1  # (inclusive)
+                max_anchor_location = bin_.end + shift_length  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
                 max_anchor_location = min(chromosome_length, max_anchor_location)
 
                 uniquely_mappable_per_bin += np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
 
-                answer.append((bin.chrom, bin.start, bin.end, uniquely_mappable_per_bin))
+                answer.append((bin_.chrom, bin_.start, bin_.end, uniquely_mappable_per_bin))
 
         return pybedtools.BedTool(answer)
 
@@ -93,12 +90,10 @@ class MappabilityTrack(object):
     def is_uniquely_mappable(self, chromosome, start, end, strand):
         chromosome_lookup = self.__lookup_dict[chromosome]
 
-        if strand == '+':
-            anchor_locus = int(start)
-        elif strand == '-':
-            anchor_locus = int(end-1)
-        else:
-            raise Exception('Unknown read directionality. Cannot infer if it is uniquely mappable')
+        # Now the start coordinate is the one we need to check, irregardless of strand
+        # this is how one should interpret the README
+        # http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
+        anchor_locus = int(start)
 
         return chromosome_lookup[anchor_locus]
 
