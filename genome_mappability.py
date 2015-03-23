@@ -23,7 +23,7 @@ class MappabilityTrack(object):
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
 
-    def filter_uniquely_mappables(self, bedtool):
+    def filter_uniquely_mappables(self, bedtool, ignore_strand=False):
         logger = logging.getLogger(self.__class__.__name__)
         chromosomes = set(imap(lambda x: x.chrom, bedtool))
 
@@ -35,7 +35,14 @@ class MappabilityTrack(object):
             reads_for_chromosome = filter(lambda x: x.chrom == chromosome, bedtool)
 
             logger.debug('Processing {} reads'.format(len(reads_for_chromosome)))
-            isunique = lambda x: chromosome_lookup[x.start if x.strand == '+' else x.end -1]
+
+            if ignore_strand:
+                anchor_point = lambda x: x.start
+            else:
+                anchor_point = lambda x: x.start if x.strand == '+' else x.end -1
+
+            isunique = lambda x: chromosome_lookup[anchor_point(x)]
+
             chromosome_answer = filter(isunique, reads_for_chromosome)
 
             logger.debug('Done. Extending answer')

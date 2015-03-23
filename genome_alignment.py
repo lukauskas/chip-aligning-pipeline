@@ -412,6 +412,8 @@ class FilteredReads(Task):
 
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
     filter_uniquely_mappable_for_truncated_length = luigi.BooleanParameter(default=True)
+    # roadmap epigenome seems to ignore the strandedness for some reason when doing this. Go Figure.
+    ignore_strandedness_when_filtering_uniquely_mappable = luigi.BooleanParameter(default=True)
     remove_duplicates = luigi.BooleanParameter(default=True)  # Also true for roadmap epigenome
     sort = luigi.BooleanParameter(default=True)  # Sort the reads?
 
@@ -449,6 +451,7 @@ class FilteredReads(Task):
         return ['unique' if self.remove_duplicates else 'non-unique',
                 't{}'.format(self.resized_length) if self.resized_length > 0 else 'untruncated',
                 'filtered' if self.filter_uniquely_mappable_for_truncated_length else 'unfiltered',
+                'unstranded' if self.ignore_strandedness_when_filtering_uniquely_mappable else 'stranded',
                 'sorted' if self.sort else 'unsorted'
                 ]
 
@@ -456,7 +459,8 @@ class FilteredReads(Task):
     def parameters(self):
         alignment_parameters = self._alignment_task.parameters
         filtering_parameters = self._filtering_parameters
-        return alignment_parameters + filtering_parameters + [self.chromosomes]
+        self_parameters = [self.chromosomes]
+        return alignment_parameters + filtering_parameters + self_parameters
 
     @property
     def _extension(self):
@@ -499,7 +503,8 @@ class FilteredReads(Task):
 
             if self.filter_uniquely_mappable_for_truncated_length:
                 logger.debug('Filtering uniquely mappable')
-                mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads)
+                mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads,
+                                                                                                ignore_strand=self.ignore_strandedness_when_filtering_uniquely_mappable)
 
             if self.sort:
                 logger.debug('Sorting reads')

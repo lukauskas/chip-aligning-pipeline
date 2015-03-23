@@ -43,6 +43,8 @@ class Chromosomes(Task):
             chromsizes = {k: chromsizes[k] for k in female_chromosomes}
         elif self.collection == 'all':
             pass
+        elif self.collection in chromsizes:
+            chromsizes = {self.collection: chromsizes[self.collection]}
         else:
             raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
 
