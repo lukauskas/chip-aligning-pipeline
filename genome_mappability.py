@@ -49,7 +49,7 @@ class MappabilityTrack(object):
 
         return pybedtools.BedTool(answer)
 
-    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length, shift_length):
+    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length, extension_length):
         logger = logging.getLogger(self.__class__.__name__)
 
         chromosomes = set(imap(lambda x: x.chrom, bins_bed))
@@ -65,8 +65,8 @@ class MappabilityTrack(object):
             for bin_ in bins_for_chromosome:
 
                 # Positive strand
-                min_anchor_location = bin_.start - shift_length - read_length + 1  # (inclusive)
-                max_anchor_location = bin_.end - shift_length  # (not inclusive)
+                min_anchor_location = bin_.start - (extension_length + read_length - 1)  # (inclusive)
+                max_anchor_location = bin_.end  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
                 max_anchor_location = min(chromosome_length, max_anchor_location)
@@ -74,8 +74,8 @@ class MappabilityTrack(object):
                 uniquely_mappable_per_bin = np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
 
                 # Negative strand
-                min_anchor_location = bin_.start + shift_length - read_length + 1  # (inclusive)
-                max_anchor_location = bin_.end + shift_length  # (not inclusive)
+                min_anchor_location = bin_.start - (read_length - 1)  # (inclusive)
+                max_anchor_location = bin_.end + extension_length  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
                 max_anchor_location = min(chromosome_length, max_anchor_location)
@@ -210,7 +210,7 @@ class MappabilityOfGenomicWindows(Task):
 
     read_length = GenomeMappabilityTrack.read_length
 
-    shift_size = luigi.IntParameter()
+    ext_size = luigi.IntParameter()
 
     @property
     def non_overlapping_windows_task(self):
@@ -231,7 +231,7 @@ class MappabilityOfGenomicWindows(Task):
         non_overlapping_windows_task_params = self.non_overlapping_windows_task.parameters
         mappability_track_task_params = self.mappability_track_task.parameters
 
-        specific_parameters = ['shift{}'.format(self.shift_size)]
+        specific_parameters = ['ext{}'.format(self.ext_size)]
 
         return non_overlapping_windows_task_params + mappability_track_task_params + specific_parameters
 
@@ -247,7 +247,7 @@ class MappabilityOfGenomicWindows(Task):
         logger.debug('Computing mappability')
         number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(genomic_windows,
                                                                                                    read_length=self.read_length,
-                                                                                                   shift_length=self.shift_size)
+                                                                                                   extension_length=self.ext_size)
 
         logger.debug('Writing output')
         with self.output().open('w') as output:

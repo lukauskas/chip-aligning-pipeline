@@ -377,7 +377,7 @@ class ConsolidatedReads(Task):
 
     chromosomes = Chromosomes.collection
 
-    max_sequencing_depth = luigi.IntParameter(default=30000000)
+    max_sequencing_depth = luigi.IntParameter(default=45000000)
     subsample_random_seed = luigi.IntParameter(default=0)
 
     @property
