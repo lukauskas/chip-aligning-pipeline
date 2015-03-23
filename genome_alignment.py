@@ -344,6 +344,10 @@ class AlignedReads(MetaTask):
 
         return class_(genome_version=self.genome_version, srr_identifier=self.srr_identifier)
 
+    @property
+    def self_parameters(self):
+        return [self.aligner]
+
     def bam_output(self):
         return self.output()[0]
 
