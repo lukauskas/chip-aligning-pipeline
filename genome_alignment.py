@@ -291,7 +291,7 @@ class FilteredReads(Task):
         return reqs
 
     @property
-    def _filtering_parameters(self):
+    def filtering_parameters(self):
         return ['unique' if self.remove_duplicates else 'non-unique',
                 't{}'.format(self.resized_length) if self.resized_length > 0 else 'untruncated',
                 'filtered' if self.filter_uniquely_mappable_for_truncated_length else 'unfiltered',
@@ -301,7 +301,7 @@ class FilteredReads(Task):
     @property
     def parameters(self):
         alignment_parameters = self._alignment_task.parameters
-        filtering_parameters = self._filtering_parameters
+        filtering_parameters = self.filtering_parameters
         self_parameters = [self.chromosomes]
         return alignment_parameters + filtering_parameters + self_parameters
 
@@ -359,6 +359,91 @@ class FilteredReads(Task):
                     row.name = 'N'  # The alignments from roadmap have this
                     row.score = '1000'  # And this... for some reason
                     f.write(str(row))
+
+        finally:
+            pybedtools.cleanup()
+
+class ConsolidatedReads(Task):
+
+    srr_identifiers = luigi.Parameter(is_list=True)
+
+    genome_version = FilteredReads.genome_version
+    aligner = FilteredReads.aligner
+
+    resized_length = FilteredReads.resized_length
+    filter_uniquely_mappable_for_truncated_length = FilteredReads.filter_uniquely_mappable_for_truncated_length
+    remove_duplicates = FilteredReads.remove_duplicates
+    sort = FilteredReads.sort
+
+    chromosomes = Chromosomes.collection
+
+    max_sequencing_depth = luigi.IntParameter(default=30000000)
+    subsample_random_seed = luigi.IntParameter(default=0)
+
+    @property
+    def parameters(self):
+        parameters = [self.genome_version, self.aligner]
+        if isinstance(self.srr_identifiers, list) or isinstance(self.srr_identifiers, tuple):
+            parameters.append(';'.join(self.srr_identifiers))
+        else:
+            raise Exception('Unexpected type of srr identifiers: {}'.format(type(self.srr_identifiers)))
+
+        parameters += self.requires()[0].filtering_parameters  # Should be the same for all tasks
+        parameters += [self.chromosomes]
+        parameters += [self.max_sequencing_depth, self.subsample_random_seed]
+
+        return parameters
+
+    def requires(self):
+        kwargs = dict(genome_version=self.genome_version,
+                      aligner=self.aligner,
+                      resized_length=self.resized_length,
+                      filter_uniquely_mappable_for_truncated_length=self.filter_uniquely_mappable_for_truncated_length,
+                      remove_duplicates=self.remove_duplicates,
+                      sort=self.sort,
+                      chromosomes=self.chromosomes)
+
+        tasks = []
+        for srr_identifier in self.srr_identifiers:
+            tasks.append(FilteredReads(srr_identifier=srr_identifier, **kwargs))
+
+        return tasks
+
+    @property
+    def _extension(self):
+        return 'tagAlign.gz'
+
+    def run(self):
+
+        try:
+            master_reads = []
+
+            logger = self.logger()
+
+            for filtered_reads in self.input():
+                logger.debug('Processing {}'.format(filtered_reads.path))
+                master_reads.extend(pybedtools.BedTool(filtered_reads.path))
+
+            master_reads = pybedtools.BedTool(master_reads)
+            length_of_master_reads = len(master_reads)
+
+            logger.debug('Total {} reads'.format(length_of_master_reads))
+            if length_of_master_reads > self.max_sequencing_depth:
+                logger.debug('Subsampling')
+
+                master_reads = master_reads.sample(n=self.max_sequencing_depth, seed=self.subsample_random_seed)
+
+                if self.sort:
+                    logger.debug('Sorting')
+                    master_reads = master_reads.sort()
+
+            logger.debug('Writing to file')
+
+            with self.output().open('w') as f:
+                for row in master_reads:
+                    f.write(str(row))
+
+            logger.debug('Done')
 
         finally:
             pybedtools.cleanup()
