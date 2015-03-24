@@ -1,17 +1,9 @@
 import pybedtools
 import luigi
+
 from task import Task
-import yaml
+from yaml_file import YamlFile
 
-class YamlFile(luigi.File):
-
-    def dump(self, data):
-        with self.open('w') as f:
-            yaml.dump(data, f)
-
-    def load(self):
-        with self.open('r') as f:
-            return yaml.load(f)
 
 class Chromosomes(Task):
 

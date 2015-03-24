@@ -22,6 +22,7 @@ class GzipOutputFile(luigi.File):
     def __init__(self, path=None):
         super(GzipOutputFile, self).__init__(path=path, format=luigi.format.Gzip)
 
+
 class Task(luigi.Task):
 
     @property
