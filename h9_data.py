@@ -7,6 +7,7 @@ import luigi
 #from signal import Signal
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
 from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
+from genome_mappability import FullyMappableGenomicWindows
 
 
 BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
@@ -96,16 +97,30 @@ class AllSignals(luigi.Task):
     chromosomes = luigi.Parameter(default='female')
     cell_type = luigi.Parameter(default='E008')
 
+    ext_size = luigi.IntParameter(default=170)
+    window_size = luigi.IntParameter(default=200)
+    read_length = luigi.IntParameter(default=36)
+
     def requires(self):
         try:
             return self.__requires_cache
         except AttributeError:
+
             downloadable_signals = DownloadableSignalTracks(genome_version=self.genome_version, cell_type=self.cell_type)
             luigi.build([downloadable_signals])
 
+            mappable_windows = FullyMappableGenomicWindows(genome_version=self.genome_version,
+                                                           chromosomes=self.chromosomes,
+                                                           read_length=self.read_length,
+                                                           ext_size=self.ext_size,
+                                                           window_size=self.window_size)
+
             tracks = downloadable_signals.output().load()
-            requires = [DownloadedSignal(genome_version=self.genome_version, cell_type=self.cell_type,
+            signals = [DownloadedSignal(genome_version=self.genome_version, cell_type=self.cell_type,
                                          chromosomes=self.chromosomes, track=track) for track in tracks]
+
+
+            requires = [BinnedSignal(bins_task=mappable_windows, signal_task=signal) for signal in signals]
             self.__requires_cache = requires
 
             return self.__requires_cache
