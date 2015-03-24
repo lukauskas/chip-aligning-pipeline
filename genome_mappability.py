@@ -315,9 +315,11 @@ class FullyMappableGenomicWindows(Task):
         with self.output().open('w') as output_:
             with self.input().open('r') as input_:
                 for row in input_:
+                    counter_total += 1
                     interval, __, score = row.rpartition('\t')
                     score = int(score)
                     if score == max_score:
+                        counter_fully_mappable += 1
                         output_.write(interval + '\n')
 
         logger.debug('Bins total: {}, bins fully mappable: {} ({}%)'.format(counter_total, counter_fully_mappable,

@@ -32,11 +32,15 @@ class NonOverlappingWindows(Task):
     def _extension(self):
         return 'bed.gz'
 
+    @property
+    def chromosomes_task(self):
+        return Chromosomes(genome_version=self.genome_version, collection=self.chromosomes)
+
     def requires(self):
-        return Chromosomes(genome_version=self.genome_version, colelction=self.chromosomes)
+        return self.chromosomes_task
 
     def _chromosomes_filter(self):
-        chromosomes = self.chromosomes.output().load()
+        chromosomes = self.chromosomes_task.output().load()
         return lambda x: x.chrom in chromosomes
 
     def run(self):
