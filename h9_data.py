@@ -4,9 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import logging
 import luigi
+#from signal import Signal
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
 from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
-from signal import Signal
+
 
 BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
 
@@ -41,32 +42,32 @@ class BRD4Signal(luigi.Task):
         return self.requires().complete()
 
 
-class BRD4Alignments(luigi.Task):
-    genome_version = luigi.Parameter()
-    aligner = luigi.Parameter(default='pash')
-    chromosomes = luigi.Parameter(default='female')
-
-    max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
-
-
-    def requires(self):
-        brd4_signal = ['SRR1537736', 'SRR1537737'] # GSM1466835 BRD4 Vehicle- treated 6h
-        brd4_control = ['SRR1537734']  # IgG GSM1466833
-
-        return [ConsolidatedReads(genome_version=self.genome_version,
-                                  aligner=self.aligner,
-                                  srr_identifiers=brd4_signal,
-                                  chromosomes=self.chromosomes,
-                                  max_sequencing_depth=self.max_sequencing_depth),
-                ConsolidatedReads(genome_version=self.genome_version,
-                                  aligner=self.aligner,
-                                  srr_identifiers=brd4_control,
-                                  chromosomes=self.chromosomes,
-                                  max_sequencing_depth=self.max_sequencing_depth)
-                ]
-
-    def complete(self):
-        return all(map(lambda x: x.complete(), self.requires()))
+# class BRD4Alignments(luigi.Task):
+#     genome_version = luigi.Parameter()
+#     aligner = luigi.Parameter(default='pash')
+#     chromosomes = luigi.Parameter(default='female')
+#
+#     max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
+#
+#
+#     def requires(self):
+#         brd4_signal = ['SRR1537736', 'SRR1537737'] # GSM1466835 BRD4 Vehicle- treated 6h
+#         brd4_control = ['SRR1537734']  # IgG GSM1466833
+#
+#         return [ConsolidatedReads(genome_version=self.genome_version,
+#                                   aligner=self.aligner,
+#                                   srr_identifiers=brd4_signal,
+#                                   chromosomes=self.chromosomes,
+#                                   max_sequencing_depth=self.max_sequencing_depth),
+#                 ConsolidatedReads(genome_version=self.genome_version,
+#                                   aligner=self.aligner,
+#                                   srr_identifiers=brd4_control,
+#                                   chromosomes=self.chromosomes,
+#                                   max_sequencing_depth=self.max_sequencing_depth)
+#                 ]
+#
+#     def complete(self):
+#         return all(map(lambda x: x.complete(), self.requires()))
 
 class H3K56acRefData(luigi.Task):
 
