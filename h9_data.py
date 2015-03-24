@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import logging
 import luigi
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
-from genome_alignment import FilteredReads, ConsolidatedReads
+from genome_alignment import ConsolidatedReads
 
 data = [
     {'cell_type': u'H9', 'experiment_accession': 'SRX670813', 'study_accession': 'PRJNA257661', 'data_track': 'BRD4'},
