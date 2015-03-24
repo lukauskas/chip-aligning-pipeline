@@ -4,12 +4,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
 import os
-import tempfile
 import shutil
 import pybedtools
-from genome_alignment import FilteredReads, ConsolidatedReads
+from genome_alignment import ConsolidatedReads
 
-from task import Task, luigi
+from task import Task
 from yaml_file import YamlFile
 
 class CrossCorrelationPlot(Task):
