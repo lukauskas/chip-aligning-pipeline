@@ -5,12 +5,41 @@ from __future__ import unicode_literals
 import logging
 import luigi
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
-from genome_alignment import ConsolidatedReads
+from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
+from signal import Signal
 
-data = [
-    {'cell_type': u'H9', 'experiment_accession': 'SRX670813', 'study_accession': 'PRJNA257661', 'data_track': 'BRD4'},
-    {'cell_type': u'H9', 'experiment_accession': 'SRX670811', 'study_accession': 'PRJNA257661', 'data_track': 'IgG'},
-]
+BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
+
+
+class BRD4Signal(luigi.Task):
+    genome_version = luigi.Parameter()
+    aligner = luigi.Parameter(default='pash')
+    chromosomes = luigi.Parameter(default='female')
+
+    max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
+
+    @property
+    def brd4_consolidated_task(self):
+        return ConsolidatedReads(genome_version=self.genome_version,
+                                 aligner=self.aligner,
+                                 srr_identifiers=BRD4_DATA_SRRS,
+                                 chromosomes=self.chromosomes,
+                                 max_sequencing_depth=self.max_sequencing_depth)
+
+    @property
+    def downloaded_h9_input_task(self):
+        return DownloadedConsolidatedReads(genome_version=self.genome_version,
+                                           cell_type=self.cell_type,
+                                           track='Input',
+                                           chromosomes=self.chromosomes
+                                           )
+
+    def requires(self):
+        return Signal(input_task=self.downloaded_h9_input_task, treatment_task=self.downloaded_h9_input_task)
+
+    def complete(self):
+        return self.requires().complete()
+
 
 class BRD4Alignments(luigi.Task):
     genome_version = luigi.Parameter()
