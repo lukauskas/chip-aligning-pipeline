@@ -8,6 +8,7 @@ import luigi
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
 from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
 from genome_mappability import FullyMappableGenomicWindows
+from profile.signal import BinnedSignal
 
 
 BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
