@@ -49,6 +49,18 @@ class MappabilityTrack(object):
 
         return pybedtools.BedTool(answer)
 
+    @classmethod
+    def maximum_mappability_score_for_bin(cls, bin_width, read_length, extension_length):
+        # see number_of_uniquely_mappable_within_a_bin below
+        # [bin_.start + bin_.width] - (bin_.start - (extension_length + read_length - 1))
+        # +
+        # [bin_.start + bin_.width] + extension_length - (bin_.start - (read_length - 1))
+        # ------------------------------------------------------------------------------
+        # bin_.width + extension_length + read_length - 1
+        # +
+        # bin_.width + extension_length + read_length - 1
+        return 2 * (bin_width + extension_length + read_length - 1)
+
     def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length, extension_length):
         logger = logging.getLogger(self.__class__.__name__)
 
@@ -239,6 +251,11 @@ class MappabilityOfGenomicWindows(Task):
     def _extension(self):
         return 'bed.gz'
 
+    def best_total_score(self):
+        return MappabilityTrack.maximum_mappability_score_for_bin(bin_width=self.window_size,
+                                                                  read_length=self.read_length,
+                                                                  extension_length=self.ext_size)
+
     def run(self):
         logger = self.logger()
         genomic_windows = pybedtools.BedTool(self.non_overlapping_windows_task.output().path)
@@ -254,10 +271,64 @@ class MappabilityOfGenomicWindows(Task):
             for row in number_of_uniquely_mappable_per_bin:
                 output.write(str(row))
 
+class FullyMappableGenomicWindows(Task):
+
+    genome_version = MappabilityOfGenomicWindows.genome_version
+    chromosomes = MappabilityOfGenomicWindows.chromosomes
+    window_size = MappabilityOfGenomicWindows.window_size
+
+    read_length = MappabilityOfGenomicWindows.read_length
+
+    ext_size = MappabilityOfGenomicWindows.ext_size
+
+    @property
+    def genome_windows_mappability_task(self):
+        return MappabilityOfGenomicWindows(genome_version=self.genome_version,
+                                           chromosomes=self.chromosomes,
+                                           window_size=self.window_size,
+                                           read_length=self.read_length,
+                                           ext_size=self.ext_size)
+
+    def requires(self):
+        return self.genome_windows_mappability_task
+
+    @property
+    def _extension(self):
+        return 'bed.gz'
+
+    @property
+    def parameters(self):
+        return self.genome_windows_mappability_task.parameters
+
+
+    def run(self):
+
+        logger = self.logger()
+
+        max_score = self.genome_windows_mappability_task.best_total_score()
+
+        logger.debug('Maximum possible score is: {}'.format(max_score))
+
+        counter_total = 0
+        counter_fully_mappable = 0
+
+        with self.output().open('w') as output_:
+            with self.input().open('r') as input_:
+                for row in input_:
+                    interval, __, score = row.rpartition('\t')
+                    score = int(score)
+                    if score == max_score:
+                        output_.write(interval + '\n')
+
+        logger.debug('Bins total: {}, bins fully mappable: {} ({}%)'.format(counter_total, counter_fully_mappable,
+                                                                            counter_fully_mappable * 100.0 / counter_total))
+
+
 
 if __name__ == '__main__':
     GenomeMappabilityTrack.logger().setLevel(logging.DEBUG)
     MappabilityOfGenomicWindows.logger().setLevel(logging.DEBUG)
+    FullyMappableGenomicWindows.logger().setLevel(logging.DEBUG)
     logging.getLogger(MappabilityTrack.__class__.__name__).setLevel(logging.DEBUG)
 
     logging.basicConfig()
