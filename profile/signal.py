@@ -2,82 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from gzip import GzipFile
 import os
 import logging
 import luigi
-import shutil
 from task import Task
-from downloader import fetch
-from profile.base import ProfileBase
-from profile.genome_wide import GenomeWideProfileBase
-from util import temporary_directory, ensure_directory_exists_for_file
+from profile.base import compute_profile
 
 import numpy as np
-
-class _RoadmapMixin(object):
-    cell_type = luigi.Parameter()
-    data_track = luigi.Parameter()
-    signal_type = luigi.Parameter(default='pval')
-    genome_version = luigi.Parameter()
-
-    def roadmap_parameters(self):
-        return [self.cell_type, self.data_track, self.genome_version, self.signal_type]
-
-class RoadmapSignal(_RoadmapMixin, Task):
-
-    _CELL_TYPE_ENCODINGS = {'H9': 'E008'}
-    _URI_TEMPLATE = 'http://egg2.wustl.edu/roadmap/data/byFileType/signal/consolidated/macs2signal/' \
-                    '{signal_type}/{cell_type_encoding}-{track}.{signal_type}.signal.bigwig'
-
-    @property
-    def parameters(self):
-        return self.roadmap_parameters()
-
-    def _roadmap_uri(self):
-        if self.genome_version != 'hg19':
-            raise ValueError('Only hg19 supported')
-        else:
-            uri = self._URI_TEMPLATE.format(cell_type_encoding=self._CELL_TYPE_ENCODINGS[self.cell_type],
-                                            track=self.data_track,
-                                            signal_type=self.signal_type)
-
-            return uri
-
-    @property
-    def _extension(self):
-        return 'bed'
-
-    def run(self):
-        from sh import bigWigToBedGraph
-
-        logger = self.logger()
-        uri_to_fetch = self._roadmap_uri()
-
-        output_abspath = os.path.abspath(self.output().path)
-        ensure_directory_exists_for_file(output_abspath)
-
-        with temporary_directory(prefix='tmp-roadmap-signal', cleanup_on_exception=False, logger=logger):
-            logger.debug('Fetching {}'.format(uri_to_fetch))
-
-            tmp_signal_filename = 'signal.bigWig'
-
-            with open(tmp_signal_filename, 'w') as output_:
-                fetch(uri_to_fetch, output_)
-
-            tmp_bed_graph_filename = 'signal.bedGraph'
-
-            logger.debug('Converting bigWig to bedGraph')
-            bigWigToBedGraph(tmp_signal_filename, tmp_bed_graph_filename)
-
-            # logger.debug('Gzipping')
-            # gzip_bed_graph_filename = 'signal.bedGraph.gz'
-            # with GzipFile(gzip_bed_graph_filename, 'w') as out_:
-            #     with open(tmp_signal_filename, 'r') as in_:
-            #         out_.writelines(in_)
-
-            logger.debug('Moving to correct location')
-            shutil.move(tmp_bed_graph_filename, output_abspath)
 
 def _log10_weighted_mean(data):
     weighted_sum = 0
@@ -89,33 +20,82 @@ def _log10_weighted_mean(data):
         weights += weight
 
     weighted_sum /= weights
-    return - np.log10(weighted_sum)
 
-class RoadmapProfile(GenomeWideProfileBase, _RoadmapMixin):
+    score = - np.log10(weighted_sum)
+    if score == 0.0:
+        return 0.0
+    else:
+        return score
+
+class BinnedSignal(Task):
+
+    bins_task = luigi.Parameter()
+    signal_task = luigi.Parameter()
 
     @property
-    def features_to_map_task(self):
-        return RoadmapSignal(genome_version=self.genome_version,
-                             cell_type=self.cell_type,
-                             data_track=self.data_track,
-                             signal_type=self.signal_type,
-                             )
+    def parameters(self):
+        return self.bins_task.parameters + self .signal_task.parameters
 
-    def _compute_profile_kwargs(self):
-        if self.signal_type == 'pval':
-            mean_function = _log10_weighted_mean
-            null_value = 1
-        else:
-            raise NotImplementedError('Unsupported signal type {!r}'.format(self.signal_type))
+    def requires(self):
+        return [self.bins_task, self.signal_task]
 
-        return dict(operation='weighted_mean', column=4, null_value=null_value, weighted_mean_function=mean_function)
+    @property
+    def _extension(self):
+        return 'bdg.gz'
+
+    @classmethod
+    def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
+        logger = cls.logger()
+        map_df = compute_profile(bins_abspath,
+                                 signal_abspath,
+                                 binarise=False,
+                                 logger=logger,
+                                 operation='weighted_mean',
+                                 column=4,
+                                 null_value=0,  # 10^(-0) = 1 -> the 'null' p-value
+                                 weighted_mean_function=_log10_weighted_mean)
+
+        logger.debug('Mapping done. Length of df: {}. Writing output'.format(len(map_df)))
+
+        for __, row in map_df.iterrows():
+            bedgraph_components = [row['chromosome'], row['start'], row['end'], row['value']]
+            str_row = '\t'.join(map(str, bedgraph_components))
+
+            output_handle.write(str_row + '\n')
+
+
+    def run(self):
+        bins_task_abspath = os.path.abspath(self.bins_task.output().path)
+        signal_task_abspath = os.path.abspath(self.signal_task.output().path)
+
+        with self.output().open('w') as f:
+            self.compute_profile(bins_task_abspath, signal_task_abspath, f)
 
 if __name__ == '__main__':
+    from genome_mappability import FullyMappableGenomicWindows
+    from downloaded_signal import DownloadedSignal
+    BinnedSignal.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
-    RoadmapSignal.logger().setLevel(logging.DEBUG)
-    RoadmapProfile.logger().setLevel(logging.DEBUG)
 
-    luigi.run()
+    class SignalProfileExample(luigi.Task):
+        genome_version = luigi.Parameter(default='hg19')
+        chromosomes = luigi.Parameter(default='chr21')
+
+        def requires(self):
+            windows = FullyMappableGenomicWindows(genome_version=self.genome_version,
+                                                    chromosomes=self.chromosomes,
+                                                    read_length=36,
+                                                    ext_size=170,
+                                                    window_size=200)
+
+            signal = DownloadedSignal(genome_version=self.genome_version,
+                                      cell_type='E008',
+                                      track='H3K56ac',
+                                      chromosomes=self.chromosomes)
+
+            return BinnedSignal(bins_task=windows, signal_task=signal)
+
+    luigi.run(main_task_cls=SignalProfileExample)
 
 
 

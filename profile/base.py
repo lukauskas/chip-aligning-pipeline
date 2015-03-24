@@ -101,7 +101,7 @@ def weighted_means(sorted_a, sorted_b, column, null_value, mean_function=None):
 
 def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
                     binarise,
-                    genome_version,
+                    genome_version=None,
                     logger=None,
                     operation='count', column=None, null_value=None,
                     extend_to_length=None,
@@ -124,10 +124,13 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             peaks = peaks.bam_to_bed()
 
         if extend_to_length is not None:
+            if genome_version is None:
+                raise ValueError('Genome version needs to be set for extend_to_length to work')
             _debug('Extending intervals to {}'.format(extend_to_length))
             peaks = extend_intervals_to_length_in_5to3_direction(peaks,
                                                                  extend_to_length,
                                                                  pybedtools.chromsizes(genome_version))
+        _debug('Number of windows: {}'.format(len(windows)))
         _debug('Number of peaks: {}'.format(len(peaks)))
 
         def _to_df_dict(bed_row, value=None):
@@ -179,11 +182,15 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
             elif operation == 'weighted_mean':
                 column = 4 if column is None else column
                 null_value = 0 if null_value is None else null_value
-                map_function = lambda x: pybedtools.BedTool(weighted_means(windows, x, column=column, null_value=null_value, mean_function=weighted_mean_function))
+                map_function = lambda x: pybedtools.BedTool(list(weighted_means(windows, x,
+                                                                           column=column,
+                                                                           null_value=null_value,
+                                                                           mean_function=weighted_mean_function)))
             else:
                 raise ValueError('Unsupported Operation')
 
             map_ = map_function(peaks)
+            _debug('Length of map: {}'.format(len(map_)))
 
             _debug('Creating dataframe')
             df = pd.DataFrame(map(_to_df_dict, map_))
