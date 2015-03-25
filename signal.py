@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 import gzip
 import os
 import shutil
-import pybedtools
 from genome_alignment import ConsolidatedReads
 
 from task import Task
@@ -139,6 +138,8 @@ class Signal(Task):
 
     def run(self):
         from command_line_applications.macs import macs2
+        import pybedtools
+
         logger = self.logger()
 
         fragment_length = self.fragment_length_task.output().load()['fragment_lengths']['best']['length']
@@ -149,8 +150,11 @@ class Signal(Task):
         treatment_abspath = os.path.abspath(self.treatment_task.output().path)
         input_abspath = os.path.abspath(self.input_task.output().path)
 
-        number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
-        number_of_input_reads = len(pybedtools.BedTool(input_abspath))
+        try:
+            number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
+            number_of_input_reads = len(pybedtools.BedTool(input_abspath))
+        finally:
+            pybedtools.cleanup()
 
         logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads, number_of_input_reads))
 

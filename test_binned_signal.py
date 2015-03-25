@@ -8,13 +8,39 @@ import unittest
 import tempfile
 import gzip
 from StringIO import StringIO
-from profile.signal import BinnedSignal
+import pybedtools
+from profile.signal import BinnedSignal, _bedtool_is_sorted
 import numpy as np
 
 
+class TestIsSorted(unittest.TestCase):
+    def test_unsorted_bedtool_is_not_sorted(self):
+        # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
+        x = pybedtools.BedTool('''
+chr9 300 400
+chr1 100 200
+chr1 1 50
+chr12 1 100
+chr9 500 600
+''', from_string=True)
+
+        self.assertFalse(_bedtool_is_sorted(x))
+
+    def test_sorted_bedtool_is_sorted(self):
+        # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
+        x = pybedtools.BedTool('''
+chr9 300 400
+chr1 100 200
+chr1 1 50
+chr12 1 100
+chr9 500 600
+''', from_string=True)
+        x = x.sort()  # We sort it here
+
+        self.assertTrue(_bedtool_is_sorted(x))
+
+
 class TestBinnedSignal(unittest.TestCase):
-
-
     def test_binned_signal_computes_the_correct_average_p_value(self):
 
         __, sample_windows_filename = tempfile.mkstemp(suffix='.bed.gz')
@@ -42,10 +68,10 @@ class TestBinnedSignal(unittest.TestCase):
             s = StringIO()
             BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s)
 
-            expected_score_for_bin = -1 * np.log10(1/1000.0 * (100 * np.power(10.0, -0.3)
-                                                               + 200 * np.power(10.0, -0.5)
-                                                               + 200 * np.power(10.0, -2)
-                                                               + (1000 - 200 - 200 - 100) * 1))
+            expected_score_for_bin = -1 * np.log10(1 / 1000.0 * (100 * np.power(10.0, -0.3)
+                                                                 + 200 * np.power(10.0, -0.5)
+                                                                 + 200 * np.power(10.0, -2)
+                                                                 + (1000 - 200 - 200 - 100) * 1))
 
             expected_output = 'chr1\t4000\t5000\t{}\nchr5\t4000\t8000\t0.0\n'.format(expected_score_for_bin)
 

@@ -5,10 +5,68 @@ from __future__ import unicode_literals
 import os
 import logging
 import luigi
+import pybedtools
 from task import Task
-from profile.base import compute_profile
-
+from profile.base import weighted_means_from_intersection
 import numpy as np
+
+def _bedtool_is_sorted(bedtool):
+    prev = None
+
+    for row in bedtool:
+        if prev is not None:
+            if row.chrom < prev[0]:
+                return False
+            elif row.chrom == prev[0] and row.start < prev[1]:
+                return False
+
+        prev = (row.chrom, row.start)
+
+    return True
+
+def _compute_binned_signal(bins_abspath, signal_abspath, output_handle, logger=None):
+    logger = logger if logger is not None else logging.getLogger('_compute_binned_signal')
+
+    logger.info('Loading bins up and checking if they are sorted')
+    bins = pybedtools.BedTool(bins_abspath)
+    if not _bedtool_is_sorted(bins):
+        raise Exception('Bins need to be sorted')
+    logger.debug('Bins length: {}'.format(len(bins)))
+
+    logger.info('Loading signal up and checking if they are sorted')
+    signal = pybedtools.BedTool(signal_abspath)
+    if not _bedtool_is_sorted(signal):
+        raise Exception('Signal needs to be sorted')
+    logger.debug('Signal length: {}'.format(len(signal)))
+
+    logger.info('Doing the intersection, this takes a while')
+    intersection = bins.intersect(signal, loj=True, sorted=True)
+
+    try:
+        logger.info('Doing the weighted means thing.')
+        iter_answer = weighted_means_from_intersection(intersection,
+                                                       column=4,
+                                                       null_value=0,  # As in 0 = -log_10 (p=1),
+                                                       mean_function=_log10_weighted_mean
+                                                       )
+
+        # Oh my, answer is an iterator, lets write it as we read it
+        for row in iter_answer:
+            row = '{}\t{}\t{}\t{}\n'.format(*row)
+            output_handle.write(row)
+
+    finally:
+        intersection_fn = intersection.fn
+        logger.debug('Removing {}'.format(intersection_fn))
+
+        # Remove reference to intersection
+        del intersection
+        # Delete the file
+        try:
+            os.unlink(intersection_fn)
+        except OSError:
+            if os.path.isfile(intersection_fn):
+                raise
 
 def _log10_weighted_mean(data):
     weighted_sum = 0
@@ -45,24 +103,8 @@ class BinnedSignal(Task):
 
     @classmethod
     def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
-        logger = cls.logger()
-        map_df = compute_profile(bins_abspath,
-                                 signal_abspath,
-                                 binarise=False,
-                                 logger=logger,
-                                 operation='weighted_mean',
-                                 column=4,
-                                 null_value=0,  # 10^(-0) = 1 -> the 'null' p-value
-                                 weighted_mean_function=_log10_weighted_mean)
-
-        logger.debug('Mapping done. Length of df: {}. Writing output'.format(len(map_df)))
-
-        for __, row in map_df.iterrows():
-            bedgraph_components = [row['chromosome'], row['start'], row['end'], row['value']]
-            str_row = '\t'.join(map(str, bedgraph_components))
-
-            output_handle.write(str_row + '\n')
-
+        _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
+                               logger=cls.logger())
 
     def run(self):
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)

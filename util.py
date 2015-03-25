@@ -25,7 +25,6 @@ def ensure_directory_exists_for_file(filename):
         if not os.path.isdir(dir_):
             raise
 
-
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     """

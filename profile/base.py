@@ -5,13 +5,13 @@ from __future__ import unicode_literals
 import os
 import luigi
 
-import pybedtools
 import pandas as pd
 
 from task import Task
 
 
 def extend_intervals_to_length_in_5to3_direction(intervals, target_length, chromsizes):
+    import pybedtools
     target_length = int(target_length)
 
     new_intervals = []
@@ -113,6 +113,8 @@ def compute_profile(windows_task_output_abspath, peaks_task_output_abspath,
     def _warn(*args, **kwargs):
         if logger:
             logger.warn(*args, **kwargs)
+
+    import pybedtools
     try:
         windows = pybedtools.BedTool(windows_task_output_abspath)
         peaks = pybedtools.BedTool(peaks_task_output_abspath)
