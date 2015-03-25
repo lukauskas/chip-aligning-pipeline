@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import logging
 import luigi
-#from signal import Signal
+from genome_signal import Signal
 from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
 from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
 from genome_mappability import FullyMappableGenomicWindows
@@ -15,19 +15,23 @@ BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
 
 
 class BRD4Signal(luigi.Task):
-    genome_version = luigi.Parameter()
+    genome_version = luigi.Parameter(default='hg19')
     aligner = luigi.Parameter(default='pash')
     chromosomes = luigi.Parameter(default='female')
+    cell_type = luigi.Parameter(default='E008')
 
     max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
 
     @property
     def brd4_consolidated_task(self):
-        return ConsolidatedReads(genome_version=self.genome_version,
-                                 aligner=self.aligner,
-                                 srr_identifiers=BRD4_DATA_SRRS,
-                                 chromosomes=self.chromosomes,
-                                 max_sequencing_depth=self.max_sequencing_depth)
+        if self.cell_type == 'E008':
+            return ConsolidatedReads(genome_version=self.genome_version,
+                                     aligner=self.aligner,
+                                     srr_identifiers=BRD4_DATA_SRRS,
+                                     chromosomes=self.chromosomes,
+                                     max_sequencing_depth=self.max_sequencing_depth)
+        else:
+            raise ValueError('Unsupported cell type {!r}'.format(self.cell_type))
 
     @property
     def downloaded_h9_input_task(self):
@@ -44,32 +48,32 @@ class BRD4Signal(luigi.Task):
         return self.requires().complete()
 
 
-# class BRD4Alignments(luigi.Task):
-#     genome_version = luigi.Parameter()
-#     aligner = luigi.Parameter(default='pash')
-#     chromosomes = luigi.Parameter(default='female')
-#
-#     max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
-#
-#
-#     def requires(self):
-#         brd4_signal = ['SRR1537736', 'SRR1537737'] # GSM1466835 BRD4 Vehicle- treated 6h
-#         brd4_control = ['SRR1537734']  # IgG GSM1466833
-#
-#         return [ConsolidatedReads(genome_version=self.genome_version,
-#                                   aligner=self.aligner,
-#                                   srr_identifiers=brd4_signal,
-#                                   chromosomes=self.chromosomes,
-#                                   max_sequencing_depth=self.max_sequencing_depth),
-#                 ConsolidatedReads(genome_version=self.genome_version,
-#                                   aligner=self.aligner,
-#                                   srr_identifiers=brd4_control,
-#                                   chromosomes=self.chromosomes,
-#                                   max_sequencing_depth=self.max_sequencing_depth)
-#                 ]
-#
-#     def complete(self):
-#         return all(map(lambda x: x.complete(), self.requires()))
+class BRD4Alignments(luigi.Task):
+    genome_version = luigi.Parameter()
+    aligner = luigi.Parameter(default='pash')
+    chromosomes = luigi.Parameter(default='female')
+
+    max_sequencing_depth = ConsolidatedReads.max_sequencing_depth
+
+
+    def requires(self):
+        brd4_signal = ['SRR1537736', 'SRR1537737'] # GSM1466835 BRD4 Vehicle- treated 6h
+        brd4_control = ['SRR1537734']  # IgG GSM1466833
+
+        return [ConsolidatedReads(genome_version=self.genome_version,
+                                  aligner=self.aligner,
+                                  srr_identifiers=brd4_signal,
+                                  chromosomes=self.chromosomes,
+                                  max_sequencing_depth=self.max_sequencing_depth),
+                ConsolidatedReads(genome_version=self.genome_version,
+                                  aligner=self.aligner,
+                                  srr_identifiers=brd4_control,
+                                  chromosomes=self.chromosomes,
+                                  max_sequencing_depth=self.max_sequencing_depth)
+                ]
+
+    def complete(self):
+        return all(map(lambda x: x.complete(), self.requires()))
 
 class H3K56acRefData(luigi.Task):
 

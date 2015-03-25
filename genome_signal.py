@@ -6,6 +6,7 @@ import gzip
 import os
 import shutil
 from genome_alignment import ConsolidatedReads
+import luigi
 
 from task import Task
 from yaml_file import YamlFile
@@ -130,7 +131,7 @@ class Signal(Task):
 
     @property
     def parameters(self):
-        return self.input_task.parameters + self.treatment_task.paramers
+        return self.input_task.parameters + self.treatment_task.parameters
 
     @property
     def _extension(self):
@@ -150,11 +151,8 @@ class Signal(Task):
         treatment_abspath = os.path.abspath(self.treatment_task.output().path)
         input_abspath = os.path.abspath(self.input_task.output().path)
 
-        try:
-            number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
-            number_of_input_reads = len(pybedtools.BedTool(input_abspath))
-        finally:
-            pybedtools.cleanup()
+        number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
+        number_of_input_reads = len(pybedtools.BedTool(input_abspath))
 
         logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads, number_of_input_reads))
 
