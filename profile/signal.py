@@ -24,20 +24,24 @@ def _bedtool_is_sorted(bedtool):
 
     return True
 
-def _compute_binned_signal(bins_abspath, signal_abspath, output_handle, logger=None):
+def _compute_binned_signal(bins_abspath, signal_abspath, output_handle, logger=None,
+                           check_sorted=True):
     logger = logger if logger is not None else logging.getLogger('_compute_binned_signal')
 
     logger.info('Loading bins up and checking if they are sorted')
     bins = pybedtools.BedTool(bins_abspath)
-    if not _bedtool_is_sorted(bins):
-        raise Exception('Bins need to be sorted')
-    logger.debug('Bins length: {}'.format(len(bins)))
+    bins_len = len(bins)
+    if check_sorted:
+        if not _bedtool_is_sorted(bins):
+            raise Exception('Bins need to be sorted')
+    logger.debug('Bins length: {}'.format(bins_len))
 
     logger.info('Loading signal up and checking if they are sorted')
     signal = pybedtools.BedTool(signal_abspath)
-    if not _bedtool_is_sorted(signal):
-        raise Exception('Signal needs to be sorted')
-    logger.debug('Signal length: {}'.format(len(signal)))
+    if check_sorted:
+        if not _bedtool_is_sorted(signal):
+            raise Exception('Signal needs to be sorted')
+        logger.debug('Signal length: {}'.format(len(signal)))
 
     logger.info('Doing the intersection, this takes a while')
     intersection = bins.intersect(signal, loj=True, sorted=True)
@@ -50,10 +54,16 @@ def _compute_binned_signal(bins_abspath, signal_abspath, output_handle, logger=N
                                                        mean_function=_log10_weighted_mean
                                                        )
 
+        rows_written = 0
         # Oh my, answer is an iterator, lets write it as we read it
         for row in iter_answer:
             row = '{}\t{}\t{}\t{}\n'.format(*row)
             output_handle.write(row)
+            rows_written += 1
+            if rows_written % (bins_len / 10) == 0:
+                logging.info('Rows written: {}/{}'.format(rows_written, bins_len))
+
+        logger.info('Done. Total rows written: {}'.format(rows_written))
 
     finally:
         intersection_fn = intersection.fn
@@ -104,7 +114,7 @@ class BinnedSignal(Task):
     @classmethod
     def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
         _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
-                               logger=cls.logger())
+                               logger=cls.logger(), check_sorted=False)
 
     def run(self):
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)
