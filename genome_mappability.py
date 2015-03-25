@@ -96,7 +96,9 @@ class MappabilityTrack(object):
 
                 answer.append((bin_.chrom, bin_.start, bin_.end, uniquely_mappable_per_bin))
 
-        return pybedtools.BedTool(answer)
+        bed_answer = pybedtools.BedTool(answer)
+        bed_answer = bed_answer.sort()
+        return bed_answer
 
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
