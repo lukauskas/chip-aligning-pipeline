@@ -9,7 +9,7 @@ import pandas as pd
 
 from task import Task
 
-from core.file_formats.dataframe import DataFrameFile
+from chipalign.core.file_formats.dataframe import DataFrameFile
 from genome_signal import Signal
 from roadmap_data.downloaded_signal import DownloadableSignalTracks, DownloadedSignal
 from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads

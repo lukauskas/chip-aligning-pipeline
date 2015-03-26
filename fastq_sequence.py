@@ -3,8 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
-import luigi
 import shutil
+
+import luigi
+
 from task import Task
 
 
@@ -21,7 +23,7 @@ class FastqSequence(Task):
         return [self.srr_identifier]
 
     def run(self):
-        from command_line_applications.sratoolkit import fastq_dump
+        from chipalign.command_line_applications.sratoolkit import fastq_dump
         logger = self.logger()
         self.ensure_output_directory_exists()
         abspath = os.path.abspath(self.output().path)
