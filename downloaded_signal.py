@@ -3,10 +3,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
+from itertools import imap
 import os
 import re
 import luigi
 import shutil
+import pybedtools
 import requests
 from chromosomes import Chromosomes
 from downloader import fetch
@@ -67,8 +69,9 @@ class DownloadedSignal(Task):
             tmp_bedgaph = 'download.bedgraph'
             bigWigToBedGraph(tmp_file, tmp_bedgaph)
 
-            filtered_output = 'filtered.gz'
-            with gzip.GzipFile(filtered_output, 'w') as out_:
+            logger.debug('Filtering the bedgraph')
+            filtered_bedgraph = 'filtered.bedgraph'
+            with open(filtered_bedgraph, 'w') as out_:
                 with open(tmp_bedgaph, 'r') as input_:
                     for row in input_:
                         chrom, __, __ = row.partition('\t')
@@ -76,8 +79,24 @@ class DownloadedSignal(Task):
                         if chrom in chromosome_sizes:
                             out_.write(row)
 
-            logger.debug('Moving')
-            shutil.move(filtered_output, output_abspath)
+            sorted_bedgraph = pybedtools.BedTool(filtered_bedgraph).sort()
+
+            try:
+                filtered_and_sorted = 'filtered.sorted.gz'
+                with gzip.GzipFile(filtered_and_sorted, 'w') as out_:
+                    out_.writelines(imap(str, sorted_bedgraph))
+
+                logger.debug('Moving')
+                shutil.move(filtered_and_sorted, output_abspath)
+            finally:
+                sorted_bedgraph_fn = sorted_bedgraph.fn
+                del sorted_bedgraph
+                try:
+                    os.unlink(sorted_bedgraph_fn)
+                except OSError:
+                    if os.path.isfile(sorted_bedgraph_fn):
+                        raise
+
 
 class DownloadableSignalTracks(Task):
 
