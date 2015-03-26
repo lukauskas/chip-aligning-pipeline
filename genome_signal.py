@@ -132,7 +132,8 @@ class Signal(Task):
 
     @property
     def parameters(self):
-        return self.input_task.parameters + self.treatment_task.parameters
+        return [self.input_task.__class__.__name__] + self.input_task.parameters \
+               + [self.treatment_task.__class__.__name__] + self.treatment_task.parameters
 
     @property
     def _extension(self):
@@ -203,12 +204,12 @@ class Signal(Task):
                 logger.debug('Moving')
                 shutil.move(tmp_gzip_file, output_abspath)
             finally:
-                pval_signal_output_fn = pval_signal_output.fn
+                pval_signal_bedtool_fn = pval_signal_bedtool.fn
                 del pval_signal_bedtool
                 try:
-                    os.unlink(pval_signal_output_fn)
+                    os.unlink(pval_signal_bedtool_fn)
                 except OSError:
-                    if os.path.isfile(pval_signal_output_fn):
+                    if os.path.isfile(pval_signal_bedtool_fn):
                         raise
 
 if __name__ == '__main__':
