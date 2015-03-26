@@ -9,10 +9,10 @@ import shutil
 
 import requests
 
-from task import Task
-from genome.chromosomes import Chromosomes
-from core.downloader import fetch
-from core.file_formats.yaml_file import YamlFile
+from chipalign.core.task import Task
+from chipalign.genome.chromosomes import Chromosomes
+from chipalign.core.downloader import fetch
+from chipalign.core.file_formats.yaml_file import YamlFile
 
 
 class DownloadedSignal(Task):
@@ -48,6 +48,7 @@ class DownloadedSignal(Task):
     def run(self):
         from chipalign.command_line_applications.ucsc_suite import bigWigToBedGraph
         from chipalign.command_line_applications.common import sort
+        from chipalign.command_line_applications.archiving import gzip as cmd_line_gzip
 
         if self.chromosomes in ['male', 'all', 'chrY']:
             raise ValueError('Unsupported chromosomes: {!r}'.foirmat(self.chromosomes))
@@ -90,10 +91,8 @@ class DownloadedSignal(Task):
             os.unlink(filtered_bedgraph)
 
             logger.info('Gzipping')
-            filtered_and_sorted = 'filtered.sorted.gz'
-            with gzip.GzipFile(filtered_and_sorted, 'w') as out_:
-                with open(filtered_sorted_bedgraph, 'r') as in_:
-                    out_.writelines(in_)
+            cmd_line_gzip('-9', filtered_sorted_bedgraph)
+            filtered_and_sorted = 'filtered.sorted.bedgraph.gz'
 
             logger.info('Moving')
             shutil.move(filtered_and_sorted, output_abspath)

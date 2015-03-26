@@ -7,3 +7,8 @@ try:
     from sh import unzip
 except ImportError:
     raise ImportError('Cannot import zip command from your system, make sure zip archiver is installed')
+
+try:
+    from sh import gzip
+except ImportError:
+    raise ImportError('Cannot import gzip from system.')
