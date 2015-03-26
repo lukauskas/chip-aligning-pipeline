@@ -10,11 +10,11 @@ import pandas as pd
 from task import Task
 
 from chipalign.core.file_formats.dataframe import DataFrameFile
-from genome_signal import Signal
-from roadmap_data.downloaded_signal import DownloadableSignalTracks, DownloadedSignal
-from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
-from genome.genome_mappability import FullyMappableGenomicWindows
-from profile.signal import BinnedSignal
+from chipalign.genome.genome_signal import Signal
+from chipalign.roadmap_data.downloaded_signal import DownloadableSignalTracks, DownloadedSignal
+from chipalign.genome.genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
+from chipalign.genome.genome_mappability import FullyMappableGenomicWindows
+from chipalign.profile.signal import BinnedSignal
 
 
 BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']
