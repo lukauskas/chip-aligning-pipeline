@@ -7,8 +7,70 @@ import logging
 import luigi
 import pybedtools
 from task import Task
-from profile.base import weighted_means_from_intersection
 import numpy as np
+
+def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):
+
+    def _interval_a_grouped_iterator(intersection):
+        previous_interval_a = None
+        group_ = None
+
+        for row in intersection:
+            interval_a = row[:3]
+            rest = row[3:]
+
+            if interval_a != previous_interval_a:
+                if previous_interval_a is not None:
+                    yield previous_interval_a, group_
+                previous_interval_a = interval_a
+                group_ = []
+
+            group_.append(rest)
+
+        if previous_interval_a is not None:
+            yield previous_interval_a, group_
+
+    def _arithmetic_mean(data):
+        weighed_sum = 0
+        total_weight = 0
+        for value, weight in data:
+            weighed_sum += value * weight
+            total_weight += weight
+
+        return weighed_sum / total_weight
+
+    if mean_function is None:
+        mean_function = _arithmetic_mean
+
+    for interval_a, interval_bs in _interval_a_grouped_iterator(intersection):
+        chr_a, start_a, end_a = interval_a
+        start_a = int(start_a)
+        end_a = int(end_a)
+
+        a_length = end_a - start_a
+
+        sum_parts = []
+
+        last_b = None
+        for interval_b in interval_bs:
+            start_b = int(interval_b[1])
+            if start_b == -1:
+                continue
+
+            if last_b is not None and start_b < last_b:
+                raise Exception('overlapping intervals in b')
+
+            end_b = int(interval_b[2])
+            last_b = end_b
+
+            bases_explained_by_b = min(end_a, end_b) - max(start_a, start_b)
+            score = float(interval_b[column - 1])
+            sum_parts.append((score, bases_explained_by_b))
+
+        unexplained_bases = a_length - sum([w for __, w in sum_parts])
+        sum_parts.append((null_value, unexplained_bases))
+
+        yield (chr_a, start_a, end_a, mean_function(sum_parts))
 
 def _bedtool_is_sorted(bedtool):
     prev = None

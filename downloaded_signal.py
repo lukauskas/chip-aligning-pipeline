@@ -3,12 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
-from itertools import imap
 import os
 import re
-import luigi
 import shutil
-import pybedtools
 import requests
 from chromosomes import Chromosomes
 from downloader import fetch
@@ -48,6 +45,8 @@ class DownloadedSignal(Task):
 
     def run(self):
         from command_line_applications.ucsc_suite import bigWigToBedGraph
+        from command_line_applications.common import sort
+
         if self.chromosomes in ['male', 'all', 'chrY']:
             raise ValueError('Unsupported chromosomes: {!r}'.foirmat(self.chromosomes))
 
@@ -60,16 +59,16 @@ class DownloadedSignal(Task):
         chromosome_sizes = self.chromosomes_task.output().load()
 
         with self.temporary_directory():
-            logger.debug('Fetching: {}'.format(url))
+            logger.info('Fetching: {}'.format(url))
             tmp_file = 'download.bigwig'
             with open(tmp_file, 'w') as f:
                 fetch(url, f)
 
-            logger.debug('Converting to bedgraph')
+            logger.info('Converting to bedgraph')
             tmp_bedgaph = 'download.bedgraph'
             bigWigToBedGraph(tmp_file, tmp_bedgaph)
 
-            logger.debug('Filtering the bedgraph')
+            logger.info('Filtering the bedgraph')
             filtered_bedgraph = 'filtered.bedgraph'
             with open(filtered_bedgraph, 'w') as out_:
                 with open(tmp_bedgaph, 'r') as input_:
@@ -79,23 +78,23 @@ class DownloadedSignal(Task):
                         if chrom in chromosome_sizes:
                             out_.write(row)
 
-            sorted_bedgraph = pybedtools.BedTool(filtered_bedgraph).sort()
+            logger.info('Sorting')
+            filtered_sorted_bedgraph = 'filtered.sorted.bedgraph'
+            # GNU sort should be faster, use less memory and generally more stable than pybedtools
+            sort(filtered_bedgraph, '-k1,1', '-k2,2n', '-k3,3n', '-k5,5n',
+                 '-o', filtered_sorted_bedgraph)
 
-            try:
-                filtered_and_sorted = 'filtered.sorted.gz'
-                with gzip.GzipFile(filtered_and_sorted, 'w') as out_:
-                    out_.writelines(imap(str, sorted_bedgraph))
+            # Free up some /tmp/ space
+            os.unlink(filtered_bedgraph)
 
-                logger.debug('Moving')
-                shutil.move(filtered_and_sorted, output_abspath)
-            finally:
-                sorted_bedgraph_fn = sorted_bedgraph.fn
-                del sorted_bedgraph
-                try:
-                    os.unlink(sorted_bedgraph_fn)
-                except OSError:
-                    if os.path.isfile(sorted_bedgraph_fn):
-                        raise
+            logger.info('Gzipping')
+            filtered_and_sorted = 'filtered.sorted.gz'
+            with gzip.GzipFile(filtered_and_sorted, 'w') as out_:
+                with open(filtered_sorted_bedgraph, 'r') as in_:
+                    out_.writelines(in_)
+
+            logger.info('Moving')
+            shutil.move(filtered_and_sorted, output_abspath)
 
 
 class DownloadableSignalTracks(Task):

@@ -85,7 +85,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
         logger = self.logger()
 
-        from command_line_applications.archiving import unzip, tar
+        from command_line_applications.archiving import unzip
         from command_line_applications.bowtie import bowtie2
         from command_line_applications.samtools import samtools
 
