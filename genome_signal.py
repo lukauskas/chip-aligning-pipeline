@@ -6,11 +6,11 @@ import gzip
 from itertools import imap
 import os
 import shutil
-from genome_alignment import ConsolidatedReads
-import luigi
 
+from genome_alignment import ConsolidatedReads
 from task import Task
-from yaml_file import YamlFile
+from file_formats.yaml_file import YamlFile
+
 
 class CrossCorrelationPlot(Task):
 

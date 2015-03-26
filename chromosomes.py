@@ -2,7 +2,7 @@ import pybedtools
 import luigi
 
 from task import Task
-from yaml_file import YamlFile
+from file_formats.yaml_file import YamlFile
 
 
 class Chromosomes(Task):

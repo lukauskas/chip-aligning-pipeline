@@ -6,11 +6,13 @@ import gzip
 import os
 import re
 import shutil
+
 import requests
+
 from chromosomes import Chromosomes
 from downloader import fetch
 from task import Task
-from yaml_file import YamlFile
+from file_formats.yaml_file import YamlFile
 
 
 class DownloadedSignal(Task):
