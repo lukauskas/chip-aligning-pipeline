@@ -6,10 +6,11 @@ import gzip
 from itertools import imap
 import os
 import shutil
+import luigi
 
-from task import Task
+from chipalign.core.task import Task
 
-from genome.genome_alignment import ConsolidatedReads
+from chipalign.genome.genome_alignment import ConsolidatedReads
 from chipalign.core.file_formats.yaml_file import YamlFile
 
 
@@ -217,7 +218,6 @@ if __name__ == '__main__':
     import logging
     logging.basicConfig()
     FragmentLength.class_logger().setLevel(logging.DEBUG)
-    import luigi
     filtered_reads_task = ConsolidatedReads(genome_version='hg19',
                                             aligner='pash',
                                             srr_identifiers=['SRR179694', 'SRR097968'],

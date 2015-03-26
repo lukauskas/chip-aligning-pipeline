@@ -7,7 +7,7 @@ import logging
 import luigi
 import pandas as pd
 
-from task import Task
+from chipalign.core.task import Task
 
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.genome.genome_signal import Signal

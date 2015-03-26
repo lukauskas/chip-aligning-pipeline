@@ -10,7 +10,13 @@ import os
 import shutil
 import logging
 
-_OUTPUT_DIR = 'data/' # TODO: make this readable from config
+def parse_config():
+    import yaml
+    with open('chipalign.yml') as f:
+        config = yaml.safe_load(f)
+        return config
+
+_OUTPUT_DIR = parse_config()['output_directory']
 
 def ensure_directory_exists_for_file(filename):
     """

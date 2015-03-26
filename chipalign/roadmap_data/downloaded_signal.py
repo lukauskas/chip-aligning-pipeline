@@ -12,7 +12,7 @@ from chipalign.core.task import Task
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.yaml_file import YamlFile
-
+import luigi
 
 class DownloadedSignal(Task):
 
@@ -142,12 +142,3 @@ class DownloadableSignalTracks(Task):
             raise Exception('No URLs for cell type {!r} have been recovered'.format(self.cell_type))
 
         self.output().dump(urls_for_cell_type)
-
-
-if __name__ == '__main__':
-    import logging
-    DownloadedSignal.logger().setLevel(logging.DEBUG)
-    logging.basicConfig()
-
-    import luigi
-    luigi.run()
