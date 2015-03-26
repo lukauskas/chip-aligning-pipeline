@@ -9,8 +9,8 @@ import tempfile
 import luigi
 import pybedtools
 
-from genome.chromosomes import Chromosomes
-from task import Task
+from chipalign.genome.chromosomes import Chromosomes
+from chipalign.core.task import Task
 from chipalign.core.util import ensure_directory_exists_for_file
 
 

@@ -9,7 +9,7 @@ import luigi
 import pybedtools
 import numpy as np
 
-from task import Task
+from chipalign.core.task import Task
 
 
 def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):

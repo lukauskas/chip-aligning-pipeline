@@ -10,14 +10,14 @@ import shutil
 import luigi
 import pybedtools
 
-from genome.chromosomes import Chromosomes
-from core.downloader import fetch
-from fastq_sequence import FastqSequence
-from genome_browser import GenomeSequence
-from genome_mappability import GenomeMappabilityTrack
-from task import Task, MetaTask
-from genome.genome_index import GenomeIndex
-from core.util import ensure_directory_exists_for_file
+from chipalign.genome.chromosomes import Chromosomes
+from chipalign.core.downloader import fetch
+from chipalign.genome.fastq_sequence import FastqSequence
+from chipalign.genome.genome_browser import GenomeSequence
+from chipalign.genome.genome_mappability import GenomeMappabilityTrack
+from chipalign.core.task import Task, MetaTask
+from chipalign.genome.genome_index import GenomeIndex
+from chipalign.core.util import ensure_directory_exists_for_file
 
 
 class AlignedReadsBase(Task):

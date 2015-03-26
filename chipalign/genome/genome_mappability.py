@@ -13,8 +13,8 @@ import luigi
 import pybedtools
 import numpy as np
 
-from genome.genome_windows import NonOverlappingWindows
-from task import Task
+from chipalign.genome.genome_windows import NonOverlappingWindows
+from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
 
 

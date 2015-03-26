@@ -10,9 +10,9 @@ import tempfile
 
 import luigi
 
-from genome.genome_browser import GenomeSequence
-from task import Task
-from core.downloader import fetch
+from chipalign.genome.genome_browser import GenomeSequence
+from chipalign.core.task import Task
+from chipalign.core.downloader import fetch
 
 
 def _build_index(twobit_sequence_abspath, name, output, random_seed=0):

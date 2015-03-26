@@ -7,7 +7,7 @@ import shutil
 
 import luigi
 
-from task import Task
+from chipalign.core.task import Task
 
 
 class FastqSequence(Task):

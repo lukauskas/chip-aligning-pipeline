@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from chipalign.core.downloader import fetch
-from task import Task, luigi
+from chipalign.core.task import Task, luigi
 
 
 class GenomeSequence(Task):
