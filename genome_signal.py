@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
+from itertools import imap
 import os
 import shutil
 from genome_alignment import ConsolidatedReads
@@ -190,14 +191,25 @@ class Signal(Task):
                   S=scaling_factor
                   )
 
-            logger.debug('Gzipping')
-            tmp_gzip_file = 'output.gz'
-            with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
-                with open(pval_signal_output) as in_:
-                    out_.writelines(in_)
+            logger.debug('Sorting the output')
+            pval_signal_bedtool = pybedtools.BedTool(pval_signal_output)
+            pval_signal_bedtool = pval_signal_bedtool.sort()
 
-            logger.debug('Moving')
-            shutil.move(tmp_gzip_file, output_abspath)
+            try:
+                logger.debug('Gzipping')
+                tmp_gzip_file = 'output.gz'
+                with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
+                    out_.writelines(imap(str, pval_signal_bedtool))
+                logger.debug('Moving')
+                shutil.move(tmp_gzip_file, output_abspath)
+            finally:
+                pval_signal_output_fn = pval_signal_output.fn
+                del pval_signal_bedtool
+                try:
+                    os.unlink(pval_signal_output_fn)
+                except OSError:
+                    if os.path.isfile(pval_signal_output_fn):
+                        raise
 
 if __name__ == '__main__':
     import logging
