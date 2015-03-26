@@ -27,6 +27,10 @@ class GzipOutputFile(luigi.File):
 class Task(luigi.Task):
 
     @property
+    def task_class_friendly_name(self):
+        return self.__class__.__name__
+
+    @property
     def parameters(self):
         return []
 
@@ -47,7 +51,7 @@ class Task(luigi.Task):
     def _output_filename(self):
         filename = u'.'.join([self._basename, self._extension])
         # Actually longer filenames are allowed, but luigi likes to append things to the end so we're being conservative
-        assert len(filename) < 230 
+        assert len(filename) < 230
         return filename
 
     @property
@@ -83,7 +87,7 @@ class Task(luigi.Task):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
         cleanup_on_exception = kwargs.pop('cleanup_on_exception', False)
         return temporary_directory(logger=self.logger(),
-                                   refix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
+                                   prefix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
 
     def ensure_output_directory_exists(self):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))

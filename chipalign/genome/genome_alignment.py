@@ -461,6 +461,10 @@ class DownloadedConsolidatedReads(Task):
 
     chromosomes = Chromosomes.collection
 
+    @property
+    def task_class_friendly_name(self):
+        return 'DConsolidatedReads'
+
     def url(self):
         if self.genome_version != 'hg19':
             raise ValueError('Unsupported genome version {!r}'.format(self.genome_version))

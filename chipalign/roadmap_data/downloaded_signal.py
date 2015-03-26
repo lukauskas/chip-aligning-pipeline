@@ -22,6 +22,10 @@ class DownloadedSignal(Task):
 
     chromosomes = Chromosomes.collection
 
+    @property
+    def task_class_friendly_name(self):
+        return 'DSignal'
+
     def url(self):
         return self.downloadable_signal_task.output().load()[self.track]
 

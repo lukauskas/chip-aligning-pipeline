@@ -286,6 +286,10 @@ class FullyMappableGenomicWindows(Task):
     ext_size = MappabilityOfGenomicWindows.ext_size
 
     @property
+    def task_class_friendly_name(self):
+        return 'FMapGW'
+
+    @property
     def genome_windows_mappability_task(self):
         return MappabilityOfGenomicWindows(genome_version=self.genome_version,
                                            chromosomes=self.chromosomes,

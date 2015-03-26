@@ -134,8 +134,8 @@ class Signal(Task):
 
     @property
     def parameters(self):
-        return [self.input_task.__class__.__name__] + self.input_task.parameters \
-               + [self.treatment_task.__class__.__name__] + self.treatment_task.parameters
+        return [self.input_task.task_class_friendly_name] + self.input_task.parameters \
+               + [self.treatment_task.task_class_friendly_name] + self.treatment_task.parameters
 
     @property
     def _extension(self):

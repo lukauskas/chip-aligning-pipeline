@@ -84,8 +84,7 @@ class NonBlacklisted(Task):
 
     @property
     def parameters(self):
-        return [self.input_task.__class__.__name__] + self.input_task.parameters + [self.genome_version]
-
+        return [self.input_task.task_class_friendly_name] + self.input_task.parameters + [self.genome_version]
 
     @property
     def _blacklist_task(self):
