@@ -8,50 +8,11 @@ import os
 import gzip
 import shutil
 import pybedtools
+import luigi
 
 from chipalign.core.downloader import fetch
-from task import Task, luigi
+from chipalign.core.task import Task
 from chipalign.core.util import temporary_directory
-
-class NonBlacklisted(Task):
-    genome_version = BlacklistedRegions.genome_version
-
-    input_task = luigi.Parameter()
-
-    @property
-    def parameters(self):
-        return [self.input_task.__class__.__name__] + self.input_task.parameters + [self.genome_version]
-
-    @property
-    def filename(self):
-        return 'bed.gz'
-
-    @property
-    def _blacklist_task(self):
-        return BlacklistedRegions(genome_version=self.genome_version)
-
-    def requires(self):
-        return [self.input_task, self._blacklist_task]
-
-    def run(self):
-
-        blacklist = pybedtools.BedTool(self._blacklist_task)
-        input_ = pybedtools.BedTool(self.input_task)
-
-        difference = input_.intersect(blacklist, '-v')
-        try:
-            with self.output().open('w') as f:
-                f.writelines(imap(str, difference))
-        finally:
-            try:
-                difference_fn = difference.fn
-                del difference
-                os.unlink(difference_fn)
-            except OSError:
-                if os.path.isfile(difference_fn):
-                    raise
-
-
 
 class BlacklistedRegions(Task):
 
@@ -84,8 +45,13 @@ class BlacklistedRegions(Task):
         if self.genome_version in self.DOWNLOADABLE_BLACKLISTS:
             url = self.DOWNLOADABLE_BLACKLISTS[self.genome_version]
             logger.debug('Downloading the blacklist directly from {}'.format(url))
-            with self.output().open('w') as output_handle:
-                fetch(url, output_handle)
+            output_abspath = os.path.abspath(self.output().path)
+            with self.temporary_directory():
+                tmp_file = 'download.gz'
+
+                with open(tmp_file, 'w') as f:
+                    fetch(url, f)
+                shutil.move(tmp_file, output_abspath)
         else:
             from chipalign.command_line_applications import crossmap
 
@@ -111,10 +77,44 @@ class BlacklistedRegions(Task):
                 logger.debug('Moving {} to {}'.format(tmp_gzip_file, output_abspath))
                 shutil.move(tmp_gzip_file, output_abspath)
 
-if __name__ == '__main__':
-    logging.basicConfig()
-    BlacklistedRegions.logger().setLevel(logging.DEBUG)
-    luigi.run(main_task_cls=BlacklistedRegions)
+class NonBlacklisted(Task):
+    genome_version = BlacklistedRegions.genome_version
+
+    input_task = luigi.Parameter()
+
+    @property
+    def parameters(self):
+        return [self.input_task.__class__.__name__] + self.input_task.parameters + [self.genome_version]
+
+
+    @property
+    def _blacklist_task(self):
+        return BlacklistedRegions(genome_version=self.genome_version)
+
+    def requires(self):
+        return [self.input_task, self._blacklist_task]
+
+    @property
+    def _extension(self):
+        return 'bed.gz'
+
+    def run(self):
+
+        blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
+        input_ = pybedtools.BedTool(self.input_task.output().path)
+
+        difference = input_.intersect(blacklist, v=True)
+        try:
+            with self.output().open('w') as f:
+                f.writelines(imap(str, difference))
+        finally:
+            difference_fn = difference.fn
+            del difference
+            try:
+                os.unlink(difference_fn)
+            except OSError:
+                if os.path.isfile(difference_fn):
+                    raise
 
 
 
