@@ -125,7 +125,7 @@ class Signal(Task):
 
     @property
     def fragment_length_task(self):
-        return FragmentLength(self.input_task)
+        return FragmentLength(self.treatment_task)
 
     def requires(self):
         return [self.input_task, self.treatment_task, self.fragment_length_task]
