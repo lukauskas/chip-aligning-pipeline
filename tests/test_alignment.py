@@ -3,8 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import unittest
+
 import pybedtools
-from genome_alignment import _remove_duplicates_from_bed, _resize_reads
+
+from genome.genome_alignment import _remove_duplicates_from_bed, _resize_reads
 
 
 class TestFiltering(unittest.TestCase):

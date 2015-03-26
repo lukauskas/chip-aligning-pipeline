@@ -3,14 +3,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import luigi
 from os.path import splitext
-from genome_browser import GenomeSequence
-from task import Task
-from downloader import fetch
 import os
 import logging
 import tempfile
+
+import luigi
+
+from genome.genome_browser import GenomeSequence
+from task import Task
+from core.downloader import fetch
+
 
 def _build_index(twobit_sequence_abspath, name, output, random_seed=0):
     logger = logging.getLogger('genome_index._build_index')
@@ -18,7 +21,6 @@ def _build_index(twobit_sequence_abspath, name, output, random_seed=0):
     from command_line_applications.bowtie import bowtie2_build
     from command_line_applications.ucsc_suite import twoBitToFa
     import shutil
-    import sh
     import zipfile
 
 

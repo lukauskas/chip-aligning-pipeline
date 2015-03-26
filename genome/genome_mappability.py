@@ -4,16 +4,18 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from itertools import imap
 import os
-import luigi
 import tarfile
 import shutil
 import tempfile
-import pybedtools
-from genome_windows import NonOverlappingWindows
-from task import Task
-from downloader import fetch
-import numpy as np
 import logging
+
+import luigi
+import pybedtools
+import numpy as np
+
+from genome.genome_windows import NonOverlappingWindows
+from task import Task
+from core.downloader import fetch
 
 
 class MappabilityTrack(object):

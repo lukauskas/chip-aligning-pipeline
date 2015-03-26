@@ -3,15 +3,18 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import logging
+
 import luigi
-from file_formats.dataframe import DataFrameFile
-from genome_signal import Signal
-from downloaded_signal import DownloadableSignalTracks, DownloadedSignal
-from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
-from genome_mappability import FullyMappableGenomicWindows
-from profile.signal import BinnedSignal
-from task import Task
 import pandas as pd
+
+from task import Task
+
+from core.file_formats.dataframe import DataFrameFile
+from genome_signal import Signal
+from roadmap_data.downloaded_signal import DownloadableSignalTracks, DownloadedSignal
+from genome_alignment import ConsolidatedReads, DownloadedConsolidatedReads
+from genome.genome_mappability import FullyMappableGenomicWindows
+from profile.signal import BinnedSignal
 
 
 BRD4_DATA_SRRS = ['SRR1537736', 'SRR1537737']

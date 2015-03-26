@@ -3,13 +3,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import logging
+import re
+import os
 
 import luigi
 import luigi.format
 
-import re
-import os
-from util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR
+from core.util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR
 
 def _file_safe_string(value):
     value = unicode(value)

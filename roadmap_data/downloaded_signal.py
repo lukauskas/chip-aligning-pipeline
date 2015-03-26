@@ -9,10 +9,11 @@ import shutil
 
 import requests
 
-from chromosomes import Chromosomes
-from downloader import fetch
 from task import Task
-from file_formats.yaml_file import YamlFile
+
+from genome.chromosomes import Chromosomes
+from core.downloader import fetch
+from core.file_formats.yaml_file import YamlFile
 
 
 class DownloadedSignal(Task):

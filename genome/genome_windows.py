@@ -4,12 +4,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
 import os
-import luigi
-from chromosomes import Chromosomes
-from task import Task
-import pybedtools
 import tempfile
-from util import ensure_directory_exists_for_file
+
+import luigi
+import pybedtools
+
+from genome.chromosomes import Chromosomes
+from task import Task
+from core.util import ensure_directory_exists_for_file
 
 
 class NonOverlappingWindows(Task):

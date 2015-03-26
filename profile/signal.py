@@ -4,10 +4,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import os
 import logging
+
 import luigi
 import pybedtools
-from task import Task
 import numpy as np
+
+from task import Task
+
 
 def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):
 
@@ -187,8 +190,8 @@ class BinnedSignal(Task):
             self.compute_profile(bins_task_abspath, signal_task_abspath, f)
 
 if __name__ == '__main__':
-    from genome_mappability import FullyMappableGenomicWindows
-    from downloaded_signal import DownloadedSignal
+    from genome.genome_mappability import FullyMappableGenomicWindows
+    from roadmap_data.downloaded_signal import DownloadedSignal
     BinnedSignal.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
 

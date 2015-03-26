@@ -7,9 +7,10 @@ from itertools import imap
 import os
 import shutil
 
-from genome_alignment import ConsolidatedReads
 from task import Task
-from file_formats.yaml_file import YamlFile
+
+from genome.genome_alignment import ConsolidatedReads
+from core.file_formats.yaml_file import YamlFile
 
 
 class CrossCorrelationPlot(Task):

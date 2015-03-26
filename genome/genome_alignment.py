@@ -3,19 +3,22 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
+import logging
+import os
+import shutil
+
 import luigi
 import pybedtools
-from chromosomes import Chromosomes
-from downloader import fetch
+
+from genome.chromosomes import Chromosomes
+from core.downloader import fetch
 from fastq_sequence import FastqSequence
 from genome_browser import GenomeSequence
 from genome_mappability import GenomeMappabilityTrack
 from task import Task, MetaTask
-from genome_index import GenomeIndex
-import logging
-import os
-import shutil
-from util import ensure_directory_exists_for_file
+from genome.genome_index import GenomeIndex
+from core.util import ensure_directory_exists_for_file
+
 
 class AlignedReadsBase(Task):
     genome_version = GenomeIndex.genome_version

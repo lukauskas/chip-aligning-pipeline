@@ -6,9 +6,10 @@ import logging
 import os
 import gzip
 import shutil
-from downloader import fetch
+
+from core.downloader import fetch
 from task import Task, luigi
-from util import temporary_directory
+from core.util import temporary_directory
 
 
 class BlacklistedRegions(Task):
