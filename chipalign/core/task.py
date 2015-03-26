@@ -44,10 +44,17 @@ class Task(luigi.Task):
         return u''
 
     @property
+    def _output_filename(self):
+        filename = u'.'.join([self._basename, self._extension])
+        # Actually longer filenames are allowed, but luigi likes to append things to the end so we're being conservative
+        assert len(filename) < 230 
+        return filename
+
+    @property
     def __full_path(self):
         class_name = self.__class__.__name__
         return os.path.join(_OUTPUT_DIR, class_name,
-                            u'.'.join([self._basename, self._extension]))
+                            self._output_filename)
 
     def output(self):
         path = self.__full_path
@@ -65,7 +72,8 @@ class Task(luigi.Task):
         logger = self.class_logger()
 
         extra = {'class': self.__class__.__name__,
-                 'parameters': '.'.join(map(str, self.parameters))}
+                 'parameters': '.'.join(map(str, self.parameters)),
+                 'output_filename': self._output_filename}
 
         return logging.LoggerAdapter(logger, extra)
 
@@ -74,7 +82,8 @@ class Task(luigi.Task):
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
         cleanup_on_exception = kwargs.pop('cleanup_on_exception', False)
-        return temporary_directory(logger=self.logger(), prefix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
+        return temporary_directory(logger=self.logger(),
+                                   refix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
 
     def ensure_output_directory_exists(self):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))
