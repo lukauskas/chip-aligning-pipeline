@@ -215,7 +215,7 @@ class Signal(Task):
 if __name__ == '__main__':
     import logging
     logging.basicConfig()
-    FragmentLength.logger().setLevel(logging.DEBUG)
+    FragmentLength.class_logger().setLevel(logging.DEBUG)
     import luigi
     filtered_reads_task = ConsolidatedReads(genome_version='hg19',
                                             aligner='pash',

@@ -102,7 +102,8 @@ class BinnedSignal(Task):
 
     @property
     def parameters(self):
-        return self.bins_task.parameters + self .signal_task.parameters
+        return [self.bins_task.__class__.__name__] + self.bins_task.parameters\
+               + [self.signal_task.__class__.__name__] + self.signal_task.parameters
 
     def requires(self):
         return [self.bins_task, self.signal_task]
@@ -114,7 +115,7 @@ class BinnedSignal(Task):
     @classmethod
     def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
         _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
-                               logger=cls.logger(), check_sorted=False)
+                               logger=cls.class_logger(), check_sorted=False)
 
     def run(self):
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)

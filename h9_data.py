@@ -55,7 +55,7 @@ class BRD4Signal(luigi.Task):
 
     @property
     def parameters(self):
-        return [self.cell_type, self.genome_version, self.aligner, self.max_sequencing_depth, self.chromosomes]
+        return self.requires().parameters
 
 class BRD4Alignments(luigi.Task):
     genome_version = luigi.Parameter()
@@ -185,7 +185,7 @@ class SignalDataFrame(Task):
         logger = self.logger()
 
         series = []
-        for track, task in self._binned_signal_tasks():
+        for track, task in self._binned_signal_tasks().iteritems():
             input_ = task.output()
             logger.info('Reading {}'.format(input_.path))
             input_series = pd.read_table(input_.path,

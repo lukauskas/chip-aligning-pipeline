@@ -27,8 +27,8 @@ def _fetch_from_http(url, output):
     response = requests.get(url=url, stream=True)
     response.raise_for_status()
 
-    # Iterate through content 10 MB at a time
-    for chunk in response.iter_content(chunk_size=10*1024*1024):
+    # Iterate through content 50 MB at a time
+    for chunk in response.iter_content(chunk_size=50*1024*1024):
         if chunk:
             output.write(chunk)
 

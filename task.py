@@ -56,8 +56,19 @@ class Task(luigi.Task):
             return luigi.File(path)
 
     @classmethod
-    def logger(cls):
-        return logging.getLogger('task.{}'.format(cls.__name__))
+    def class_logger(cls):
+        logger = logging.getLogger('task.{}'.format(cls.__name__))
+        return logger
+
+    def logger(self):
+        logger = self.class_logger()
+
+        extra = {'class': self.__class__.__name__,
+                 'parameters': '.'.join(map(str, self.parameters))}
+
+        return logging.LoggerAdapter(logger, extra)
+
+
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
