@@ -51,7 +51,7 @@ class Task(luigi.Task):
     def _output_filename(self):
         filename = u'.'.join([self._basename, self._extension])
         # Actually longer filenames are allowed, but luigi likes to append things to the end so we're being conservative
-        assert len(filename) < 230
+        assert len(filename) < 230, 'Filename {!r} is too long'.format(filename)
         return filename
 
     @property
