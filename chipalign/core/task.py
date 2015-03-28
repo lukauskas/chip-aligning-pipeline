@@ -94,6 +94,10 @@ class Task(luigi.Task):
 
 class MetaTask(luigi.Task):
 
+    @property
+    def task_class_friendly_name(self):
+        return self.__class__.__name__
+
     def complete(self):
         return self.requires().complete()
 
