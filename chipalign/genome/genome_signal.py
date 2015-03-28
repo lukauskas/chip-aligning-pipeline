@@ -125,17 +125,32 @@ class Signal(Task):
     input_task = luigi.Parameter()
     treatment_task = luigi.Parameter()
 
+    fragment_length = luigi.Parameter(default='auto')
+    scaling_factor = luigi.Parameter(default='auto')
+
     @property
     def fragment_length_task(self):
         return FragmentLength(self.treatment_task)
 
     def requires(self):
-        return [self.input_task, self.treatment_task, self.fragment_length_task]
+        reqs = [self.input_task, self.treatment_task]
+
+        if self.fragment_length != 'auto':
+            reqs.append(self.fragment_length_task)
+
+        return reqs
 
     @property
     def parameters(self):
+        additional_parameters = []
+        if self.fragment_length != 'auto':
+            additional_parameters.append('f{}'.format(self.fragment_length))
+        if self.scaling_factor != 'auto':
+            additional_parameters.append('sf{}'.format(self.scaling_factor))
+
         return [self.input_task.task_class_friendly_name] + self.input_task.parameters \
-               + [self.treatment_task.task_class_friendly_name] + self.treatment_task.parameters
+               + [self.treatment_task.task_class_friendly_name] + self.treatment_task.parameters \
+               + additional_parameters
 
     @property
     def _extension(self):
@@ -147,7 +162,11 @@ class Signal(Task):
 
         logger = self.logger()
 
-        fragment_length = self.fragment_length_task.output().load()['fragment_lengths']['best']['length']
+        if self.fragment_length == 'auto':
+            fragment_length = self.fragment_length_task.output().load()['fragment_lengths']['best']['length']
+        else:
+            fragment_length = int(self.fragment_length)
+
         ext_size = int(fragment_length/2)
 
         logger.debug('Fragment length: {}, ext_size: {}'.format(fragment_length, ext_size))
@@ -155,13 +174,18 @@ class Signal(Task):
         treatment_abspath = os.path.abspath(self.treatment_task.output().path)
         input_abspath = os.path.abspath(self.input_task.output().path)
 
-        number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
-        number_of_input_reads = len(pybedtools.BedTool(input_abspath))
+        if self.scaling_factor == 'auto':
+            number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
+            number_of_input_reads = len(pybedtools.BedTool(input_abspath))
 
-        logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads, number_of_input_reads))
+            logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
+                                                                            number_of_input_reads))
 
-        scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
-        logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
+            scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
+            logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
+        else:
+            scaling_factor = float(self.scaling_factor)
+            logger.debug('Using user-defined scaling factor: {}'.format(scaling_factor))
 
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
