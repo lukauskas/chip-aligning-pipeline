@@ -484,9 +484,6 @@ class DownloadedConsolidatedReads(Task):
         return 'tagAlign.gz'
 
     def run(self):
-        if self.chromosomes in ['male', 'all', 'chrY']:
-            raise ValueError('Unsupported chromosomes: {!r}'.foirmat(self.chromosomes))
-
         logger = self.logger()
         url = self.url()
 

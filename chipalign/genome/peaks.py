@@ -62,7 +62,7 @@ class MACSResults(Task):
     def requires(self):
         reqs = [self.input_task, self.treatment_task]
 
-        if self.fragment_length_is_known():
+        if not self.fragment_length_is_known():
             reqs.append(self.fragment_length_task)
 
         return reqs
