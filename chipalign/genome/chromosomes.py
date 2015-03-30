@@ -27,7 +27,7 @@ class Chromosomes(Task):
         chromsizes = pybedtools.chromsizes(self.genome_version)
 
         female_chromosomes = {'chr{}'.format(x) for x in (range(1, 23) + ['X', 'M'])}
-        male_chromosomes = female_chromosomes | {'Y'}
+        male_chromosomes = female_chromosomes | {'chrY'}
 
         if self.collection == 'male':
             chromsizes = {k: chromsizes[k] for k in male_chromosomes}
