@@ -3,122 +3,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
-from itertools import imap
 import os
 import shutil
+
 import luigi
+import tarfile
 
 from chipalign.core.task import Task
+from chipalign.genome.peaks import MACSResults
 
-from chipalign.genome.genome_alignment import ConsolidatedReads
-from chipalign.core.file_formats.yaml_file import YamlFile
-
-
-class CrossCorrelationPlot(Task):
-
-    input_task = luigi.Parameter()
-
-    def requires(self):
-        return self.input_task
-
-    @property
-    def _extension(self):
-        return 'pdf'
-
-    @property
-    def parameters(self):
-        return self.input_task.parameters
-
-    def run(self):
-        from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
-        logger = self.logger()
-
-        input_abspath = os.path.abspath(self.input().path)
-        output_abspath = os.path.abspath(self.output().path)
-        self.ensure_output_directory_exists()
-
-        with self.temporary_directory():
-            tmp_output = 'output.tmp'
-            logger.debug('Running SPP')
-            run_spp_nodups('-c={}'.format(input_abspath),
-                           '-savp={}'.format(tmp_output),
-                           '-odir=.')
-
-            logger.debug('Relocating output')
-            shutil.move(tmp_output, output_abspath)
-
-
-class FragmentLength(Task):
-
-    input_task = luigi.Parameter()
-
-    def requires(self):
-        return self.input_task
-
-    def output(self):
-        super_output = super(FragmentLength, self).output().path
-        return YamlFile(super_output)
-
-    @property
-    def parameters(self):
-        return self.input_task.parameters
-
-    @property
-    def _extension(self):
-        return 'yml'
-
-    def run(self):
-        from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
-        logger = self.logger()
-
-        input_abspath = os.path.abspath(self.input().path)
-        output = self.output()
-
-        with self.temporary_directory():
-            tmp_output = 'output.tmp'
-            logger.debug('Running SPP')
-            run_spp_nodups('-c={}'.format(input_abspath),
-                           '-out={}'.format(tmp_output),
-                           '-odir=.')
-
-            logger.debug('Parsing output')
-            with open(tmp_output) as f:
-                data = f.read()
-
-        data = data.strip().split('\t')
-
-        filename, num_reads, estimated_fragment_length, corr_estimated_fragment_length, \
-        phantom_peak, corr_phantom_peak, argmin_corr, min_corr, nsc, rsc, quality_tag = data
-
-        estimated_fragment_length = map(int, estimated_fragment_length.split(','))
-        corr_estimated_fragment_length = map(float, corr_estimated_fragment_length.split(','))
-        assert len(estimated_fragment_length) == len(corr_estimated_fragment_length)
-
-        fragment_lengths = [{'length': x, 'correlation': y}
-                            for x, y in zip(estimated_fragment_length, corr_estimated_fragment_length)]
-
-        data_fragment_lengths = {i: v for i, v in enumerate(fragment_lengths)}
-        data_fragment_lengths['best'] = data_fragment_lengths[0]
-
-        quality_tag = int(quality_tag)
-        quality_tag_map = {-2: 'very low',
-                           -1: 'low',
-                           0: 'medium',
-                           1: 'high',
-                           2: 'very high'}
-
-        data = {}
-        data['filename'] = filename
-        data['num_reads'] = int(num_reads)
-        data['fragment_lengths'] = data_fragment_lengths
-        data['phantom_peak'] = {'read_length': int(phantom_peak), 'correlation': float(corr_phantom_peak)}
-        data['min_strand_shift'] = {'shift': int(argmin_corr), 'correlation': float(min_corr)}
-        data['nsc'] = float(nsc)
-        data['rsc'] = float(rsc)
-        data['quality_tag'] = {'numeric': quality_tag, 'text': quality_tag_map[quality_tag]}
-
-        logger.debug('Writing output')
-        output.dump(data)
 
 class Signal(Task):
 
@@ -129,112 +22,116 @@ class Signal(Task):
     scaling_factor = luigi.Parameter(default='auto')
 
     @property
-    def fragment_length_task(self):
-        return FragmentLength(self.treatment_task)
+    def macs_task(self):
+        return MACSResults(input_task=self.input_task, treatment_task=self.treatment_task,
+                           fragment_length=self.fragment_length)
 
     def requires(self):
-        reqs = [self.input_task, self.treatment_task]
-
-        if self.fragment_length != 'auto':
-            reqs.append(self.fragment_length_task)
-
-        return reqs
+        return self.macs_task
 
     @property
     def parameters(self):
         additional_parameters = []
-        if self.fragment_length != 'auto':
-            additional_parameters.append('f{}'.format(self.fragment_length))
         if self.scaling_factor != 'auto':
             additional_parameters.append('sf{}'.format(self.scaling_factor))
 
-        return [self.input_task.task_class_friendly_name] + self.input_task.parameters \
-               + [self.treatment_task.task_class_friendly_name] + self.treatment_task.parameters \
-               + additional_parameters
+        return self.requires().parameters + additional_parameters
 
     @property
     def _extension(self):
         return 'bdg.gz'
 
-    def run(self):
-        from chipalign.command_line_applications.macs import macs2
+    def scaling_factor_value(self):
         import pybedtools
-
         logger = self.logger()
 
-        if self.fragment_length == 'auto':
-            fragment_length = self.fragment_length_task.output().load()['fragment_lengths']['best']['length']
-        else:
-            fragment_length = int(self.fragment_length)
-
-        ext_size = int(fragment_length)  # Roadmap used --shiftsize = fragment_length / 2
-                                         # which is now equivalent to --extsize =fragment_length
-
-        logger.debug('Fragment length: {}, ext_size: {}'.format(fragment_length, ext_size))
-
-        treatment_abspath = os.path.abspath(self.treatment_task.output().path)
-        input_abspath = os.path.abspath(self.input_task.output().path)
 
         if self.scaling_factor == 'auto':
-            number_of_treatment_reads = len(pybedtools.BedTool(treatment_abspath))
-            number_of_input_reads = len(pybedtools.BedTool(input_abspath))
+            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task.output().path))
+            number_of_input_reads = len(pybedtools.BedTool(self.input().output().path))
 
             logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
                                                                             number_of_input_reads))
 
             scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
             logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
+
         else:
             scaling_factor = float(self.scaling_factor)
             logger.debug('Using user-defined scaling factor: {}'.format(scaling_factor))
 
+        return scaling_factor
+
+    def run(self):
+        from chipalign.command_line_applications.macs import macs2
+
+        logger = self.logger()
+
+        macs_callpeaks_files_abspath = os.path.abspath(self.macs_task.output().path)
+
+        scaling_factor = self.scaling_factor_value()
+
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
+
         with self.temporary_directory():
 
-            logger.debug('Running MACS callpeak')
-            output_basename = 'macs_out'
+            macs_basename = MACSResults.OUTPUT_BASENAME
+            treat_pileup_filename = '{}_treat_pileup.bdg'.format(macs_basename)
+            control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
 
-            macs2('callpeak',
-                  '--nomodel',
-                  '--extsize', ext_size,
-                  '-B',
-                  '--SPMR',
-                  f='BED',
-                  t=treatment_abspath,
-                  c=input_abspath,
-                  g='hs',
-                  n=output_basename,
-                  p=1e-2,
-                  )
+            logger.debug('Extracting files')
+            with tarfile.open(macs_callpeaks_files_abspath, 'r') as tf:
+                tf.extract(treat_pileup_filename)
+                tf.extract(control_lambda_filename)
 
             logger.debug('Now running bdgcmp')
             pval_signal_output = 'pval.signal'
             macs2('bdgcmp',
-                  t='{}_treat_pileup.bdg'.format(output_basename),
-                  c='{}_control_lambda.bdg'.format(output_basename),
+                  t=treat_pileup_filename,
+                  c=control_lambda_filename,
                   o=pval_signal_output,
                   m='ppois',
                   S=scaling_factor
                   )
 
-            logger.debug('Sorting the output')
-            pval_signal_bedtool = pybedtools.BedTool(pval_signal_output)
-            pval_signal_bedtool = pval_signal_bedtool.sort()
+            logger.info('Writing the output in a sorted order')
+            # MACS returns sorted signal output, but the chromosomes are in random order
+            # Let's fix that
+            chromosomes = set()
+            with open(pval_signal_output, 'r') as f:
+                for row in f:
+                    chrom, __, __ = row.partition('\t')
+                    chromosomes.add(chrom)
 
-            try:
-                logger.debug('Gzipping')
-                tmp_gzip_file = 'output.gz'
-                with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
-                    out_.writelines(imap(str, pval_signal_bedtool))
-                logger.debug('Moving')
-                shutil.move(tmp_gzip_file, output_abspath)
-            finally:
-                pval_signal_bedtool_fn = pval_signal_bedtool.fn
-                del pval_signal_bedtool
-                try:
-                    os.unlink(pval_signal_bedtool_fn)
-                except OSError:
-                    if os.path.isfile(pval_signal_bedtool_fn):
-                        raise
+            sorted_chromosomes = sorted(chromosomes)
+
+            tmp_gzip_file = 'output.gz'
+            with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
+                for chrom in sorted_chromosomes:
+                    logger.info('Processing chromosome: {}'.format(chrom))
+
+                    # This loops through the input file, and writes it to out_ file chromosome by chromosome as defined
+                    # in sorted_chromosomes
+                    with open(pval_signal_output, 'r') as in_:
+                        seen_chrom = False
+                        for row in in_:
+                            in_chrom, __, __ = row.partition('\t')
+
+                            # If chromosomes match, write it
+                            if chrom == in_chrom:
+                                out_.write(row)
+                                seen_chrom = True
+                            # Else either stop (if we already processed chromosome required)
+                            # .. or continue looking for it
+                            else:
+                                if seen_chrom:
+                                    break
+                                else:
+                                    continue
+
+            logger.info('Moving')
+            shutil.move(tmp_gzip_file, output_abspath)
+
+            logger.info('Done')
