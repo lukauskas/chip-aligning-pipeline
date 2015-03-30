@@ -167,7 +167,8 @@ class Signal(Task):
         else:
             fragment_length = int(self.fragment_length)
 
-        ext_size = int(fragment_length/2)
+        ext_size = int(fragment_length)  # Roadmap used --shiftsize = fragment_length / 2
+                                         # which is now equivalent to --extsize =fragment_length
 
         logger.debug('Fragment length: {}, ext_size: {}'.format(fragment_length, ext_size))
 
@@ -237,26 +238,3 @@ class Signal(Task):
                 except OSError:
                     if os.path.isfile(pval_signal_bedtool_fn):
                         raise
-
-if __name__ == '__main__':
-    import logging
-    logging.basicConfig()
-    FragmentLength.class_logger().setLevel(logging.DEBUG)
-    filtered_reads_task = ConsolidatedReads(genome_version='hg19',
-                                            aligner='pash',
-                                            srr_identifiers=['SRR179694', 'SRR097968'],
-                                            chromosomes='female',
-                                            max_sequencing_depth=30000000)
-
-    task = FragmentLength(input_task=filtered_reads_task)
-    task2 = CrossCorrelationPlot(input_task=filtered_reads_task)
-
-    _sch = luigi.interface.WorkerSchedulerFactory().create_local_scheduler()
-    _w = luigi.worker.Worker(scheduler=_sch)
-    _w.add(task)
-    _w.add(task2)
-    _w.run()
-
-
-
-
