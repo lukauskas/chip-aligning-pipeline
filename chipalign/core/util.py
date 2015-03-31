@@ -10,13 +10,23 @@ import os
 import shutil
 import logging
 
-def parse_config():
+def config_from_file():
     import yaml
     with open('chipalign.yml') as f:
         config = yaml.safe_load(f)
         return config
 
-_OUTPUT_DIR = parse_config()['output_directory']
+
+def get_config():
+    return config_from_file()
+
+def output_dir():
+    _environ_key = 'CHIPALIGN_OUTPUT_DIRECTORY'
+    try:
+        return os.environ[_environ_key]
+    except KeyError:
+        os.environ[_environ_key] = get_config()['output_directory']
+        return os.environ[_environ_key]
 
 def ensure_directory_exists_for_file(filename):
     """
@@ -47,7 +57,7 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     current_working_directory = os.getcwd()
 
     # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
-    dir_ = kwargs.pop('dir', os.path.join(_OUTPUT_DIR, '.tmp'))
+    dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
     # Encsure this directory exists
     try:
         os.makedirs(dir_)

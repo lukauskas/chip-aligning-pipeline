@@ -9,7 +9,7 @@ import os
 import luigi
 import luigi.format
 
-from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR
+from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR, output_dir
 
 
 def _file_safe_string(value):
@@ -57,7 +57,7 @@ class Task(luigi.Task):
     @property
     def __full_path(self):
         class_name = self.__class__.__name__
-        return os.path.join(_OUTPUT_DIR, class_name,
+        return os.path.join(output_dir(), class_name,
                             self._output_filename)
 
     @property
