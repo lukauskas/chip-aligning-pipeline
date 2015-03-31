@@ -53,9 +53,6 @@ class DownloadedSignal(Task):
         from chipalign.command_line_applications.common import sort
         from chipalign.command_line_applications.archiving import gzip as cmd_line_gzip
 
-        if self.chromosomes in ['male', 'all', 'chrY']:
-            raise ValueError('Unsupported chromosomes: {!r}'.foirmat(self.chromosomes))
-
         logger = self.logger()
         url = self.url()
 

@@ -226,7 +226,7 @@ class MappabilityOfGenomicWindows(Task):
 
     read_length = GenomeMappabilityTrack.read_length
 
-    ext_size = luigi.IntParameter()
+    max_ext_size = luigi.IntParameter()
 
     @property
     def non_overlapping_windows_task(self):
@@ -247,7 +247,7 @@ class MappabilityOfGenomicWindows(Task):
         non_overlapping_windows_task_params = self.non_overlapping_windows_task.parameters
         mappability_track_task_params = self.mappability_track_task.parameters
 
-        specific_parameters = ['ext{}'.format(self.ext_size)]
+        specific_parameters = ['ext{}'.format(self.max_ext_size)]
 
         return non_overlapping_windows_task_params + mappability_track_task_params + specific_parameters
 
@@ -258,7 +258,7 @@ class MappabilityOfGenomicWindows(Task):
     def best_total_score(self):
         return MappabilityTrack.maximum_mappability_score_for_bin(bin_width=self.window_size,
                                                                   read_length=self.read_length,
-                                                                  extension_length=self.ext_size)
+                                                                  extension_length=self.max_ext_size)
 
     def run(self):
         logger = self.logger()
@@ -268,7 +268,7 @@ class MappabilityOfGenomicWindows(Task):
         logger.debug('Computing mappability')
         number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(genomic_windows,
                                                                                                    read_length=self.read_length,
-                                                                                                   extension_length=self.ext_size)
+                                                                                                   extension_length=self.max_ext_size)
 
         logger.debug('Writing output')
         with self.output().open('w') as output:
@@ -283,7 +283,7 @@ class FullyMappableGenomicWindows(Task):
 
     read_length = MappabilityOfGenomicWindows.read_length
 
-    ext_size = MappabilityOfGenomicWindows.ext_size
+    max_ext_size = MappabilityOfGenomicWindows.max_ext_size
 
     @property
     def task_class_friendly_name(self):
@@ -295,7 +295,7 @@ class FullyMappableGenomicWindows(Task):
                                            chromosomes=self.chromosomes,
                                            window_size=self.window_size,
                                            read_length=self.read_length,
-                                           ext_size=self.ext_size)
+                                           max_ext_size=self.max_ext_size)
 
     def requires(self):
         return self.genome_windows_mappability_task
@@ -332,18 +332,3 @@ class FullyMappableGenomicWindows(Task):
 
         logger.debug('Bins total: {}, bins fully mappable: {} ({}%)'.format(counter_total, counter_fully_mappable,
                                                                             counter_fully_mappable * 100.0 / counter_total))
-
-
-
-if __name__ == '__main__':
-    GenomeMappabilityTrack.logger().setLevel(logging.DEBUG)
-    MappabilityOfGenomicWindows.logger().setLevel(logging.DEBUG)
-    FullyMappableGenomicWindows.logger().setLevel(logging.DEBUG)
-    logging.getLogger(MappabilityTrack.__class__.__name__).setLevel(logging.DEBUG)
-
-    logging.basicConfig()
-    luigi.run()
-
-
-
-
