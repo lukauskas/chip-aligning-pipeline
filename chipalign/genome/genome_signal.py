@@ -8,6 +8,7 @@ import shutil
 
 import luigi
 import tarfile
+from chipalign.core.file_formats.bedgraph import BedGraph
 
 from chipalign.core.task import Task
 from chipalign.genome.peaks import MACSResults
@@ -40,6 +41,10 @@ class Signal(Task):
     @property
     def _extension(self):
         return 'bdg.gz'
+
+    @property
+    def _output_class(self):
+        return BedGraph
 
     def scaling_factor_value(self):
         import pybedtools

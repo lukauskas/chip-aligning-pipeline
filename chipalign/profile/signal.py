@@ -8,6 +8,7 @@ import logging
 import luigi
 import pybedtools
 import numpy as np
+from chipalign.core.file_formats.bedgraph import BedGraph
 
 from chipalign.core.task import Task
 
@@ -176,6 +177,10 @@ class BinnedSignal(Task):
     @property
     def _extension(self):
         return 'bdg.gz'
+
+    @property
+    def _output_class(self):
+        return BedGraph
 
     @classmethod
     def compute_profile(cls, bins_abspath, signal_abspath, output_handle):

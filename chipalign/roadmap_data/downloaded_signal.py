@@ -7,6 +7,7 @@ import re
 import shutil
 
 import requests
+from chipalign.core.file_formats.bedgraph import BedGraph
 
 from chipalign.core.task import Task
 from chipalign.genome.chromosomes import Chromosomes
@@ -47,6 +48,11 @@ class DownloadedSignal(Task):
     @property
     def _extension(self):
         return 'bdg.gz'
+
+
+    @property
+    def _output_class(self):
+        return BedGraph
 
     def run(self):
         from chipalign.command_line_applications.ucsc_suite import bigWigToBedGraph

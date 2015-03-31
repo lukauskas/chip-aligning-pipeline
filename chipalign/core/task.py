@@ -60,12 +60,16 @@ class Task(luigi.Task):
         return os.path.join(_OUTPUT_DIR, class_name,
                             self._output_filename)
 
+    @property
+    def _output_class(self):
+        if self._extension.endswith('.gz'):
+            return GzipOutputFile
+        else:
+            return luigi.File
+
     def output(self):
         path = self.__full_path
-        if self._extension.endswith('.gz'):
-            return GzipOutputFile(path)
-        else:
-            return luigi.File(path)
+        return self._output_class(path)
 
     @classmethod
     def class_logger(cls):
