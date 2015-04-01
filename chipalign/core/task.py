@@ -9,7 +9,7 @@ import os
 import luigi
 import luigi.format
 
-from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, _OUTPUT_DIR, output_dir
+from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir
 
 
 def _file_safe_string(value):

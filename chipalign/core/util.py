@@ -10,6 +10,7 @@ import os
 import shutil
 import logging
 
+_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
 def config_from_file():
     import yaml
     with open('chipalign.yml') as f:
@@ -21,12 +22,12 @@ def get_config():
     return config_from_file()
 
 def output_dir():
-    _environ_key = 'CHIPALIGN_OUTPUT_DIRECTORY'
+
     try:
-        return os.environ[_environ_key]
+        return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
     except KeyError:
-        os.environ[_environ_key] = get_config()['output_directory']
-        return os.environ[_environ_key]
+        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = get_config()['output_directory']
+        return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
 
 def ensure_directory_exists_for_file(filename):
     """

@@ -198,6 +198,58 @@ class AlignedReads(MetaTask):
     def bam_output(self):
         return self.output()[0]
 
+class RoadmapAlignedReads(Task):
+    url = luigi.Parameter()
+    genome_version = luigi.Parameter()
+
+    @property
+    def _extension(self):
+        return 'bam'
+
+    @property
+    def parameters(self):
+        file_base, __ = os.path.splitext(os.path.basename(self.url))
+        return [file_base]
+
+    def run(self):
+        output_abspath = os.path.abspath(self.output().path)
+        self.ensure_output_directory_exists()
+
+        with self.temporary_directory():
+
+            tmp_file = 'downloaded.bed.gz'
+
+            with open(tmp_file, 'w') as tf:
+                fetch(self.url, tf)
+
+            # Their BED files are broken, to fix:
+            # adjust start coordinate by one to the left, irrespective of strand
+            # adjust the strand column to column 6
+
+            fixed_bed = 'fixed.bed'
+
+            with gzip.open(tmp_file, 'r') as _in:
+                with open(fixed_bed, 'w') as _out:
+                    for row in _in:
+                        chrom, start, end, name, strand = row.split('\t')
+
+                        start = int(start) - 1  # Yup, one subtracted here intentionally
+                        end = int(end)
+
+                        score = '.'  # No score
+
+                        _out.write('{}\t{}\t{}\t{}\t{}\t{}\n'.format(chrom, start, end, name, score, strand))
+
+            # Now one needs to convert the bed to BAM
+            tmp_bam = 'temporary.bam'
+            pybedtools.BedTool(fixed_bed).to_bam(genome=self.genome_version).saveas(tmp_bam)
+
+            # Finally, move the bam
+            shutil.move(tmp_bam, output_abspath)
+
+    def bam_output(self):
+        return self.output()
+
 def _remove_duplicates_from_bed(bedtools_object):
 
     def _key_for_row(row):
@@ -258,8 +310,8 @@ def _filter_uniquely_mappable(mappability_track, reads):
 class FilteredReads(Task):
 
     genome_version = AlignedReads.genome_version
-    srr_identifier = AlignedReads.srr_identifier
-    aligner = AlignedReads.aligner
+
+    alignment_task = luigi.Parameter()
 
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
     filter_uniquely_mappable_for_truncated_length = luigi.BooleanParameter(default=True)
@@ -267,12 +319,6 @@ class FilteredReads(Task):
     sort = luigi.BooleanParameter(default=True)  # Sort the reads?
 
     chromosomes = Chromosomes.collection
-
-    @property
-    def _alignment_task(self):
-        return AlignedReads(genome_version=self.genome_version,
-                            srr_identifier=self.srr_identifier,
-                            aligner=self.aligner)
 
     @property
     def _chromosomes_task(self):
@@ -290,7 +336,7 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        reqs = [self._alignment_task, self._chromosomes_task]
+        reqs = [self.alignment_task, self._chromosomes_task]
         if self._mappability_task is not None:
             reqs.append(self._mappability_task)
         return reqs
@@ -305,7 +351,7 @@ class FilteredReads(Task):
 
     @property
     def parameters(self):
-        alignment_parameters = self._alignment_task.parameters
+        alignment_parameters = self.alignment_task.parameters
         filtering_parameters = self.filtering_parameters
         self_parameters = [self.chromosomes]
         return alignment_parameters + filtering_parameters + self_parameters
@@ -317,7 +363,7 @@ class FilteredReads(Task):
     def run(self):
         logger = self.logger()
 
-        bam_output = self._alignment_task.bam_output().path
+        bam_output = self.alignment_task.bam_output().path
 
         chromsizes = self._chromosomes_task.output().load()
 
@@ -373,7 +419,7 @@ class ConsolidatedReads(Task):
     srr_identifiers = luigi.Parameter(is_list=True)
 
     genome_version = FilteredReads.genome_version
-    aligner = FilteredReads.aligner
+    aligner = AlignedReads.aligner
 
     resized_length = FilteredReads.resized_length
     filter_uniquely_mappable_for_truncated_length = FilteredReads.filter_uniquely_mappable_for_truncated_length
@@ -401,7 +447,6 @@ class ConsolidatedReads(Task):
 
     def requires(self):
         kwargs = dict(genome_version=self.genome_version,
-                      aligner=self.aligner,
                       resized_length=self.resized_length,
                       filter_uniquely_mappable_for_truncated_length=self.filter_uniquely_mappable_for_truncated_length,
                       remove_duplicates=self.remove_duplicates,
@@ -410,7 +455,11 @@ class ConsolidatedReads(Task):
 
         tasks = []
         for srr_identifier in self.srr_identifiers:
-            tasks.append(FilteredReads(srr_identifier=srr_identifier, **kwargs))
+            aligned_reads = AlignedReads(srr_identifier=srr_identifier,
+                                         genome_version=self.genome_version,
+                                         aligner=self.aligner)
+
+            tasks.append(FilteredReads(alignment_task=aligned_reads, **kwargs))
 
         return tasks
 
