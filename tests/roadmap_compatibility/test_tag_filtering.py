@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
-from itertools import izip
+from itertools import izip, groupby
 import os
 import unittest
 import tempfile
@@ -78,12 +78,41 @@ class TestTagFiltering(unittest.TestCase):
         self.assertEqual(len(expected), len(actual), 'Length of produced bed files differ: {} != {}.\n'
                                                      '{}'.format(len(expected), len(actual), debug_msg))
 
+        key_func = lambda r: (r.chrom, r.start, r.end)
+
+        prev_key = None
+        expected_strand_counts = None
+        actual_strand_counts = None
 
         for expected_row, actual_row in izip(expected, actual):
-            row_message = 'Row expected:\n{}\nRow actual:\n{}\n'.formaT(expected_row, actual_row)
-            mismatch_message = 'Line by line differences:\n{}\n\n{}'.format(row_message, debug_msg)
+            # Get the key
+            expected_key = key_func(expected_row)
+            actual_key = key_func(actual_row)
 
-            self.assertEqual(expected_row.chrom, actual_row.chrom, mismatch_message)
-            self.assertEqual(expected_row.start, actual_row.start, mismatch_message)
-            self.assertEqual(expected_row.end, actual_row.end, mismatch_message)
-            self.assertEqual(expected_row.strand, actual_row.strand, mismatch_message)
+            # And compare it
+            self.assertTupleEqual(expected_key, actual_key)
+
+            # Strand order in datasets is a bit undefined as .sort() by default does not care about them
+            # therefore compare them in a sort-invariant way
+            if expected_key != prev_key:
+                if prev_key is not None:
+                    # Check the strand counts match
+                    self.assertDictEqual(expected_strand_counts, actual_strand_counts,
+                                         'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
+                                                                                          expected_strand_counts,
+                                                                                          actual_strand_counts))
+                # Reset counts for new key
+                expected_strand_counts = {'+': 0, '-': 0}
+                actual_strand_counts = {'+': 0, '-': 0}
+                prev_key = expected_key
+
+            # Add the counts
+            expected_strand_counts[expected_row.strand] += 1
+            actual_strand_counts[actual_row.strand] += 1
+
+        # check the last one
+        if prev_key is not None:
+            self.assertDictEqual(expected_strand_counts, actual_strand_counts,
+                                 'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
+                                                                                  expected_strand_counts,
+                                                                                  actual_strand_counts))
