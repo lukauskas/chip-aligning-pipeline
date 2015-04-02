@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import gzip
 from itertools import izip
 import os
 import unittest
@@ -24,9 +25,16 @@ class TestTagFiltering(unittest.TestCase):
 
         __, self.answer_file = tempfile.mkstemp(prefix='tag-filtering-answer')
 
-        with open(self.answer_file, 'w') as f:
+        gzip_tmp = tempfile.mkstemp(prefix='tag-filtering-answer', suffix='.gz')
+        with open(gzip_tmp, 'w') as f:
             fetch('http://egg2.wustl.edu/roadmap/data/byFileType/alignments/'
                   'unconsolidated/Class1Marks/UCSD.H9.H3K56ac.YL238.filt.tagAlign.gz', f)
+
+        with gzip.GzipFile(gzip_tmp, 'r') as _in:
+            with open(self.answer_file, 'w') as _out:
+                _out.writelines(_in)
+
+        os.unlink(gzip_tmp)
 
     def tearDown(self):
         try:
@@ -63,7 +71,10 @@ class TestTagFiltering(unittest.TestCase):
         expected = pybedtools.BedTool(self.answer_file)
         actual = pybedtools.BedTool(filtered_reads_task.output().path)
 
-        debug_msg = 'Expected:\n{}\nActual:\n{}\n'.format(expected.head(), actual.head())
+        expected_head = '\n'.join(map(str, expected[:min(10, len(expected))]))
+        actual_head = '\n'.join(map(str, actual[:min(10, len(actual))]))
+
+        debug_msg = 'Expected:\n{}\nActual:\n{}\n'.format(expected_head, actual_head)
         self.assertEqual(len(expected), len(actual), 'Length of produced bed files differ: {} != {}.\n'
                                                      '{}'.format(len(expected), len(actual), debug_msg))
 
