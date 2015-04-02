@@ -25,7 +25,7 @@ class TestTagFiltering(unittest.TestCase):
 
         __, self.answer_file = tempfile.mkstemp(prefix='tag-filtering-answer')
 
-        gzip_tmp = tempfile.mkstemp(prefix='tag-filtering-answer', suffix='.gz')
+        __, gzip_tmp = tempfile.mkstemp(prefix='tag-filtering-answer', suffix='.gz')
         with open(gzip_tmp, 'w') as f:
             fetch('http://egg2.wustl.edu/roadmap/data/byFileType/alignments/'
                   'unconsolidated/Class1Marks/UCSD.H9.H3K56ac.YL238.filt.tagAlign.gz', f)
