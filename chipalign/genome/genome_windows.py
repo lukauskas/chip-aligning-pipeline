@@ -21,6 +21,12 @@ class NonOverlappingWindows(Task):
 
     chromosomes = Chromosomes.collection
 
+    use_non_fully_mappable_windows = luigi.BooleanParameter(default=False)
+
+    @property
+    def task_class_friendly_name(self):
+        return 'NOW'
+
     @property
     def parameters(self):
         params = [self.genome_version]
