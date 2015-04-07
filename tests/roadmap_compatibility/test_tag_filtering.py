@@ -19,6 +19,9 @@ from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR
 @roadmap_test
 class TestTagFiltering(unittest.TestCase):
 
+    _GENOME_VERSION = 'hg19'
+    _TAG_LENGTH = 36
+
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix='tests-temp')
         os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.temp_dir
@@ -33,6 +36,11 @@ class TestTagFiltering(unittest.TestCase):
         with gzip.GzipFile(gzip_tmp, 'r') as _in:
             with open(self.answer_file, 'w') as _out:
                 _out.writelines(_in)
+
+        # Slop the bedtool by zeros to truncate the lengths of reads by chromosome boundaries
+        # (i.e. their file contains read "chrM 16536 16572" whilst chrM is 16571 bp long)
+        # then sort it, and save it to a convenient location
+        pybedtools.BedTool(self.answer_file).slop(r=0, l=0, genome=self._GENOME_VERSION).sort().saveas(self.answer_file)
 
         os.unlink(gzip_tmp)
 
@@ -53,10 +61,10 @@ class TestTagFiltering(unittest.TestCase):
         roadmap_aligned_reads = RoadmapAlignedReads(url='http://genboree.org/EdaccData/Release-9/'
                                                         'experiment-sample/Histone_H3K56ac/H9_Cell_Line/'
                                                         'UCSD.H9.H3K56ac.YL238.bed.gz',
-                                                    genome_version='hg19')
+                                                    genome_version=self._GENOME_VERSION)
 
-        filtered_reads_task = FilteredReads(genome_version='hg19',
-                                            resized_length=36,
+        filtered_reads_task = FilteredReads(genome_version=self._GENOME_VERSION,
+                                            resized_length=self._TAG_LENGTH,
                                             filter_uniquely_mappable_for_truncated_length=True,
                                             remove_duplicates=True,
                                             sort=True,
