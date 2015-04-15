@@ -84,8 +84,8 @@ class TestMacsPileup(unittest.TestCase):
                     self.assertEquals(expected_row, actual_row)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
-                self.assertThrows(StopIteration, actual)
-                self.assertThrows(StopIteration, expected)
+                self.assertRaises(StopIteration, actual.next)
+                self.assertRaises(StopIteration, expected.next)
 
     def test_can_reproduce_signal_track(self):
 
@@ -116,6 +116,6 @@ class TestMacsPileup(unittest.TestCase):
                     self.assertEquals(expected_row, actual_row)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
-                self.assertThrows(StopIteration, actual)
-                self.assertThrows(StopIteration, expected)
+                self.assertRaises(StopIteration, actual.next)
+                self.assertRaises(StopIteration, expected.next)
 
