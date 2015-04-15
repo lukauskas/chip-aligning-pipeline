@@ -6,7 +6,10 @@ import os
 import unittest
 import tempfile
 import luigi
+import shutil
 from chipalign.core.downloader import fetch
+from chipalign.genome.genome_alignment import DownloadedConsolidatedReads
+from chipalign.genome.genome_signal import Signal
 from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR, temporary_file
@@ -20,14 +23,21 @@ class TestMacsPileup(unittest.TestCase):
     _GENOME_VERSION = 'hg19'
     _CHROMOSOMES = 'male'
 
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix='tests-temp')
+        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.temp_dir
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.temp_dir)
+        except OSError:
+            if os.path.isdir(self.temp_dir):
+                raise
 
     @classmethod
     def setUpClass(cls):
         from chipalign.command_line_applications.ucsc_suite import bigWigToBedGraph
         from chipalign.command_line_applications.common import sort
-
-        cls.temp_dir = tempfile.mkdtemp(prefix='tests-temp')
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = cls.temp_dir
 
         if cls._GENOME_VERSION != 'hg19':
             raise NotImplementedError('Cannot do this for non hg19')
@@ -67,12 +77,45 @@ class TestMacsPileup(unittest.TestCase):
         self.assertTrue(ds.complete())
 
 
-        with ds.output().open('r') as actual_:
-            with open(self.answer_file) as expected_:
+        with ds.output().open('r') as actual:
+            with open(self.answer_file) as expected:
 
-                for expected_row, actual_row in izip(expected_, actual_):
+                for expected_row, actual_row in izip(expected, actual):
                     self.assertEquals(expected_row, actual_row)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
-                self.assertThrows(StopIteration, actual_)
-                self.assertThrows(StopIteration, expected_)
+                self.assertThrows(StopIteration, actual)
+                self.assertThrows(StopIteration, expected)
+
+    def test_can_reproduce_signal_track(self):
+
+
+        input_reads = DownloadedConsolidatedReads(genome_version=self._GENOME_VERSION,
+                                                  cell_type=self._CELL_TYPE,
+                                                  track='Input',
+                                                  chromosomes=self._CHROMOSOMES
+                                                  )
+
+        track_reads = DownloadedConsolidatedReads(genome_version=self._GENOME_VERSION,
+                                                  cell_type=self._CELL_TYPE,
+                                                  track=self._TRACK,
+                                                  chromosomes=self._CHROMOSOMES
+                                                  )
+
+        st = Signal(input_task=input_reads, treatment_task=track_reads,
+                    scaling_factor=self.scaling_factor,
+                    fragment_length=self.fragment_length)
+
+        luigi.build([st], local_scheduler=True)
+
+        self.assertTrue(st.complete())
+
+        with st.output().oopen('r') as actual:
+            with open(self.answer_file) as expected:
+                for expected_row, actual_row in izip(expected, actual):
+                    self.assertEquals(expected_row, actual_row)
+
+                # Check that files were read completely (`izip` stops when one of them stops)
+                self.assertThrows(StopIteration, actual)
+                self.assertThrows(StopIteration, expected)
+
