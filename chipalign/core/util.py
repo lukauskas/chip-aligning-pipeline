@@ -69,7 +69,7 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     temp_dir = tempfile.mkdtemp(dir=dir_, **kwargs)
 
     if logger is None:
-        logger = logging.getLogger('temporary_directory')
+        logger = logging.getLogger('chipalign.core.util.temporary_directory')
 
     try:
         logger.debug('Working on: {}'.format(temp_dir))
@@ -78,7 +78,7 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     except:
         if cleanup_on_exception:
             # If exception, and cleanup_on_exception is set -- remove directory
-            logger.debug('Removing {} as cleanup_on_exception is set'.format(cleanup_on_exception))
+            logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_dir))
             shutil.rmtree(temp_dir)
         raise
     finally:
@@ -88,6 +88,33 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     logger.debug('Removing {}'.format(temp_dir))
     shutil.rmtree(temp_dir)
 
+@contextmanager
+def temporary_file(logger=None, cleanup_on_exception=False, **kwargs):
+
+    __, temp_file = tempfile.mkstemp(**kwargs)
+    if logger is None:
+        logger = logging.getLogger('chipalign.core.util.temporary_file')
+
+    try:
+        logger.debug('Working with temporary file: {}'.format(temp_file))
+        yield temp_file
+    except:
+        if cleanup_on_exception:
+            # If exception, and cleanup_on_exception is set -- remove file
+            logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_file))
+            try:
+                os.unlink(temp_file)
+            except OSError:
+                if os.path.isfile(temp_file):
+                    raise
+
+    # If we are here, no exception occurred
+    logger.debug('Removing {}'.format(temp_file))
+    try:
+        os.unlink(temp_file)
+    except OSError:
+        if os.path.isfile(temp_file):
+            raise
 
 def memoised(f):
     """

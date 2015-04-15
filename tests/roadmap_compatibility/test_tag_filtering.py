@@ -16,6 +16,7 @@ from chipalign.genome.genome_alignment import RoadmapAlignedReads, FilteredReads
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR
 
+
 @roadmap_test
 class TestTagFiltering(unittest.TestCase):
 
