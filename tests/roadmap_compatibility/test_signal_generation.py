@@ -108,7 +108,7 @@ class TestMacsPileup(unittest.TestCase):
 
         self.assertTrue(st.complete())
 
-        with st.output().oopen('r') as actual:
+        with st.output().open('r') as actual:
             with open(self.answer_file) as expected:
                 for expected_row, actual_row in izip(expected, actual):
                     self.assertEquals(expected_row, actual_row)
