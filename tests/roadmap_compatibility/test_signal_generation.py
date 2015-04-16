@@ -102,9 +102,7 @@ class TestMacsPileup(unittest.TestCase):
                                                   chromosomes=self._CHROMOSOMES
                                                   )
 
-        st = Signal(input_task=input_reads, treatment_task=track_reads,
-                    scaling_factor=self.scaling_factor,
-                    fragment_length=self.fragment_length)
+        st = Signal(input_task=input_reads, treatment_task=track_reads)
 
         luigi.build([st], local_scheduler=True)
 
