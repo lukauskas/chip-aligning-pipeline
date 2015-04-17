@@ -111,7 +111,18 @@ class TestMacsPileup(unittest.TestCase):
         with st.output().open('r') as actual:
             with open(self.answer_file) as expected:
                 for expected_row, actual_row in izip(expected, actual):
-                    self.assertEquals(expected_row, actual_row)
+
+                    expected_chromosome, expected_start, expected_end, expected_score = expected_row.strip('\n').split('\t')
+                    actual_chromosome, actual_start, actual_end, actual_score = actual_row.strip('\n').split('\t')
+
+                    expected_start, actual_start = int(expected_start), int(actual_start)
+                    expected_end, actual_end = int(expected_end), int(actual_end)
+                    expected_score, actual_score = float(expected_score), float(actual_score)
+
+                    self.assertEquals(expected_chromosome, actual_chromosome)
+                    self.assertEquals(expected_start, actual_start)
+                    self.assertEquals(expected_end, actual_end)
+                    self.assertEquals(expected_score, actual_score)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
                 self.assertRaises(StopIteration, actual.next)
