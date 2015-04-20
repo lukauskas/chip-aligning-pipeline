@@ -90,7 +90,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
         from chipalign.command_line_applications.archiving import unzip
         from chipalign.command_line_applications.bowtie import bowtie2
-        from chipalign.command_line_applications import samtools
+        from chipalign.command_line_applications.samtools import samtools
 
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
