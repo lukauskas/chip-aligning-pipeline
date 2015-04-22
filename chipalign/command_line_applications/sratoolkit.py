@@ -6,4 +6,5 @@ from __future__ import unicode_literals
 try:
     from sh import fastq_dump
 except ImportError:
+    fastq_dump = None  # So the code interpreter is OK
     raise ImportError('Cannot import fastq-dump. Ensure SRA toolkit is installed')

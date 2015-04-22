@@ -6,4 +6,5 @@ from __future__ import unicode_literals
 try:
     from sh import macs2
 except ImportError:
+    macs2 = None
     raise ImportError('Cannot import macs2 from the system, ensure it is installed')

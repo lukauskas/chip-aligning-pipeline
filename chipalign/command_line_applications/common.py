@@ -6,4 +6,7 @@ from __future__ import unicode_literals
 try:
     from sh import sort, cat, cut
 except ImportError:
+    sort = None
+    cat = None
+    cut = None
     raise ImportError('Cannot import sort, cat or cut from the standard unix utilities')

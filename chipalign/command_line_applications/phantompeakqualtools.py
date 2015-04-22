@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 try:
     from sh import run_spp_nodups
 except ImportError:
+    run_spp_nodups = None
     raise ImportError('Cannot import run_spp_nodups, ensure phantompeakqualtools is installed https://code.google.com/p/phantompeakqualtools/')
 
 

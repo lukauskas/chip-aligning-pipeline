@@ -6,4 +6,5 @@ from __future__ import unicode_literals
 try:
     from sh import pash3
 except ImportError:
+    pash3 = None
     raise ImportError('Cannot import Pash3, ensure pash is installed')
