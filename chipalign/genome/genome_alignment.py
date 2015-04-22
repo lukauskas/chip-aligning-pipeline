@@ -139,7 +139,7 @@ class AlignedReadsPash(AlignedReadsBase):
     def run(self):
         from chipalign.command_line_applications.ucsc_suite import twoBitToFa
         from chipalign.command_line_applications.pash import pash3
-        from chipalign.command_line_applications import samtools
+        from chipalign.command_line_applications.samtools import samtools
 
         logger = self.logger()
 
