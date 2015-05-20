@@ -16,7 +16,7 @@ def _file_safe_string(value):
     value = unicode(value)
     value = re.sub('[^a-zA-Z0-9]', '_', value)
     value = re.sub('__+', '_', value)
-    return value
+    return value.strip('_')
 
 class GzipOutputFile(luigi.File):
 
@@ -25,6 +25,14 @@ class GzipOutputFile(luigi.File):
 
 
 class Task(luigi.Task):
+
+    _MAX_LENGTH_FOR_FILENAME = 255 - len('-luigi-tmp-10000000000')
+
+    def __init__(self, *args, **kwargs):
+        super(Task, self).__init__(*args, **kwargs)
+
+        # Try generating the filename so exception is raised early, if it is raised
+        __ = self._output_filename
 
     @property
     def task_class_friendly_name(self):
@@ -66,14 +74,19 @@ class Task(luigi.Task):
 
     @property
     def _extension(self):
-        return u''
+        raise NotImplementedError
 
     @property
     def _output_filename(self):
         filename = u'.'.join([self._basename, self._extension])
-        # Actually longer filenames are allowed, but luigi likes to append things to the end so we're being conservative
-        assert len(filename) < 230, 'Filename {!r} is too long'.format(filename)
+
+        if len(filename) > self._MAX_LENGTH_FOR_FILENAME:
+            raise ValueError('Filename {!r} too long. '
+                             'Only {!r} characters allowed, consider editing .parameters'.format(filename,
+                                                                                                  self._MAX_LENGTH_FOR_FILENAME))
+
         return filename
+
 
     @property
     def __full_path(self):

@@ -14,6 +14,10 @@ class A(Task):
 
     z = luigi.Parameter(significant=False)
 
+    @property
+    def _extension(self):
+        return 'ext'
+
 class B(Task):
     x = luigi.Parameter()
 
@@ -40,3 +44,37 @@ class TestTaskParameterHelpers(unittest.TestCase):
 
         expected_parameters = [b.task_class_friendly_name, 'bx', 'y']
         self.assertListEqual(expected_parameters, a.parameters)
+
+class TestTaskFilenameIsCorrect(unittest.TestCase):
+
+
+    def test_parameters_are_joined_correctly(self):
+        a = A(x='x', y='y', z='z')
+        self.assertEqual('x.y', a._basename)
+
+    def test_special_characters_are_escaped_correctly(self):
+        a = A(x='5.123', y='y++154-44--!//', z='z')
+        self.assertEqual('5_123.y_154_44', a._basename)
+
+    def extension_is_added_correctly(self):
+        a = A(x='x', y='y', z='z')
+        self.assertEqual('x.y.ext', a._output_filename)
+
+    def test_long_filename_raises_exception(self):
+        # FAT32 allows 255 chars for filename, luigi adds the luigi-tmp suffix sometimes so we need to allow for it
+        MAX_LENGTH_FOR_TASK_FILENAME = Task._MAX_LENGTH_FOR_FILENAME
+
+        characters_left_for_x = MAX_LENGTH_FOR_TASK_FILENAME - len('.y') - len('.ext')
+
+        # Both should be fine
+        try:
+            less_than_limit = A(x='x' * (characters_left_for_x-1), y='y', z='not important')
+            equal_to_limit = A(x='x' * characters_left_for_x, y='y', z='not important')
+        except Exception as e:
+            self.fail('Got {!r}, while expected no exception'.format(e))
+
+        # One should not be able to create this class
+        self.assertRaises(ValueError, A, x='x' * (characters_left_for_x+1), y='y', z='not important')
+
+
+
