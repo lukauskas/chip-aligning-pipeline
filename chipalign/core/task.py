@@ -32,7 +32,28 @@ class Task(luigi.Task):
 
     @property
     def parameters(self):
-        return []
+
+        luigi_params = self.get_params()
+        param_kwargs = self.param_kwargs
+
+        # Create the parameters array from significant parameters list
+        ans = []
+        for param_name, param in luigi_params:
+            if param.significant:
+                param_value = param_kwargs[param_name]
+
+                if isinstance(param_value, Task):
+                    # If we got a Task object as a parameter
+
+                    # Add the friendly name of the task to our parameters
+                    ans.append(param_value.task_class_friendly_name)
+                    # Add the parameters of the task to our parameters
+                    ans.extend(param_value.parameters)
+                else:
+                    # Else just add parameter
+                    ans.append(param_value)
+
+        return ans
 
     @property
     def _basename(self):
