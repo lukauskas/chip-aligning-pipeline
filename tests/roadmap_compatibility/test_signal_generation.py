@@ -3,36 +3,25 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
-import unittest
 import tempfile
 import luigi
-import shutil
 from chipalign.core.downloader import fetch
 from chipalign.genome.genome_alignment import DownloadedConsolidatedReads
 from chipalign.genome.genome_signal import Signal
 from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
+from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
-from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR, temporary_file
+from chipalign.core.util import temporary_file
 from itertools import izip
 
 @roadmap_test
-class TestMacsPileup(unittest.TestCase):
+class TestMacsPileup(TaskTestCase):
 
     _CELL_TYPE = 'E008'
     _TRACK = 'H3K56ac'
     _GENOME_VERSION = 'hg19'
     _CHROMOSOMES = 'male'
 
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix='tests-temp')
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.temp_dir
-
-    def tearDown(self):
-        try:
-            shutil.rmtree(self.temp_dir)
-        except OSError:
-            if os.path.isdir(self.temp_dir):
-                raise
 
     @classmethod
     def setUpClass(cls):
@@ -103,10 +92,7 @@ class TestMacsPileup(unittest.TestCase):
                                                   )
 
         st = Signal(input_task=input_reads, treatment_task=track_reads)
-
-        luigi.build([st], local_scheduler=True)
-
-        self.assertTrue(st.complete())
+        self.build_task(st)
 
         with st.output().open('r') as actual:
             with open(self.answer_file) as expected:
@@ -119,10 +105,15 @@ class TestMacsPileup(unittest.TestCase):
                     expected_end, actual_end = int(expected_end), int(actual_end)
                     expected_score, actual_score = float(expected_score), float(actual_score)
 
-                    self.assertEquals(expected_chromosome, actual_chromosome)
-                    self.assertEquals(expected_start, actual_start)
-                    self.assertEquals(expected_end, actual_end)
-                    self.assertEquals(expected_score, actual_score)
+                    message = '{!r} != {!r}'.format(expected_row, actual_row)
+
+                    self.assertEquals(expected_chromosome, actual_chromosome, message)
+                    self.assertEquals(expected_start, actual_start, message)
+                    self.assertEquals(expected_end, actual_end, message)
+
+                    # They round to four digits, but there are some weird things going on with rounding there
+                    # So let's just do three
+                    self.assertAlmostEqual(expected_score, actual_score, msg=message, places=3)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
                 self.assertRaises(StopIteration, actual.next)
