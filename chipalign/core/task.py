@@ -137,10 +137,18 @@ class MetaTask(luigi.Task):
         return self.__class__.__name__
 
     def complete(self):
-        return self.requires().complete()
+        requires = self.requires()
+        if isinstance(requires, list):
+            return all(map(lambda x: x.complete(), requires))
+        else:
+            return requires.complete()
 
     def output(self):
-        return self.requires().output()
+        requires = self.requires()
+        if isinstance(requires, list):
+            return map(lambda x: x.output(), requires)
+        else:
+            return requires.output()
 
     def requires(self):
         raise NotImplementedError

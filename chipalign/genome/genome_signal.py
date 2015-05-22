@@ -8,6 +8,7 @@ import shutil
 
 import luigi
 import tarfile
+import pybedtools
 from chipalign.core.file_formats.bedgraph import BedGraph
 
 from chipalign.core.task import Task
@@ -69,6 +70,7 @@ class Signal(Task):
 
     def run(self):
         from chipalign.command_line_applications.macs import macs2
+        from chipalign.command_line_applications.ucsc_suite import bedClip
 
         logger = self.logger()
 
@@ -92,14 +94,26 @@ class Signal(Task):
                 tf.extract(control_lambda_filename)
 
             logger.debug('Now running bdgcmp')
-            pval_signal_output = 'pval.signal'
+            pval_signal_output_raw = 'pval.unclipped.signal'
             macs2('bdgcmp',
                   t=treat_pileup_filename,
                   c=control_lambda_filename,
-                  o=pval_signal_output,
+                  o=pval_signal_output_raw,
                   m='ppois',
                   S=scaling_factor
                   )
+            logger.info('Clipping the output')
+
+
+            tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(genome=self.treatment_task.genome_version)
+            tmp_bedtool.saveas(pval_signal_output_raw)
+            tmp_bedtool.delete_temporary_history(ask=False)
+
+            chromsizes_file = 'chromsizes'
+            pybedtools.chromsizes_to_file(self.treatment_task.genome_version, chromsizes_file)
+            pval_signal_output = 'pval.signal'
+            bedClip(pval_signal_output_raw, chromsizes_file, pval_signal_output)
+            os.unlink(pval_signal_output_raw)
 
             logger.info('Writing the output in a sorted order')
             # MACS returns sorted signal output, but the chromosomes are in random order
