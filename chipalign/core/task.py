@@ -10,6 +10,8 @@ import itertools
 import luigi
 import luigi.format
 
+from chipalign.core.file_formats.file import File, GzippedFile
+
 from luigi.task import flatten
 
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir
@@ -20,12 +22,6 @@ def _file_safe_string(value):
     value = re.sub('[^a-zA-Z0-9]', '_', value)
     value = re.sub('__+', '_', value)
     return value.strip('_')
-
-class GzipOutputFile(luigi.File):
-
-    def __init__(self, path=None):
-        super(GzipOutputFile, self).__init__(path=path, format=luigi.format.Gzip)
-
 
 class Task(luigi.Task):
 
@@ -90,7 +86,6 @@ class Task(luigi.Task):
 
         return filename
 
-
     @property
     def __full_path(self):
         class_name = self.__class__.__name__
@@ -100,9 +95,9 @@ class Task(luigi.Task):
     @property
     def _output_class(self):
         if self._extension.endswith('.gz'):
-            return GzipOutputFile
+            return GzippedFile
         else:
-            return luigi.File
+            return File
 
     def output(self):
         path = self.__full_path
