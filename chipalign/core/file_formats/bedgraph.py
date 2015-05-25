@@ -2,12 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import luigi
 import luigi.format
 
 import pandas as pd
+from chipalign.core.file_formats.file import File
 
-class BedGraph(luigi.File):
+
+class BedGraph(File):
     def __init__(self, path=None, **kwargs):
         if path.endswith('gz'):
             format_ = kwargs.get('format', luigi.format.Gzip)

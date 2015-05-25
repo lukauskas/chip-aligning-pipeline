@@ -2,12 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import os
-import luigi
 import yaml
+from chipalign.core.file_formats.file import File
 
-
-class YamlFile(luigi.File):
+class YamlFile(File):
 
     def dump(self, data, safe=True):
         yaml_dump = yaml.safe_dump if safe else yaml.dump

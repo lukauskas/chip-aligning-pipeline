@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
+import datetime
 import numpy as np
 import tempfile
 import shutil
@@ -48,6 +49,14 @@ class DataFrameFile(object):
 
     def load(self):
         return self.__load_hdf(self.path)
+
+    @property
+    def modification_time(self):
+        if not self.exists():
+            return None
+        else:
+            return datetime.datetime.fromtimestamp(os.path.getmtime(self.path))
+
 
 class _Legacy_DataFrameFile(object):
 
