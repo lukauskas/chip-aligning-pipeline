@@ -5,9 +5,12 @@ from __future__ import unicode_literals
 import logging
 import re
 import os
+import itertools
 
 import luigi
 import luigi.format
+
+from luigi.task import flatten
 
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir
 
@@ -119,7 +122,40 @@ class Task(luigi.Task):
 
         return logging.LoggerAdapter(logger, extra)
 
+    def complete(self):
+        """
+            If the task has outputs, check that they all are complete,
+            and check that their modification times are all higher than inputs
+        """
+        outputs = flatten(self.output())
+        if len(outputs) == 0:
+            return False
 
+        dependancies = flatten(self.requires())
+
+        all_outputs_exist = all(itertools.imap(lambda output: output.exists(), outputs))
+        if not all_outputs_exist:
+            return False
+        else:
+            if len(dependancies) == 0:
+                return True
+            else:
+                max_dependancy_mod_date = None
+                for dependancy in dependancies:
+                    dependancy_outputs = flatten(dependancy.output())
+                    mod_dates = itertools.imap(lambda output: output.modification_date, dependancy_outputs)
+                    if None in mod_dates:
+                        # If at least one dependancy unsatisfied, this task is also not complete
+                        return False
+                    dependancy_max_mod_date = max(mod_dates)
+
+                    if max_dependancy_mod_date is None or dependancy_max_mod_date > max_dependancy_mod_date:
+                        max_dependancy_mod_date = dependancy_max_mod_date
+
+                min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_date, outputs))
+
+                # Ensure all dependencies were built before the parent.
+                return max_dependancy_mod_date < min_output_mod_date_date
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
