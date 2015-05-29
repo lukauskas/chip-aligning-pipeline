@@ -14,7 +14,7 @@ from chipalign.core.task import Task
 class RoadmapAlignedReads(Task):
     """
     Downloads aligned reads straight from ROADMAP consortium
-    
+
     """
 
     url = luigi.Parameter()

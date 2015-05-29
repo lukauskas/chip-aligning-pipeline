@@ -36,7 +36,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
         index_output_abspath = os.path.abspath(self.index_task.output().path)
-        fastq_sequence_abspath = os.path.abspath(self.fastq_task.output().path)
+        fastq_sequence_abspath = os.path.abspath(self.fastq_task._filename().path)
 
         with self.temporary_directory():
             logger.debug('Unzipping index')

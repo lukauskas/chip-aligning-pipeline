@@ -49,7 +49,7 @@ class FastqMetadata(Task):
 
         to_key = lambda x: tuple(map(x.get, key_columns))
         counter = Counter()
-        with self.fastq_sequence.output().open('r') as f:
+        with self.fastq_sequence._filename().open('r') as f:
             for line in f:
                 if not line.startswith('@'):
                     continue

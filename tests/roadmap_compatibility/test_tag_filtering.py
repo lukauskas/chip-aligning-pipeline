@@ -3,76 +3,70 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
-from itertools import izip, groupby
-import os
-import unittest
-import tempfile
-import shutil
+from itertools import izip
 import luigi
 import pybedtools
-from chipalign.core.downloader import fetch
 from chipalign.roadmap_data.downloaded_reads import RoadmapAlignedReads
 from chipalign.alignment.filtering import FilteredReads
+from tests.helpers.external_resource import DownloadableExternalResource
 
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
-from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR
+from tests.helpers.task_test import TaskTestCase
+from chipalign.core.util import temporary_file
 
+class FilteredReadsResource(DownloadableExternalResource):
+
+    genome_version = None
+
+    def __init__(self, associated_task_test_case, url, genome_version):
+        super(FilteredReadsResource, self).__init__(associated_task_test_case, url)
+        self.genome_version = genome_version
+
+    def _obtain(self):
+        with temporary_file(cleanup_on_exception=True) as gzip_tmp:
+            self._fetch_resource(gzip_tmp)
+            with temporary_file(cleanup_on_exception=True) as tmp_answer_file:
+                with gzip.GzipFile(gzip_tmp, 'r') as _in:
+                    with open(tmp_answer_file, 'w') as _out:
+                        _out.writelines(_in)
+
+            with temporary_file(cleanup_on_exception=True) as answer_file:
+                answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
+                                                                          genome=self.genome_version).sort()
+                answer_bedtool.saveas(answer_file)
+                answer_bedtool.delete_temporary_history(ask=False)
+                self._relocate_to_output(answer_file)
+
+class CachedRoadmapAlignedReads(RoadmapAlignedReads):
+    def _output_directory(self):
+        return TestTagFiltering.task_cache_directory()
 
 @roadmap_test
-class TestTagFiltering(unittest.TestCase):
+class TestTagFiltering(TaskTestCase):
 
     _GENOME_VERSION = 'hg19'
     _TAG_LENGTH = 36
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix='tests-temp')
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.temp_dir
+        super(TestTagFiltering, self).setUp()
 
-        __, self.answer_file = tempfile.mkstemp(prefix='tag-filtering-answer')
+        filtered_reads_resource = FilteredReadsResource(self.__class__,
+                                                        'http://egg2.wustl.edu/roadmap/data/byFileType/alignments/'
+                                                        'unconsolidated/Class1Marks/'
+                                                        'UCSD.H9.H3K56ac.YL238.filt.tagAlign.gz',
+                                                        self._GENOME_VERSION)
 
-        __, gzip_tmp = tempfile.mkstemp(prefix='tag-filtering-answer', suffix='.gz')
-        with open(gzip_tmp, 'w') as f:
-            fetch('http://egg2.wustl.edu/roadmap/data/byFileType/alignments/'
-                  'unconsolidated/Class1Marks/UCSD.H9.H3K56ac.YL238.filt.tagAlign.gz', f)
-
-        with gzip.GzipFile(gzip_tmp, 'r') as _in:
-            with open(self.answer_file, 'w') as _out:
-                _out.writelines(_in)
-
-        # Slop the bedtool by zeros to truncate the lengths of reads by chromosome boundaries
-        # (i.e. their file contains read "chrM 16536 16572" whilst chrM is 16571 bp long)
-        # then sort it, and save it to a convenient location
-        pybedtools.BedTool(self.answer_file).slop(r=0, l=0, genome=self._GENOME_VERSION).sort().saveas(self.answer_file)
-
-        os.unlink(gzip_tmp)
-
-    def tearDown(self):
-        try:
-            shutil.rmtree(self.temp_dir)
-        except OSError:
-            if os.path.isdir(self.temp_dir):
-                raise
-
-        try:
-            os.unlink(self.answer_file)
-        except OSError:
-            if os.path.isfile(self.answer_file):
-                raise
+        self.answer_file = filtered_reads_resource.get()
 
     def test_h3k56ac_can_be_reproduced(self):
-        roadmap_aligned_reads = RoadmapAlignedReads(url='http://genboree.org/EdaccData/Release-9/'
-                                                        'experiment-sample/Histone_H3K56ac/H9_Cell_Line/'
-                                                        'UCSD.H9.H3K56ac.YL238.bed.gz',
-                                                    genome_version=self._GENOME_VERSION)
+        roadmap_aligned_reads = CachedRoadmapAlignedReads(url='http://genboree.org/EdaccData/Release-9/'
+                                                              'experiment-sample/Histone_H3K56ac/H9_Cell_Line/'
+                                                              'UCSD.H9.H3K56ac.YL238.bed.gz',
+                                                          genome_version=self._GENOME_VERSION)
 
         filtered_reads_task = FilteredReads(genome_version=self._GENOME_VERSION,
                                             resized_length=self._TAG_LENGTH,
-                                            filter_uniquely_mappable_for_truncated_length=True,
-                                            remove_duplicates=True,
-                                            sort=True,
-                                            alignment_task=roadmap_aligned_reads,
-                                            chromosomes='male')
-
+                                            alignment_task=roadmap_aligned_reads)
 
         luigi.build([filtered_reads_task], local_scheduler=True)
 

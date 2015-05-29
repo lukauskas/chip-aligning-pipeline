@@ -64,7 +64,7 @@ class NonBlacklisted(Task):
     def run(self):
 
         blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
-        input_ = pybedtools.BedTool(self.input_task.output().path)
+        input_ = pybedtools.BedTool(self.input_task._filename().path)
 
         difference = input_.intersect(blacklist, v=True)
         try:

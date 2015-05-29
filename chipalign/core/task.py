@@ -86,10 +86,12 @@ class Task(luigi.Task):
 
         return filename
 
+    def _output_directory(self):
+        return os.path.join(output_dir(), self.__class__.__name__)
+
     @property
     def __full_path(self):
-        class_name = self.__class__.__name__
-        return os.path.join(output_dir(), class_name,
+        return os.path.join(self._output_directory(),
                             self._output_filename)
 
     @property
@@ -137,7 +139,7 @@ class Task(luigi.Task):
             else:
                 max_dependency_mod_date = None
                 for dependency in dependancies:
-                    dependency_outputs = flatten(dependency.output())
+                    dependency_outputs = flatten(dependency._filename())
 
                     all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
                     if not all_dependencies_satisfied:
@@ -183,9 +185,9 @@ class MetaTask(luigi.Task):
     def output(self):
         requires = self.requires()
         if isinstance(requires, list):
-            return map(lambda x: x.output(), requires)
+            return map(lambda x: x._filename(), requires)
         else:
-            return requires.output()
+            return requires._filename()
 
     def requires(self):
         raise NotImplementedError

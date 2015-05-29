@@ -38,11 +38,10 @@ def _remove_duplicates_from_bed(bedtools_object):
 
 
 def _resize_reads(bedtools_object, new_length,
-                  genome,
+                  chromsizes,
                   can_extend=True,
                   can_shorten=True):
 
-    chromsizes = pybedtools.chromsizes(genome)
 
     def _resizing_function(row):
         min_value, max_value = chromsizes[row.chrom]
@@ -100,10 +99,7 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        reqs = [self.alignment_task, self._chromosomes_task]
-        if self._mappability_task is not None:
-            reqs.append(self._mappability_task)
-        return reqs
+        return self.alignment_task
 
     @property
     def _extension(self):
@@ -125,7 +121,7 @@ class FilteredReads(Task):
                 logger.debug('Truncating reads to {} base pairs'.format(self.resized_length))
                 resized_reads = _resize_reads(mapped_reads,
                                               new_length=self.resized_length,
-                                              genome=self.genome_version,
+                                              chromsizes=pybedtools.chromsizes(self.genome_version),
                                               can_shorten=True,
                                               # According to the Roadmap protocol
                                               # this should be false

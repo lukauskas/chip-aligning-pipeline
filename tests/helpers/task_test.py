@@ -8,8 +8,10 @@ import tempfile
 import os
 import shutil
 import luigi
+from chipalign.core.downloader import fetch
 
-from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR
+from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR, temporary_file
+
 
 class TaskTestCase(TestCase):
 
@@ -27,3 +29,21 @@ class TaskTestCase(TestCase):
     def build_task(self, task):
         luigi.build([task], local_scheduler=True)
         self.assertTrue(task.complete())
+
+    @classmethod
+    def task_cache_directory(cls, make_if_not_exists=True):
+        """
+        Returns the directory for cache
+        :param make_if_not_exists:
+        :return:
+        """
+        absfile = os.path.abspath(__file__)
+        dirname = os.path.dirname(absfile)
+
+        class_name = cls.__name__
+
+        dirname = os.path.join(dirname, '.cache-{}'.format(class_name))
+        if make_if_not_exists and not os.path.isdir(dirname):
+            os.makedirs(dirname)
+
+        return dirname

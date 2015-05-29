@@ -53,8 +53,8 @@ class Signal(Task):
 
 
         if self.scaling_factor == 'auto':
-            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task.output().path))
-            number_of_input_reads = len(pybedtools.BedTool(self.input_task.output().path))
+            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task._filename().path))
+            number_of_input_reads = len(pybedtools.BedTool(self.input_task._filename().path))
 
             logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
                                                                             number_of_input_reads))

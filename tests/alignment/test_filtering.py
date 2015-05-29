@@ -6,7 +6,6 @@ import unittest
 
 import pybedtools
 
-from chipalign.genome.genome_alignment import _resize_reads
 from chipalign.alignment.filtering import _remove_duplicates_from_bed, _resize_reads
 
 
@@ -33,7 +32,6 @@ class TestFiltering(unittest.TestCase):
         output_ = pybedtools.BedTool(expected_output)
         return input_, output_
 
-
     def test_duplicate_filtering_works(self):
         input_, expected_output = self.sample_data()
 
@@ -43,8 +41,6 @@ class TestFiltering(unittest.TestCase):
 
 
 class TestResizing(unittest.TestCase):
-
-
     def test_resizing_produces_correct_length(self):
 
         data = [
@@ -55,7 +51,7 @@ class TestResizing(unittest.TestCase):
             ('chr2', '50', '80', 'h', '99', '-'),  # Length: 30
             # Need to extend
             ('chr1', '10', '15', 'e', '99', '+'),  # Length: 5
-            ('chr2', '50', '60', 'f', '99', '-')   # Length: 10
+            ('chr2', '50', '60', 'f', '99', '-')  # Length: 10
         ]
         input_ = pybedtools.BedTool(data)
 
@@ -83,7 +79,7 @@ class TestResizing(unittest.TestCase):
             ('chr2', '50', '80', 'h', '99', '-'),  # Length: 30
             # Need to extend
             ('chr1', '10', '15', 'e', '99', '+'),  # Length: 5
-            ('chr2', '50', '60', 'f', '99', '-')   # Length: 10
+            ('chr2', '50', '60', 'f', '99', '-')  # Length: 10
         ]
 
         new_length = 20
@@ -96,7 +92,7 @@ class TestResizing(unittest.TestCase):
             ('chr2', '60', '80', 'h', '99', '-'),  # Length: 20
             # Need to extend
             ('chr1', '10', '30', 'e', '99', '+'),  # Length: 5
-            ('chr2', '40', '60', 'f', '99', '-')   # Length: 10
+            ('chr2', '40', '60', 'f', '99', '-')  # Length: 10
         ]
 
         input_ = pybedtools.BedTool(data)
@@ -112,7 +108,6 @@ class TestResizing(unittest.TestCase):
 
         self.assertEqual(expected_output, actual_output,
                          msg="Expected:\n{}\nActual:\n{}".format(expected_output, actual_output))
-
 
     def test_resizing_raises_exception_if_needed(self):
         shorten_data = [
@@ -175,8 +170,8 @@ class TestResizing(unittest.TestCase):
         new_length = 50
 
         new_data = [
-           ('chr1', '0', '35', 'a', '99', '+'),  # Length: 35
-           ('chr2', '2', '25', 'h', '99', '-'),  # Length: 23
+            ('chr1', '0', '35', 'a', '99', '+'),  # Length: 35
+            ('chr2', '2', '25', 'h', '99', '-'),  # Length: 23
         ]
 
         # Specific, and rather unusual boundaries
