@@ -10,7 +10,7 @@ import tempfile
 
 import luigi
 
-from chipalign.sequence.genome_sequence import GenomeSequence
+from chipalign.genome.sequence import GenomeSequence
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
 
