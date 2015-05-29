@@ -13,7 +13,7 @@ import luigi
 import pybedtools
 import numpy as np
 
-from chipalign.genome.windows.genome_windows import NonOverlappingWindows
+from chipalign.genome.windows.genome_windows import NonOverlappingBins
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.file import File
@@ -221,9 +221,9 @@ class GenomeMappabilityTrack(Task):
         self.output().dump(processed_tracks)
 
 class MappabilityOfGenomicWindows(Task):
-    genome_version = NonOverlappingWindows.genome_version
-    chromosomes = NonOverlappingWindows.chromosomes
-    window_size = NonOverlappingWindows.window_size
+    genome_version = NonOverlappingBins.genome_version
+    chromosomes = NonOverlappingBins.chromosomes
+    window_size = NonOverlappingBins.window_size
 
     read_length = GenomeMappabilityTrack.read_length
 
@@ -231,7 +231,7 @@ class MappabilityOfGenomicWindows(Task):
 
     @property
     def non_overlapping_windows_task(self):
-        return NonOverlappingWindows(genome_version=self.genome_version,
+        return NonOverlappingBins(genome_version=self.genome_version,
                                      window_size=self.window_size,
                                      chromosomes=self.chromosomes)
 

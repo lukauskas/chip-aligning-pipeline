@@ -13,7 +13,7 @@ from chipalign.core.util import ensure_directory_exists_for_file, temporary_file
 from chipalign.genome.blacklist import BlacklistedRegions, remove_blacklisted_regions
 
 
-class NonOverlappingWindows(Task):
+class NonOverlappingBins(Task):
 
     genome_version = luigi.Parameter()
     window_size = luigi.IntParameter()
@@ -66,4 +66,4 @@ class NonOverlappingWindows(Task):
                 windows.delete_temporary_history(ask=False)
 
 if __name__ == '__main__':
-    luigi.run(main_task_cls=NonOverlappingWindows)
+    luigi.run(main_task_cls=NonOverlappingBins)
