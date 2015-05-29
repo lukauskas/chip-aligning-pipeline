@@ -7,7 +7,7 @@ import shutil
 
 from chipalign.alignment.implementations.base import AlignedReadsBase
 from chipalign.sequence.srr import SRRSequence
-from chipalign.genome.genome_browser import GenomeSequence
+from chipalign.sequence.genome_sequence import GenomeSequence
 from chipalign.alignment.implementations.bowtie.index import GenomeIndex
 
 

@@ -7,6 +7,9 @@ from chipalign.core.task import Task, luigi
 
 
 class GenomeSequence(Task):
+    """
+    Downloads whole sequences of genomes from UCSC
+    """
 
     _DOWNLOAD_URIS = {
         'hg18': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg18/bigZips/hg18.2bit',
