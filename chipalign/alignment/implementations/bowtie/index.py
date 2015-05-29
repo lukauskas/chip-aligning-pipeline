@@ -23,7 +23,6 @@ def _build_index(twobit_sequence_abspath, name, output, random_seed=0):
     import shutil
     import zipfile
 
-
     output_abspath = os.path.abspath(output.path)
     output_dir = os.path.dirname(output_abspath)
     logger.debug('Ensuring {} exists'.format(output_dir))
@@ -75,9 +74,9 @@ def _build_index(twobit_sequence_abspath, name, output, random_seed=0):
         shutil.move(final_filename, output_abspath)
     finally:
         os.chdir(current_working_directory)
-        #shutil.rmtree(temporary_directory)
+        shutil.rmtree(temporary_directory)
 
-class GenomeIndex(Task):
+class BowtieIndex(Task):
     """
     Downloads/creates bowtie2 index for the specified genome version
 
@@ -111,8 +110,3 @@ class GenomeIndex(Task):
             sequence_filename = os.path.abspath(self._genome_sequence_task.output().path)
             with self.output().open('w') as output_file:
                 _build_index(sequence_filename, self.genome_version, output_file)
-
-
-if __name__ == '__main__':
-    logging.getLogger('genome_index._build_index').setLevel(logging.DEBUG)
-    luigi.run()

@@ -9,7 +9,7 @@ from chipalign.core.file_formats.file import File
 from chipalign.core.task import Task
 from chipalign.core.util import ensure_directory_exists_for_file
 from chipalign.sequence.srr import SRRSequence
-from chipalign.genome.genome_index import GenomeIndex
+from chipalign.alignment.implementations.bowtie.index import GenomeIndex
 
 
 class AlignedReadsBase(Task):

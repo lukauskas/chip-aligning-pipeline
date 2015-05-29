@@ -8,7 +8,7 @@ import shutil
 from chipalign.alignment.implementations.base import AlignedReadsBase
 from chipalign.sequence.srr import SRRSequence
 from chipalign.genome.genome_browser import GenomeSequence
-from chipalign.genome.genome_index import GenomeIndex
+from chipalign.alignment.implementations.bowtie.index import GenomeIndex
 
 
 class AlignedReadsPash(AlignedReadsBase):

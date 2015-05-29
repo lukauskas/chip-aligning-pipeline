@@ -4,16 +4,16 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import luigi
+
 from chipalign.alignment.implementations.bowtie import AlignedReadsBowtie
 from chipalign.alignment.implementations.pash import AlignedReadsPash
 from chipalign.core.task import MetaTask
 from chipalign.sequence.srr import SRRSequence
-from chipalign.genome.genome_index import GenomeIndex
 
 
 class AlignedSRR(MetaTask):
 
-    genome_version = GenomeIndex.genome_version
+    genome_version = luigi.Parameter()
     srr_identifier = SRRSequence.srr_identifier
 
     aligner = luigi.Parameter()
