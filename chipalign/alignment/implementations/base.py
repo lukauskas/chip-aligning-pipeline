@@ -4,19 +4,19 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+import luigi
 
 from chipalign.core.file_formats.file import File
 from chipalign.core.task import Task
 from chipalign.core.util import ensure_directory_exists_for_file
 from chipalign.sequence.srr import SRRSequence
-from chipalign.alignment.implementations.bowtie.index import GenomeIndex
 
 
 class AlignedReadsBase(Task):
     """
     A base class to act as a scaffold for implementing different genome aligners.
     """
-    genome_version = GenomeIndex.genome_version
+    genome_version = luigi.Parameter()
     srr_identifier = SRRSequence.srr_identifier
 
     @property

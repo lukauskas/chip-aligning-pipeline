@@ -8,7 +8,7 @@ import shutil
 import luigi
 
 from chipalign.alignment.implementations.base import AlignedReadsBase
-from chipalign.genome.genome_index import GenomeIndex
+from chipalign.alignment.implementations.bowtie.index import BowtieIndex
 
 
 class AlignedReadsBowtie(AlignedReadsBase):
@@ -23,7 +23,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
     @property
     def index_task(self):
-        return GenomeIndex(genome_version=self.genome_version)
+        return BowtieIndex(genome_version=self.genome_version)
 
     def run(self):
 
@@ -36,7 +36,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
         index_output_abspath = os.path.abspath(self.index_task.output().path)
-        fastq_sequence_abspath = os.path.abspath(self.fastq_task._filename().path)
+        fastq_sequence_abspath = os.path.abspath(self.fastq_task.output().path)
 
         with self.temporary_directory():
             logger.debug('Unzipping index')
