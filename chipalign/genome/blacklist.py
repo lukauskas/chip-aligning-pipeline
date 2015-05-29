@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from itertools import imap
 import os
 import shutil
 import pybedtools
@@ -10,6 +9,7 @@ import luigi
 
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
+from chipalign.core.util import temporary_file
 
 
 class BlacklistedRegions(Task):
@@ -41,6 +41,10 @@ class BlacklistedRegions(Task):
         else:
           raise Exception('No blacklist for genome version {!r} available'.format(self.genome_version))
 
+def remove_blacklisted_regions(input_bedtool, blacklist_bedtool):
+    difference = input_bedtool.intersect(blacklist_bedtool, v=True)
+    return difference
+
 class NonBlacklisted(Task):
     genome_version = BlacklistedRegions.genome_version
 
@@ -62,22 +66,16 @@ class NonBlacklisted(Task):
         return 'bed.gz'
 
     def run(self):
-
+        input_ = pybedtools.BedTool(self.input_task.output().path)
         blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
-        input_ = pybedtools.BedTool(self.input_task._filename().path)
 
-        difference = input_.intersect(blacklist, v=True)
-        try:
-            with self.output().open('w') as f:
-                f.writelines(imap(str, difference))
-        finally:
-            difference_fn = difference.fn
-            del difference
-            try:
-                os.unlink(difference_fn)
-            except OSError:
-                if os.path.isfile(difference_fn):
-                    raise
+        with temporary_file(cleanup_on_exception=True) as temp:
+            remove_blacklisted_regions(input_, blacklist).saveas(temp)
+
+            with open(temp, 'r') as read_:
+                with self.output().open('w') as f:
+                    f.writelines(read_)
+
     @property
     def task_class_friendly_name(self):
         return 'WL'
