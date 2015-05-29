@@ -16,6 +16,7 @@ import numpy as np
 from chipalign.genome.genome_windows import NonOverlappingWindows
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
+from chipalign.core.file_formats.file import File
 
 
 class MappabilityTrack(object):
@@ -113,7 +114,7 @@ class MappabilityTrack(object):
 
         return chromosome_lookup[anchor_locus]
 
-class MappabilityInfoFile(luigi.File):
+class MappabilityInfoFile(File):
 
     def dump(self, data, verify=True):
         logger = logging.getLogger('MappabilityInfoFile.dump')

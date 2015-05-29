@@ -135,22 +135,28 @@ class Task(luigi.Task):
             if len(dependancies) == 0:
                 return True
             else:
-                max_dependancy_mod_date = None
-                for dependancy in dependancies:
-                    dependancy_outputs = flatten(dependancy.output())
-                    mod_dates = itertools.imap(lambda output: output.modification_date, dependancy_outputs)
-                    if None in mod_dates:
-                        # If at least one dependancy unsatisfied, this task is also not complete
+                max_dependency_mod_date = None
+                for dependency in dependancies:
+                    dependency_outputs = flatten(dependency.output())
+
+                    all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
+                    if not all_dependencies_satisfied:
+                        # If at least one dependency unsatisfied, this task is also not complete
                         return False
+
+                    mod_dates = itertools.imap(lambda output: output.modification_time, dependency_outputs)
                     dependancy_max_mod_date = max(mod_dates)
 
-                    if max_dependancy_mod_date is None or dependancy_max_mod_date > max_dependancy_mod_date:
-                        max_dependancy_mod_date = dependancy_max_mod_date
+                    if max_dependency_mod_date is None or dependancy_max_mod_date > max_dependency_mod_date:
+                        max_dependency_mod_date = dependancy_max_mod_date
 
-                min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_date, outputs))
+                try:
+                    min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_time, outputs))
+                except AttributeError as e:
+                    raise AttributeError('Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
 
                 # Ensure all dependencies were built before the parent.
-                return max_dependancy_mod_date < min_output_mod_date_date
+                return max_dependency_mod_date < min_output_mod_date_date
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))

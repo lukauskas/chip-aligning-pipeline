@@ -116,5 +116,8 @@ class NonBlacklisted(Task):
                     raise
 
 
+    @property
+    def task_class_friendly_name(self):
+        return 'WL'
 
 

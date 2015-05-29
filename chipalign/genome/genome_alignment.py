@@ -19,6 +19,7 @@ from chipalign.core.task import Task, MetaTask
 from chipalign.genome.genome_index import GenomeIndex
 from chipalign.core.util import ensure_directory_exists_for_file
 
+from chipalign.core.file_formats.file import File
 
 class AlignedReadsBase(Task):
     genome_version = GenomeIndex.genome_version
@@ -52,10 +53,9 @@ class AlignedReadsBase(Task):
     def _extension(self):
         return 'bam'
 
-
     def output(self):
         bam_output = super(AlignedReadsBase, self).output()
-        stdout_output = luigi.File(bam_output.path + '.stdout')
+        stdout_output = File(bam_output.path + '.stdout')
         return bam_output, stdout_output
 
     def _output_abspaths(self, ensure_directory_exists=True):
