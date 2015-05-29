@@ -42,7 +42,6 @@ def _resize_reads(bedtools_object, new_length,
                   can_extend=True,
                   can_shorten=True):
 
-
     def _resizing_function(row):
         min_value, max_value = chromsizes[row.chrom]
 

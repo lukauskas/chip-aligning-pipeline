@@ -10,7 +10,6 @@ import requests
 from chipalign.core.file_formats.bedgraph import BedGraph
 
 from chipalign.core.task import Task
-from chipalign.genome.chromosomes import Chromosomes
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.yaml_file import YamlFile
 import luigi
@@ -20,8 +19,6 @@ class DownloadedSignal(Task):
     cell_type = luigi.Parameter()
     track = luigi.Parameter()
     genome_version = luigi.Parameter()
-
-    chromosomes = Chromosomes.collection
 
     @property
     def task_class_friendly_name(self):
@@ -35,10 +32,6 @@ class DownloadedSignal(Task):
         return [self.cell_type, self.track, self.genome_version, self.chromosomes]
 
     @property
-    def chromosomes_task(self):
-        return Chromosomes(genome_version=self.genome_version, collection=self.chromosomes)
-
-    @property
     def downloadable_signal_task(self):
         return DownloadableSignalTracks(genome_version=self.genome_version, cell_type=self.cell_type)
 
@@ -48,7 +41,6 @@ class DownloadedSignal(Task):
     @property
     def _extension(self):
         return 'bdg.gz'
-
 
     @property
     def _output_class(self):
@@ -65,8 +57,6 @@ class DownloadedSignal(Task):
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
-        chromosome_sizes = self.chromosomes_task.output().load()
-
         with self.temporary_directory():
             logger.info('Fetching: {}'.format(url))
             tmp_file = 'download.bigwig'
@@ -74,27 +64,17 @@ class DownloadedSignal(Task):
                 fetch(url, f)
 
             logger.info('Converting to bedgraph')
-            tmp_bedgaph = 'download.bedgraph'
-            bigWigToBedGraph(tmp_file, tmp_bedgaph)
-
-            logger.info('Filtering the bedgraph')
-            filtered_bedgraph = 'filtered.bedgraph'
-            with open(filtered_bedgraph, 'w') as out_:
-                with open(tmp_bedgaph, 'r') as input_:
-                    for row in input_:
-                        chrom, __, __ = row.partition('\t')
-
-                        if chrom in chromosome_sizes:
-                            out_.write(row)
+            tmp_bedgraph = 'download.bedgraph'
+            bigWigToBedGraph(tmp_file, tmp_bedgraph)
 
             logger.info('Sorting')
             filtered_sorted_bedgraph = 'filtered.sorted.bedgraph'
             # GNU sort should be faster, use less memory and generally more stable than pybedtools
-            sort(filtered_bedgraph, '-k1,1', '-k2,2n', '-k3,3n', '-k5,5n',
+            sort(tmp_bedgraph, '-k1,1', '-k2,2n', '-k3,3n', '-k5,5n',
                  '-o', filtered_sorted_bedgraph)
 
             # Free up some /tmp/ space
-            os.unlink(filtered_bedgraph)
+            os.unlink(tmp_bedgraph)
 
             logger.info('Gzipping')
             cmd_line_gzip('-9', filtered_sorted_bedgraph)
@@ -102,7 +82,6 @@ class DownloadedSignal(Task):
 
             logger.info('Moving')
             shutil.move(filtered_and_sorted, output_abspath)
-
 
 class DownloadableSignalTracks(Task):
 
