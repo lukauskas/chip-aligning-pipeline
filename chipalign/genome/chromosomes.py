@@ -4,8 +4,10 @@ import luigi
 from chipalign.core.task import Task
 from chipalign.core.file_formats.yaml_file import YamlFile
 
-
 class Chromosomes(Task):
+    """
+    Saves chromosome information to file, allows pre-filtering
+    """
 
     genome_version = luigi.Parameter()
     collection = luigi.Parameter('all')  # All, male/female

@@ -6,7 +6,8 @@ import unittest
 
 import pybedtools
 
-from chipalign.genome.genome_alignment import _remove_duplicates_from_bed, _resize_reads
+from chipalign.genome.genome_alignment import _resize_reads
+from chipalign.alignment.filtering import _remove_duplicates_from_bed, _resize_reads
 
 
 class TestFiltering(unittest.TestCase):

@@ -6,7 +6,7 @@ import os
 import tarfile
 import shutil
 from chipalign.core.task import Task, luigi
-from chipalign.genome.fragment_length import FragmentLength
+from chipalign.quality_control.fragment_length import FragmentLength
 
 
 class MACSResults(Task):

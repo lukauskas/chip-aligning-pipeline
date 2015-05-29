@@ -11,7 +11,8 @@ import shutil
 import luigi
 import pybedtools
 from chipalign.core.downloader import fetch
-from chipalign.genome.genome_alignment import RoadmapAlignedReads, FilteredReads
+from chipalign.roadmap_data.downloaded_reads import RoadmapAlignedReads
+from chipalign.alignment.filtering import FilteredReads
 
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR

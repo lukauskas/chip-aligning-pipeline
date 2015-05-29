@@ -4,7 +4,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import unittest
 import yaml
-from chipalign.genome.fastq_sequence import parse_fastq_read_header, FastqSequence, FastqMetadata
+from chipalign.sequence.metadata import _parse_fastq_read_header, FastqMetadata
+from chipalign.sequence.srr import SRRSequence
 from tests.helpers.task_test import TaskTestCase
 
 
@@ -23,7 +24,7 @@ class TestSequenceMetadataExtraction(unittest.TestCase):
                            y_coord=931
                            )
 
-        self.assertDictEqual(parsed_data, parse_fastq_read_header(sample_header))
+        self.assertDictEqual(parsed_data, _parse_fastq_read_header(sample_header))
 
 class TestTestSequenceMetadataTask(TaskTestCase):
 
@@ -31,7 +32,7 @@ class TestTestSequenceMetadataTask(TaskTestCase):
         srr_identifier = 'SRR001392'
         spot_limit = 5
 
-        fastq_sequence_task = FastqSequence(srr_identifier=srr_identifier, spot_limit=spot_limit)
+        fastq_sequence_task = SRRSequence(srr_identifier=srr_identifier, spot_limit=spot_limit)
         sequence_metadata_task = FastqMetadata(fastq_sequence=fastq_sequence_task)
 
         self.build_task(sequence_metadata_task)
