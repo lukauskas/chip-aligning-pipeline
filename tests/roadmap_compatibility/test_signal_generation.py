@@ -6,7 +6,7 @@ import os
 import tempfile
 import luigi
 from chipalign.core.downloader import fetch
-from chipalign.genome.genome_alignment import DownloadedConsolidatedReads
+from chipalign.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
 from chipalign.genome.genome_signal import Signal
 from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
 from tests.helpers.task_test import TaskTestCase
