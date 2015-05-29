@@ -6,7 +6,7 @@ import luigi
 import pybedtools
 from chipalign.alignment.aligned_reads import AlignedSRR
 from chipalign.core.task import Task
-from chipalign.genome.genome_mappability import GenomeMappabilityTrack
+from chipalign.genome.mappability import GenomeMappabilityTrack
 
 
 def _remove_duplicates_from_bed(bedtools_object):

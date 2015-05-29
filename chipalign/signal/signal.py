@@ -5,14 +5,14 @@ from __future__ import unicode_literals
 import gzip
 import os
 import shutil
+import tarfile
 
 import luigi
-import tarfile
 import pybedtools
-from chipalign.core.file_formats.bedgraph import BedGraph
 
+from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
-from chipalign.genome.peaks import MACSResults
+from chipalign.signal.peaks import MACSResults
 
 
 class Signal(Task):

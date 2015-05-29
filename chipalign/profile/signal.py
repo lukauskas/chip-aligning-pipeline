@@ -220,7 +220,7 @@ class SignalSeries(Task):
         self.output().dump(series)
 
 if __name__ == '__main__':
-    from chipalign.genome.genome_mappability import FullyMappableGenomicWindows
+    from chipalign.genome.mappability import FullyMappableGenomicWindows
     from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
     BinnedSignal.logger().setLevel(logging.DEBUG)
     logging.basicConfig()
