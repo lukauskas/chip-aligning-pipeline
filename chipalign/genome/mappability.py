@@ -222,18 +222,17 @@ class GenomeMappabilityTrack(Task):
 
 class MappabilityOfGenomicWindows(Task):
     genome_version = NonOverlappingBins.genome_version
-    chromosomes = NonOverlappingBins.chromosomes
     window_size = NonOverlappingBins.window_size
-
     read_length = GenomeMappabilityTrack.read_length
+    remove_blacklisted = NonOverlappingBins.remove_blacklisted
 
     max_ext_size = luigi.IntParameter()
 
     @property
     def non_overlapping_windows_task(self):
         return NonOverlappingBins(genome_version=self.genome_version,
-                                     window_size=self.window_size,
-                                     chromosomes=self.chromosomes)
+                                  window_size=self.window_size,
+                                  remove_blacklisted=self.remove_blacklisted)
 
     @property
     def mappability_track_task(self):
@@ -279,7 +278,6 @@ class MappabilityOfGenomicWindows(Task):
 class FullyMappableGenomicWindows(Task):
 
     genome_version = MappabilityOfGenomicWindows.genome_version
-    chromosomes = MappabilityOfGenomicWindows.chromosomes
     window_size = MappabilityOfGenomicWindows.window_size
 
     read_length = MappabilityOfGenomicWindows.read_length
@@ -293,7 +291,6 @@ class FullyMappableGenomicWindows(Task):
     @property
     def genome_windows_mappability_task(self):
         return MappabilityOfGenomicWindows(genome_version=self.genome_version,
-                                           chromosomes=self.chromosomes,
                                            window_size=self.window_size,
                                            read_length=self.read_length,
                                            max_ext_size=self.max_ext_size)

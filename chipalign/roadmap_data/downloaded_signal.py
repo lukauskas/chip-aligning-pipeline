@@ -31,7 +31,7 @@ class DownloadedSignal(Task):
         return SignalTracksList(genome_version=self.genome_version, cell_type=self.cell_type)
 
     def requires(self):
-        return [self.chromosomes_task, self.downloadable_signal_task]
+        return [self.downloadable_signal_task]
 
     @property
     def _extension(self):

@@ -41,6 +41,10 @@ class BlacklistedRegions(Task):
         else:
           raise Exception('No blacklist for genome version {!r} available'.format(self.genome_version))
 
+    @property
+    def _extension(self):
+        return 'bed.gz'
+
 def remove_blacklisted_regions(input_bedtool, blacklist_bedtool):
     difference = input_bedtool.intersect(blacklist_bedtool, v=True)
     return difference

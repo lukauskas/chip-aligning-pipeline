@@ -190,8 +190,8 @@ class BinnedSignal(Task):
 
     def run(self):
 
-        bins_task_abspath = os.path.abspath(self.bins_task._filename().path)
-        signal_task_abspath = os.path.abspath(self.signal_task._filename().path)
+        bins_task_abspath = os.path.abspath(self.bins_task.output().path)
+        signal_task_abspath = os.path.abspath(self.signal_task.output().path)
 
         self.logger().info('Binning signal for {}'.format(signal_task_abspath))
 
@@ -204,7 +204,7 @@ class SignalSeries(Task):
     bedgraph_task = luigi.Parameter()
 
     def requires(self):
-        assert isinstance(self.bedgraph_task._filename(), BedGraph)
+        assert isinstance(self.bedgraph_task.output(), BedGraph)
         return self.bedgraph_task
 
     @property

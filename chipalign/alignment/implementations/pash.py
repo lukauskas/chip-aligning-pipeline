@@ -8,12 +8,11 @@ import shutil
 from chipalign.alignment.implementations.base import AlignedReadsBase
 from chipalign.sequence.srr import SRRSequence
 from chipalign.genome.sequence import GenomeSequence
-from chipalign.alignment.implementations.bowtie.index import GenomeIndex
 
 
 class AlignedReadsPash(AlignedReadsBase):
 
-    genome_version = GenomeIndex.genome_version
+    genome_version = GenomeSequence.genome_version
     srr_identifier = SRRSequence.srr_identifier
 
     @property
