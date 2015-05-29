@@ -139,7 +139,7 @@ class Task(luigi.Task):
             else:
                 max_dependency_mod_date = None
                 for dependency in dependancies:
-                    dependency_outputs = flatten(dependency._filename())
+                    dependency_outputs = flatten(dependency.output())
 
                     all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
                     if not all_dependencies_satisfied:
