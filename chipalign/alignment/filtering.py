@@ -99,7 +99,7 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        return self.alignment_task
+        return [self.alignment_task, self._mappability_task]
 
     @property
     def _extension(self):

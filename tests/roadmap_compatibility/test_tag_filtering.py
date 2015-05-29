@@ -68,9 +68,7 @@ class TestTagFiltering(TaskTestCase):
                                             resized_length=self._TAG_LENGTH,
                                             alignment_task=roadmap_aligned_reads)
 
-        luigi.build([filtered_reads_task], local_scheduler=True)
-
-        self.assertTrue(filtered_reads_task.complete())
+        self.build_task(filtered_reads_task)
 
         expected = pybedtools.BedTool(self.answer_file)
         actual = pybedtools.BedTool(filtered_reads_task.output().path)
