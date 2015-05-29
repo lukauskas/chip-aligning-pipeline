@@ -20,8 +20,6 @@ class TestMacsPileup(TaskTestCase):
     _CELL_TYPE = 'E008'
     _TRACK = 'H3K56ac'
     _GENOME_VERSION = 'hg19'
-    _CHROMOSOMES = 'male'
-
 
     @classmethod
     def setUpClass(cls):
@@ -58,13 +56,11 @@ class TestMacsPileup(TaskTestCase):
 
         ds = DownloadedSignal(cell_type=self._CELL_TYPE,
                               track=self._TRACK,
-                              genome_version=self._GENOME_VERSION,
-                              chromosomes=self._CHROMOSOMES)
+                              genome_version=self._GENOME_VERSION)
 
         luigi.build([ds], local_scheduler=True)
 
         self.assertTrue(ds.complete())
-
 
         with ds.output().open('r') as actual:
             with open(self.answer_file) as expected:
@@ -77,19 +73,13 @@ class TestMacsPileup(TaskTestCase):
                 self.assertRaises(StopIteration, expected.next)
 
     def test_can_reproduce_signal_track(self):
-
-
         input_reads = DownloadedConsolidatedReads(genome_version=self._GENOME_VERSION,
                                                   cell_type=self._CELL_TYPE,
-                                                  track='Input',
-                                                  chromosomes=self._CHROMOSOMES
-                                                  )
+                                                  track='Input')
 
         track_reads = DownloadedConsolidatedReads(genome_version=self._GENOME_VERSION,
                                                   cell_type=self._CELL_TYPE,
-                                                  track=self._TRACK,
-                                                  chromosomes=self._CHROMOSOMES
-                                                  )
+                                                  track=self._TRACK)
 
         st = Signal(input_task=input_reads, treatment_task=track_reads)
         self.build_task(st)
