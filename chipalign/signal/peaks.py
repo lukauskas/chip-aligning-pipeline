@@ -18,22 +18,6 @@ class MACSResults(Task):
 
     OUTPUT_BASENAME = 'macs_out'
 
-
-    def additional_parameters(self):
-        additional_parameters = []
-
-        if self.fragment_length_is_known():
-            additional_parameters.append('f{}'.format(self.fragment_length_value()))
-
-        return additional_parameters
-
-    @property
-    def parameters(self):
-        additional_parameters = self.additional_parameters()
-        return [self.input_task.task_class_friendly_name] + self.input_task.parameters \
-               + [self.treatment_task.task_class_friendly_name] + self.treatment_task.parameters \
-               + additional_parameters
-
     @property
     def fragment_length_task(self):
         return FragmentLength(self.treatment_task)

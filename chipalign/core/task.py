@@ -23,8 +23,32 @@ def _file_safe_string(value):
     value = re.sub('__+', '_', value)
     return value.strip('_')
 
-class Task(luigi.Task):
+def _collapse_parameters(luigi_params, param_kwargs):
+    ans = []
+    for param_name, param in luigi_params:
+        if param.significant:
+            value = param_kwargs[param_name]
+            # Flatten list parameters
+            if isinstance(value, list) or isinstance(value, tuple):
+                param_values = value
+            else:
+                param_values = [value]
 
+            for param_value in param_values:
+                if isinstance(param_value, Task) or isinstance(param_value, MetaTask):
+                    # If we got a Task object as a parameter
+
+                    # Add the friendly name of the task to our parameters
+                    ans.append(param_value.task_class_friendly_name)
+                    # Add the parameters of the task to our parameters
+                    ans.extend(param_value.parameters)
+                else:
+                    # Else just add parameter
+                    ans.append(param_value)
+    return ans
+
+
+class Task(luigi.Task):
     _MAX_LENGTH_FOR_FILENAME = 255 - len('-luigi-tmp-10000000000')
 
     def __init__(self, *args, **kwargs):
@@ -44,27 +68,7 @@ class Task(luigi.Task):
         param_kwargs = self.param_kwargs
 
         # Create the parameters array from significant parameters list
-        ans = []
-        for param_name, param in luigi_params:
-            if param.significant:
-                value = param_kwargs[param_name]
-                # Flatten list parameters
-                if isinstance(value, list) or isinstance(value, tuple):
-                    param_values = value
-                else:
-                    param_values = [value]
-
-                for param_value in param_values:
-                    if isinstance(param_value, Task):
-                        # If we got a Task object as a parameter
-
-                        # Add the friendly name of the task to our parameters
-                        ans.append(param_value.task_class_friendly_name)
-                        # Add the parameters of the task to our parameters
-                        ans.extend(param_value.parameters)
-                    else:
-                        # Else just add parameter
-                        ans.append(param_value)
+        ans = _collapse_parameters(luigi_params, param_kwargs)
 
         return ans
 
@@ -163,7 +167,8 @@ class Task(luigi.Task):
                 try:
                     min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_time, outputs))
                 except AttributeError as e:
-                    raise AttributeError('Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
+                    raise AttributeError(
+                        'Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
 
                 # Ensure all dependencies were built before the parent.
                 return max_dependency_mod_date < min_output_mod_date_date
@@ -178,7 +183,6 @@ class Task(luigi.Task):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))
 
 class MetaTask(luigi.Task):
-
     @property
     def task_class_friendly_name(self):
         return self.__class__.__name__
@@ -193,20 +197,23 @@ class MetaTask(luigi.Task):
     def output(self):
         requires = self.requires()
         if isinstance(requires, list):
-            return map(lambda x: x._filename(), requires)
+            return map(lambda x: x.output(), requires)
         else:
-            return requires._filename()
+            return requires.output()
 
     def requires(self):
         raise NotImplementedError
 
     def run(self):
-        pass # Should not do anything
-
-    @property
-    def self_parameters(self):
-        return []
+        pass  # Should not do anything
 
     @property
     def parameters(self):
-        return self.self_parameters + self.requires().parameters
+
+        luigi_params = self.get_params()
+        param_kwargs = self.param_kwargs
+
+        # Create the parameters array from significant parameters list
+        ans = _collapse_parameters(luigi_params, param_kwargs)
+
+        return ans

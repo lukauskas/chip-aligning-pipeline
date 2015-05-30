@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import luigi
 import unittest
-from chipalign.core.task import Task
+from chipalign.core.task import Task, MetaTask
 
 
 class A(Task):
@@ -29,6 +29,14 @@ class B(Task):
     def _extension(self):
         return 'derp'
 
+class Meta(MetaTask):
+
+    derp = luigi.Parameter()
+
+    def requires(self):
+        return A(x='x', z='z')
+
+
 class TestTaskParameterHelpers(unittest.TestCase):
 
     def test_task_default_parameters_is_set_to_all_significant_params(self):
@@ -47,6 +55,14 @@ class TestTaskParameterHelpers(unittest.TestCase):
         a = A(x=b, z='derp')
 
         expected_parameters = [b.task_class_friendly_name, 'bx', 'y']
+        self.assertListEqual(expected_parameters, a.parameters)
+
+    def test_metatasks_are_reproduced_correctly(self):
+
+        b = Meta(derp='derpina')
+        a = A(x=b, z='derp')
+
+        expected_parameters = [b.task_class_friendly_name, 'derpina', 'y']
         self.assertListEqual(expected_parameters, a.parameters)
 
     def test_lists_are_reproduced_as_separate_parameters(self):

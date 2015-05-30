@@ -32,7 +32,8 @@ class Signal(Task):
 
     @property
     def macs_task(self):
-        return MACSResults(input_task=self.input_task, treatment_task=self.treatment_task,
+        return MACSResults(input_task=self.input_task,
+                           treatment_task=self.treatment_task,
                            fragment_length=self.fragment_length)
 
     def requires(self):
