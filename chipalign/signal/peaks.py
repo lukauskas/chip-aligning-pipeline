@@ -76,8 +76,8 @@ class MACSResults(Task):
 
         logger.info('Using fragment length: {}'.format(fragment_length))
 
-        treatment_abspath = os.path.abspath(self.treatment_task._filename().path)
-        input_abspath = os.path.abspath(self.input_task._filename().path)
+        treatment_abspath = os.path.abspath(self.treatment_task.output().path)
+        input_abspath = os.path.abspath(self.input_task.output().path)
 
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
