@@ -29,4 +29,6 @@ class SignalPandas(Task):
 
     def run(self):
         series = self.input().to_pandas_series()
+        series = series.sortlevel()  # To allow for multi-index slicing
+
         self.output().dump(series)

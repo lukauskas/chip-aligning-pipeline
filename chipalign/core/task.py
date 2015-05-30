@@ -47,18 +47,24 @@ class Task(luigi.Task):
         ans = []
         for param_name, param in luigi_params:
             if param.significant:
-                param_value = param_kwargs[param_name]
-
-                if isinstance(param_value, Task):
-                    # If we got a Task object as a parameter
-
-                    # Add the friendly name of the task to our parameters
-                    ans.append(param_value.task_class_friendly_name)
-                    # Add the parameters of the task to our parameters
-                    ans.extend(param_value.parameters)
+                value = param_kwargs[param_name]
+                # Flatten list parameters
+                if isinstance(value, list) or isinstance(value, tuple):
+                    param_values = value
                 else:
-                    # Else just add parameter
-                    ans.append(param_value)
+                    param_values = [value]
+
+                for param_value in param_values:
+                    if isinstance(param_value, Task):
+                        # If we got a Task object as a parameter
+
+                        # Add the friendly name of the task to our parameters
+                        ans.append(param_value.task_class_friendly_name)
+                        # Add the parameters of the task to our parameters
+                        ans.extend(param_value.parameters)
+                    else:
+                        # Else just add parameter
+                        ans.append(param_value)
 
         return ans
 
@@ -80,9 +86,11 @@ class Task(luigi.Task):
         filename = u'.'.join([self._basename, self._extension])
 
         if len(filename) > self._MAX_LENGTH_FOR_FILENAME:
-            raise ValueError('Filename {!r} too long. '
-                             'Only {!r} characters allowed, consider editing .parameters'.format(filename,
-                                                                                                  self._MAX_LENGTH_FOR_FILENAME))
+            raise ValueError('Filename for {} too long: {!r} '
+                             'Only {!r} characters allowed, consider editing .parameters'.format(
+                self.__class__.__name__,
+                filename,
+                self._MAX_LENGTH_FOR_FILENAME))
 
         return filename
 

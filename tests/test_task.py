@@ -49,8 +49,21 @@ class TestTaskParameterHelpers(unittest.TestCase):
         expected_parameters = [b.task_class_friendly_name, 'bx', 'y']
         self.assertListEqual(expected_parameters, a.parameters)
 
-class TestTaskFilenameIsCorrect(unittest.TestCase):
+    def test_lists_are_reproduced_as_separate_parameters(self):
+        b = B(x='bx')
+        c = B(x='bc')
+        a = A(x=[b, c], z='derp')
 
+        expected_parameters = [b.task_class_friendly_name, 'bx', c.task_class_friendly_name, 'bc', 'y']
+        self.assertListEqual(expected_parameters, a.parameters)
+
+    def test_list_of_tasks_reproduced_faithfully(self):
+        a = A(x=['x', 'xx', 'xxx'], z='derp')
+        expected_parameters = ['x', 'xx', 'xxx', 'y']
+        self.assertListEqual(expected_parameters, a.parameters)
+
+
+class TestTaskFilenameIsCorrect(unittest.TestCase):
 
     def test_parameters_are_joined_correctly(self):
         a = A(x='x', y='y', z='z')
