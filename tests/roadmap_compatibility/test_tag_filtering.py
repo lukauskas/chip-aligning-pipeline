@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
 from itertools import izip
+import os
 import luigi
 import pybedtools
 from chipalign.roadmap_data.downloaded_reads import RoadmapAlignedReads
@@ -25,17 +26,19 @@ class FilteredReadsResource(DownloadableExternalResource):
     def _obtain(self):
         with temporary_file(cleanup_on_exception=True) as gzip_tmp:
             self._fetch_resource(gzip_tmp)
+            assert os.path.isfile(gzip_tmp)
+
             with temporary_file(cleanup_on_exception=True) as tmp_answer_file:
                 with gzip.GzipFile(gzip_tmp, 'r') as _in:
                     with open(tmp_answer_file, 'w') as _out:
                         _out.writelines(_in)
 
-            with temporary_file(cleanup_on_exception=True) as answer_file:
-                answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
-                                                                          genome=self.genome_version).sort()
-                answer_bedtool.saveas(answer_file)
-                answer_bedtool.delete_temporary_history(ask=False)
-                self._relocate_to_output(answer_file)
+                with temporary_file(cleanup_on_exception=True) as answer_file:
+                    answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
+                                                                              genome=self.genome_version).sort()
+                    answer_bedtool.saveas(answer_file)
+                    answer_bedtool.delete_temporary_history(ask=False)
+                    self._relocate_to_output(answer_file)
 
 class CachedRoadmapAlignedReads(RoadmapAlignedReads):
     def _output_directory(self):

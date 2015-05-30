@@ -37,8 +37,9 @@ class DownloadableExternalResource(ExternalResource):
         return final_location
 
     def _fetch_resource(self, temp_file):
-        with open(temp_file) as tf:
+        with open(temp_file, 'w') as tf:
             fetch(self.url, tf)
+        assert os.path.isfile(temp_file)
 
     def _relocate_to_output(self, temp_file):
         shutil.move(temp_file, self._filename())
@@ -54,4 +55,5 @@ class DownloadableExternalResource(ExternalResource):
     def get(self):
         if not self.exists():
             self._obtain()
+            assert self.exists(), '_obtain() failed'
         return self._filename()
