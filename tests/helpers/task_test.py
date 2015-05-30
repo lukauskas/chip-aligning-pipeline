@@ -7,6 +7,7 @@ from unittest import TestCase
 import tempfile
 import os
 import shutil
+import logging
 import luigi
 from chipalign.core.downloader import fetch
 
@@ -27,6 +28,8 @@ class TaskTestCase(TestCase):
                 raise
 
     def build_task(self, task):
+        task.class_logger().setLevel(logging.DEBUG)
+        logging.basicConfig()
         luigi.build([task], local_scheduler=True)
         self.assertTrue(task.complete())
 

@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 import gzip
 from itertools import izip
 import os
-import luigi
 import pybedtools
 from chipalign.roadmap_data.downloaded_reads import RoadmapAlignedReads
 from chipalign.alignment.filtering import FilteredReads

@@ -89,7 +89,7 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     shutil.rmtree(temp_dir)
 
 @contextmanager
-def temporary_file(logger=None, cleanup_on_exception=False, **kwargs):
+def temporary_file(logger=None, cleanup_on_exception=True, **kwargs):
 
     __, temp_file = tempfile.mkstemp(**kwargs)
     if logger is None:
@@ -107,6 +107,7 @@ def temporary_file(logger=None, cleanup_on_exception=False, **kwargs):
             except OSError:
                 if os.path.isfile(temp_file):
                     raise
+        raise
 
     # If we are here, no exception occurred
     logger.debug('Removing {}'.format(temp_file))

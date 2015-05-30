@@ -22,6 +22,27 @@ class ExternalResource(object):
     def _directory(self):
         return self.associated_task_test_case.task_cache_directory()
 
+    def _basename(self):
+        raise NotImplementedError
+
+    def _filename(self):
+        final_location = os.path.join(self._directory(),
+                                      self._basename())
+        return final_location
+
+    def exists(self):
+        return os.path.isfile(self._filename())
+
+    def _obtain(self):
+        raise NotImplementedError
+
+    def get(self):
+        if not self.exists():
+            self._obtain()
+            assert self.exists(), '_obtain() failed'
+        return self._filename()
+
+
 class DownloadableExternalResource(ExternalResource):
 
     url = None
@@ -30,11 +51,8 @@ class DownloadableExternalResource(ExternalResource):
         super(DownloadableExternalResource, self).__init__(associated_task_test_case)
         self.url = url
 
-    def _filename(self):
-        final_location = os.path.join(self._directory(),
-                                      '{}-cache'.format(os.path.basename(self.url)))
-
-        return final_location
+    def _basename(self):
+        return '{}-cache'.format(os.path.basename(self.url))
 
     def _fetch_resource(self, temp_file):
         with open(temp_file, 'w') as tf:
@@ -44,16 +62,7 @@ class DownloadableExternalResource(ExternalResource):
     def _relocate_to_output(self, temp_file):
         shutil.move(temp_file, self._filename())
 
-    def exists(self):
-        return os.path.isfile(self._filename())
-
     def _obtain(self):
         with temporary_file(cleanup_on_exception=True) as temp_file:
             self._fetch_resource(temp_file)
             self._relocate_to_output(temp_file)
-
-    def get(self):
-        if not self.exists():
-            self._obtain()
-            assert self.exists(), '_obtain() failed'
-        return self._filename()
