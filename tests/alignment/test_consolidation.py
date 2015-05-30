@@ -10,7 +10,6 @@ import shutil
 from chipalign.alignment.implementations.consolidation import ConsolidatedReads
 from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
-from tests.helpers.external_resource import ExternalResource
 from tests.helpers.task_test import TaskTestCase
 
 
