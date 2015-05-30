@@ -16,7 +16,6 @@ from chipalign.signal.peaks import MACSResults
 
 
 class Signal(Task):
-
     input_task = luigi.Parameter()
     treatment_task = luigi.Parameter()
 
@@ -49,12 +48,12 @@ class Signal(Task):
 
     def scaling_factor_value(self):
         import pybedtools
+
         logger = self.logger()
 
-
         if self.scaling_factor == 'auto':
-            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task._filename().path))
-            number_of_input_reads = len(pybedtools.BedTool(self.input_task._filename().path))
+            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task.output().path))
+            number_of_input_reads = len(pybedtools.BedTool(self.input_task.output().path))
 
             logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
                                                                             number_of_input_reads))
@@ -81,7 +80,6 @@ class Signal(Task):
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
-
         with self.temporary_directory():
 
             macs_basename = MACSResults.OUTPUT_BASENAME
@@ -104,8 +102,8 @@ class Signal(Task):
                   )
             logger.info('Clipping the output')
 
-
-            tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(genome=self.treatment_task.genome_version)
+            tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
+                genome=self.treatment_task.genome_version)
             tmp_bedtool.saveas(pval_signal_output_raw)
             tmp_bedtool.delete_temporary_history(ask=False)
 
