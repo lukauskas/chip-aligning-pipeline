@@ -8,10 +8,47 @@ import logging
 import luigi
 import pybedtools
 import numpy as np
-from chipalign.core.file_formats.bedgraph import BedGraph
-from chipalign.core.file_formats.dataframe import DataFrameFile
 
+from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
+
+class BinnedSignal(Task):
+    """
+        Takes the signal and creates a bedgraph of it distributed across the bins specified in `bins_task`.
+    """
+    bins_task = luigi.Parameter()
+    signal_task = luigi.Parameter()
+
+    @property
+    def parameters(self):
+        return [self.bins_task.task_class_friendly_name] + self.bins_task.parameters\
+               + [self.signal_task.task_class_friendly_name] + self.signal_task.parameters
+
+    def requires(self):
+        return [self.bins_task, self.signal_task]
+
+    @property
+    def _extension(self):
+        return 'bdg.gz'
+
+    @property
+    def _output_class(self):
+        return BedGraph
+
+    @classmethod
+    def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
+        _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
+                               logger=cls.class_logger(), check_sorted=False)
+
+    def run(self):
+
+        bins_task_abspath = os.path.abspath(self.bins_task.output().path)
+        signal_task_abspath = os.path.abspath(self.signal_task.output().path)
+
+        self.logger().info('Binning signal for {}'.format(signal_task_abspath))
+
+        with self.output().open('w') as f:
+            self.compute_profile(bins_task_abspath, signal_task_abspath, f)
 
 
 def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):
@@ -161,92 +198,4 @@ def _log10_weighted_mean(data):
         return 0.0
     else:
         return score
-
-class BinnedSignal(Task):
-
-    bins_task = luigi.Parameter()
-    signal_task = luigi.Parameter()
-
-    @property
-    def parameters(self):
-        return [self.bins_task.task_class_friendly_name] + self.bins_task.parameters\
-               + [self.signal_task.task_class_friendly_name] + self.signal_task.parameters
-
-    def requires(self):
-        return [self.bins_task, self.signal_task]
-
-    @property
-    def _extension(self):
-        return 'bdg.gz'
-
-    @property
-    def _output_class(self):
-        return BedGraph
-
-    @classmethod
-    def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
-        _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
-                               logger=cls.class_logger(), check_sorted=False)
-
-    def run(self):
-
-        bins_task_abspath = os.path.abspath(self.bins_task.output().path)
-        signal_task_abspath = os.path.abspath(self.signal_task.output().path)
-
-        self.logger().info('Binning signal for {}'.format(signal_task_abspath))
-
-        with self.output().open('w') as f:
-            self.compute_profile(bins_task_abspath, signal_task_abspath, f)
-
-
-class SignalSeries(Task):
-
-    bedgraph_task = luigi.Parameter()
-
-    def requires(self):
-        assert isinstance(self.bedgraph_task.output(), BedGraph)
-        return self.bedgraph_task
-
-    @property
-    def _output_class(self):
-        return DataFrameFile
-
-    @property
-    def _extension(self):
-        return '.series'
-
-    def run(self):
-        series = self.input().to_pandas_series()
-        self.output().dump(series)
-
-if __name__ == '__main__':
-    from chipalign.genome.mappability import FullyMappableGenomicWindows
-    from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
-    BinnedSignal.logger().setLevel(logging.DEBUG)
-    logging.basicConfig()
-
-    class SignalProfileExample(luigi.Task):
-        genome_version = luigi.Parameter(default='hg19')
-        chromosomes = luigi.Parameter(default='chr21')
-
-        def requires(self):
-            windows = FullyMappableGenomicWindows(genome_version=self.genome_version,
-                                                    chromosomes=self.chromosomes,
-                                                    read_length=36,
-                                                    ext_size=170,
-                                                    window_size=200)
-
-            signal = DownloadedSignal(genome_version=self.genome_version,
-                                      cell_type='E008',
-                                      track='H3K56ac',
-                                      chromosomes=self.chromosomes)
-
-            return BinnedSignal(bins_task=windows, signal_task=signal)
-
-    luigi.run(main_task_cls=SignalProfileExample)
-
-
-
-
-
 

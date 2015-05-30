@@ -14,8 +14,15 @@ from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
 from chipalign.signal.peaks import MACSResults
 
-
 class Signal(Task):
+    """
+    Creates a bedgraph of signal track (p-values) as specified by ROADMAP pipeline
+
+    :param input_task: Consolidated reads for input
+    :param treatment_task: Consolidated reads for treatment
+    :param fragment_length: fragment length to use (`'auto'` to estimate it automatically)
+    :param scaling_factor: float scaling factor to use (`'auto'` to automatically estimate from the data)
+    """
     input_task = luigi.Parameter()
     treatment_task = luigi.Parameter()
 
@@ -150,5 +157,4 @@ class Signal(Task):
 
             logger.info('Moving')
             shutil.move(tmp_gzip_file, output_abspath)
-
             logger.info('Done')

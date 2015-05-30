@@ -3,14 +3,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
-
 import unittest
 import tempfile
 import gzip
 from StringIO import StringIO
+
 import pybedtools
-from chipalign.profile.signal import BinnedSignal, _bedtool_is_sorted
 import numpy as np
+
+from chipalign.signal.bins import BinnedSignal, _bedtool_is_sorted
 
 
 class TestIsSorted(unittest.TestCase):

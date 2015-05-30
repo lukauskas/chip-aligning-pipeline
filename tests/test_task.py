@@ -25,6 +25,10 @@ class B(Task):
     def task_class_friendly_name(self):
         return 'bfriendly'
 
+    @property
+    def _extension(self):
+        return 'derp'
+
 class TestTaskParameterHelpers(unittest.TestCase):
 
     def test_task_default_parameters_is_set_to_all_significant_params(self):

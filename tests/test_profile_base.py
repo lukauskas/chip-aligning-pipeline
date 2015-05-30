@@ -4,8 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import unittest
+
 import pybedtools
-from chipalign.profile.signal import weighted_means_from_intersection
+
+from chipalign.signal.bins import weighted_means_from_intersection
 
 
 class TestGenomeWindows(unittest.TestCase):
@@ -44,7 +46,6 @@ class TestGenomeWindows(unittest.TestCase):
                     + (200 - (10600 - 10550)) * null
                 ) / 200.0)]
 
-
     def test_weighted_means_from_intersection_general_case(self):
         null_value = 0
         expected_output = self.expected_output_factory(null_value)
@@ -66,7 +67,6 @@ class TestGenomeWindows(unittest.TestCase):
         column_shifted_sample_data = []
         for chr_a, start_a, end_a, chr_b, start_b, end_b, value in sample_data:
             column_shifted_sample_data.append((chr_a, start_a, end_a, chr_b, start_b, end_b, 1, value))
-
 
         null_value = 0
         expected_output = self.expected_output_factory(null_value)
