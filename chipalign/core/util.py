@@ -9,6 +9,8 @@ import tempfile
 import os
 import shutil
 import logging
+import pybedtools
+from pybedtools.helpers import _flatten_list, get_tempdir
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
 def config_from_file():
@@ -139,3 +141,23 @@ def memoised(f):
         return ans
 
     return wrapper
+
+
+def clean_bedtool_history(bedtool):
+    if not isinstance(bedtool, pybedtools.BedTool):
+        return
+
+    flattened_history = _flatten_list(bedtool.history)
+    to_delete = []
+    tempdir = get_tempdir()
+    for i in flattened_history:
+        fn = i.fn
+        if not fn:
+            continue
+        if fn.startswith(os.path.join(os.path.abspath(tempdir),
+                                      'pybedtools')):
+            if fn.endswith('.tmp'):
+                to_delete.append(fn)
+
+    for fn in to_delete:
+        os.unlink(fn)

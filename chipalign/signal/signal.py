@@ -12,6 +12,7 @@ import pybedtools
 
 from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
+from chipalign.core.util import clean_bedtool_history
 from chipalign.signal.peaks import MACSResults
 
 class Signal(Task):
@@ -112,7 +113,7 @@ class Signal(Task):
             tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
                 genome=self.treatment_task.genome_version)
             tmp_bedtool.saveas(pval_signal_output_raw)
-            tmp_bedtool.delete_temporary_history(ask=False)
+            clean_bedtool_history(tmp_bedtool)
 
             chromsizes_file = 'chromsizes'
             pybedtools.chromsizes_to_file(self.treatment_task.genome_version, chromsizes_file)

@@ -6,6 +6,7 @@ import luigi
 import pybedtools
 from chipalign.alignment.aligned_reads import AlignedSRR
 from chipalign.core.task import Task
+from chipalign.core.util import clean_bedtool_history
 from chipalign.genome.mappability import GenomeMappabilityTrack
 
 
@@ -152,4 +153,4 @@ class FilteredReads(Task):
                     f.write(str(row))
         finally:
             if mapped_reads:
-                mapped_reads.delete_temporary_history(ask=False)
+                clean_bedtool_history(mapped_reads)

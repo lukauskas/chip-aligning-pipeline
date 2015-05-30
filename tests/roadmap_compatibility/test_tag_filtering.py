@@ -12,7 +12,8 @@ from tests.helpers.external_resource import DownloadableExternalResource
 
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 from tests.helpers.task_test import TaskTestCase
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, clean_bedtool_history
+
 
 class FilteredReadsResource(DownloadableExternalResource):
 
@@ -36,7 +37,7 @@ class FilteredReadsResource(DownloadableExternalResource):
                     answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
                                                                               genome=self.genome_version).sort()
                     answer_bedtool.saveas(answer_file)
-                    answer_bedtool.delete_temporary_history(ask=False)
+                    clean_bedtool_history(answer_bedtool)
                     self._relocate_to_output(answer_file)
 
 class CachedRoadmapAlignedReads(RoadmapAlignedReads):

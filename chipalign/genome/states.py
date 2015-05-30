@@ -9,6 +9,8 @@ import tempfile
 import pybedtools
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
+from chipalign.core.util import clean_bedtool_history
+
 
 class ChromatinStates(Task):
 
@@ -66,9 +68,9 @@ class ChromatinStates(Task):
                     with self.output().open('w') as output:
                         output.writelines(imap(str, answer))
                 finally:
-                    answer.delete_temporary_history(ask=False)
+                    clean_bedtool_history(answer)
             finally:
-                states.delete_temporary_history(ask=False)
+                clean_bedtool_history(states)
 
         finally:
             try:

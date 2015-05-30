@@ -9,7 +9,7 @@ import pybedtools
 import shutil
 
 from chipalign.core.task import Task
-from chipalign.core.util import ensure_directory_exists_for_file, temporary_file
+from chipalign.core.util import ensure_directory_exists_for_file, temporary_file, clean_bedtool_history
 from chipalign.genome.blacklist import BlacklistedRegions, remove_blacklisted_regions
 
 
@@ -22,7 +22,7 @@ class NonOverlappingBins(Task):
 
     @property
     def task_class_friendly_name(self):
-        return 'NOW'
+        return 'NOB'
 
     @property
     def _extension(self):
@@ -63,7 +63,7 @@ class NonOverlappingBins(Task):
 
         finally:
             if windows:
-                windows.delete_temporary_history(ask=False)
+                clean_bedtool_history(windows)
 
 if __name__ == '__main__':
     luigi.run(main_task_cls=NonOverlappingBins)

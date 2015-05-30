@@ -28,18 +28,20 @@ class BlacklistedRegions(Task):
     def run(self):
         logger = self.logger()
 
-        if self.genome_version in self.DOWNLOADABLE_BLACKLISTS:
-            url = self.DOWNLOADABLE_BLACKLISTS[self.genome_version]
-            logger.debug('Downloading the blacklist directly from {}'.format(url))
-            output_abspath = os.path.abspath(self.output().path)
-            with self.temporary_directory():
-                tmp_file = 'download.gz'
+        if self.genome_version not in self.DOWNLOADABLE_BLACKLISTS:
+            raise Exception('No blacklist for genome version {!r} available'.format(self.genome_version))
 
-                with open(tmp_file, 'w') as f:
-                    fetch(url, f)
-                shutil.move(tmp_file, output_abspath)
-        else:
-          raise Exception('No blacklist for genome version {!r} available'.format(self.genome_version))
+        url = self.DOWNLOADABLE_BLACKLISTS[self.genome_version]
+        logger.debug('Downloading the blacklist directly from {}'.format(url))
+        output_abspath = os.path.abspath(self.output().path)
+        self.ensure_output_directory_exists()
+        with self.temporary_directory():
+            tmp_file = 'download.gz'
+
+            with open(tmp_file, 'w') as f:
+                fetch(url, f)
+
+            shutil.move(tmp_file, output_abspath)
 
     @property
     def _extension(self):
@@ -84,4 +86,5 @@ class NonBlacklisted(Task):
     def task_class_friendly_name(self):
         return 'WL'
 
-
+if __name__ == '__main__':
+    luigi.run()

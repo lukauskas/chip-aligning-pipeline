@@ -201,7 +201,7 @@ class MetaTask(luigi.Task):
         raise NotImplementedError
 
     def run(self):
-        raise Exception('MetaTasks should never be run as they are completed when requires task is complete')
+        pass # Should not do anything
 
     @property
     def self_parameters(self):
