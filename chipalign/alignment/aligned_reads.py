@@ -34,3 +34,7 @@ class AlignedSRR(MetaTask):
 
     def bam_output(self):
         return self.output()[0]
+
+    @property
+    def task_class_friendly_name(self):
+        return 'SRR'

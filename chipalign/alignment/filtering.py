@@ -124,6 +124,10 @@ class FilteredReads(Task):
         return Chromosomes(genome_version=self.genome_version,
                            collection='male')  # Male collection contains all of them
 
+    @property
+    def task_class_friendly_name(self):
+        return 'FR'
+
     def run(self):
         logger = self.logger()
 

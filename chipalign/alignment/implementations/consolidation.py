@@ -63,6 +63,10 @@ class ConsolidatedReads(Task):
     def _extension(self):
         return 'tagAlign.gz'
 
+    @property
+    def task_class_friendly_name(self):
+        return 'CR'
+
     def run(self):
         logger = self.logger()
 
