@@ -12,6 +12,7 @@ import logging
 import luigi
 import pybedtools
 import numpy as np
+from chipalign.core.util import fast_bedtool_from_iterable
 
 from chipalign.genome.windows.genome_windows import NonOverlappingBins
 from chipalign.core.task import Task
@@ -29,6 +30,12 @@ class MappabilityTrack(object):
     def filter_uniquely_mappables(self, bedtool):
         logger = logging.getLogger(self.__class__.__name__)
         chromosomes = set(imap(lambda x: x.chrom, bedtool))
+        chromosomes_in_mappability_track = set(self.__lookup_dict.keys())
+
+        chromosomes_not_in_mappability_track = chromosomes - chromosomes_in_mappability_track
+        if chromosomes_not_in_mappability_track:
+            raise Exception('No mappability track for chromosomes {}.'.format(
+                sorted(chromosomes_not_in_mappability_track)))
 
         answer = []
         for chromosome in chromosomes:
@@ -50,7 +57,7 @@ class MappabilityTrack(object):
             answer.extend(chromosome_answer)
             logger.debug('Done')
 
-        return pybedtools.BedTool(answer)
+        return fast_bedtool_from_iterable(answer)
 
     @classmethod
     def maximum_mappability_score_for_bin(cls, bin_width, read_length, extension_length):

@@ -8,6 +8,7 @@ import pybedtools
 from chipalign.alignment.aligned_reads import AlignedSRR
 from chipalign.core.task import Task
 from chipalign.core.util import clean_bedtool_history, fast_bedtool_from_iterable
+from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack
 
 
@@ -67,6 +68,12 @@ def _resize_reads(bedtools_object, new_length,
     new_data = imap(_resizing_function, bedtools_object)
     return fast_bedtool_from_iterable(new_data)
 
+def _filter_chromosomes(bedtools_object, allowed_chromosomes):
+    allowed_chromosomes = frozenset(allowed_chromosomes)
+
+    new_data = ifilter(lambda x: x.chrom in allowed_chromosomes, bedtools_object)
+    return fast_bedtool_from_iterable(new_data)
+
 class FilteredReads(Task):
     """
     Performs read filtering as described in ROADMAP pipeline.
@@ -81,6 +88,7 @@ class FilteredReads(Task):
     :param alignment_task: task containing .bam_output() pointing to a BAM file object with aligned reads.
     :param genome_version: self-explanatory; try `hg19`.
     :param resized_length: The length to resize reads to. (default: 36, as set by ROADMAP consortium)
+    :param ignore_non_standard_chromosomes: if set to true, non-standard chromosomes will be ignored
     """
 
     # Task that will be aligned
@@ -88,6 +96,8 @@ class FilteredReads(Task):
 
     genome_version = AlignedSRR.genome_version
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
+
+    ignore_non_standard_chromosomes = luigi.BooleanParameter(default=True)
 
     @property
     def _mappability_task(self):
@@ -100,11 +110,23 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        return [self.alignment_task, self._mappability_task]
+        reqs = [self.alignment_task, self._mappability_task]
+        if self.ignore_non_standard_chromosomes:
+            reqs.append(self.standard_chromosomes_task)
+        return reqs
 
     @property
     def _extension(self):
         return 'tagAlign.gz'
+
+    @property
+    def genome_version(self):
+        return self.alignment_task.genome_version
+
+    @property
+    def standard_chromosomes_task(self):
+        return Chromosomes(genome_version=self.genome_version,
+                           collection='male')  # Male collection contains all of them
 
     def run(self):
         logger = self.logger()
@@ -113,13 +135,21 @@ class FilteredReads(Task):
 
         mapped_reads = None
         try:
-            logger.debug('Loading {}'.format(bam_output))
+            logger.info('Loading {}'.format(bam_output))
             mapped_reads = pybedtools.BedTool(bam_output)
-            logger.debug('Converting BAM to BED')
+            logger.info('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
 
+            if self.ignore_non_standard_chromosomes:
+                logger.info('Leaving only reads within standard chromosomes')
+                standard_chromosomes = self.standard_chromosomes_task.output().load().keys()
+                logger.debug('Standard chromosomes: {}'.format(standard_chromosomes))
+                _len_before = mapped_reads.count()
+                mapped_reads = _filter_chromosomes(mapped_reads, standard_chromosomes)
+                logger.debug('Number of reads removed: {}'.format(mapped_reads.count() - _len_before))
+
             if self.resized_length > 0:
-                logger.debug('Truncating reads to {} base pairs'.format(self.resized_length))
+                logger.info('Truncating reads to {} base pairs'.format(self.resized_length))
                 resized_reads = _resize_reads(mapped_reads,
                                               new_length=self.resized_length,
                                               chromsizes=pybedtools.chromsizes(self.genome_version),
@@ -135,17 +165,17 @@ class FilteredReads(Task):
                 mapped_reads.delete_temporary_history(ask=False)
                 mapped_reads = resized_reads
 
-            logger.debug('Removing duplicates. Length before: {}'.format(len(mapped_reads)))
+            logger.info('Removing duplicates. Length before: {}'.format(mapped_reads.count()))
             mapped_reads = _remove_duplicates_from_bed(mapped_reads)
-            logger.debug('Done removing duplicates. Length after: {}'.format(len(mapped_reads)))
+            logger.info('Done removing duplicates. Length after: {}'.format(mapped_reads.count()))
 
-            logger.debug('Filtering uniquely mappable')
+            logger.info('Filtering uniquely mappable')
             mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads)
 
-            logger.debug('Sorting reads')
+            logger.info('Sorting reads')
             mapped_reads = mapped_reads.sort()
 
-            logger.debug('Writing to file')
+            logger.info('Writing to file')
             with self.output().open('w') as f:
 
                 for row in mapped_reads:
