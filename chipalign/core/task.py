@@ -131,6 +131,52 @@ class Task(luigi.Task):
 
         return logging.LoggerAdapter(logger, extra)
 
+    def _flattened_outputs(self):
+        return flatten(self.output())
+
+    def _all_outputs_exist(self):
+        """
+        Returns whether files for each of the outputs exist
+        :return:
+        """
+        outputs = self._flattened_outputs()
+        return all(itertools.imap(lambda output: output.exists(), outputs))
+
+    def _dependancies_have_lower_modification_dates_than_outputs(self):
+        """
+        Returns true if the dependancy modification dates are lower than the modification date of current task
+        :return:
+        """
+        dependancies = flatten(self.requires())
+        if len(dependancies) == 0:
+            # No dependancies -- we're good
+            return True
+
+        max_dependency_mod_date = None
+        for dependency in dependancies:
+            dependency_outputs = flatten(dependency.output())
+
+            all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
+            if not all_dependencies_satisfied:
+                # If at least one dependency unsatisfied, this task is also not complete
+                return False
+
+            mod_dates = itertools.imap(lambda output: output.modification_time, dependency_outputs)
+            dependancy_max_mod_date = max(mod_dates)
+
+            if max_dependency_mod_date is None or dependancy_max_mod_date > max_dependency_mod_date:
+                max_dependency_mod_date = dependancy_max_mod_date
+
+        outputs = self._flattened_outputs()
+        try:
+            min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_time, outputs))
+        except AttributeError as e:
+            raise AttributeError(
+                'Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
+
+        # Ensure all dependencies were built before the parent.
+        return max_dependency_mod_date < min_output_mod_date_date
+
     def complete(self):
         """
             If the task has outputs, check that they all are complete,
@@ -140,38 +186,11 @@ class Task(luigi.Task):
         if len(outputs) == 0:
             return False
 
-        dependancies = flatten(self.requires())
-
-        all_outputs_exist = all(itertools.imap(lambda output: output.exists(), outputs))
-        if not all_outputs_exist:
+        # If the task's outputs do not exist, task is by definition not complete
+        if not self._all_outputs_exist() or not self._dependancies_have_lower_modification_dates_than_outputs():
             return False
         else:
-            if len(dependancies) == 0:
-                return True
-            else:
-                max_dependency_mod_date = None
-                for dependency in dependancies:
-                    dependency_outputs = flatten(dependency.output())
-
-                    all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
-                    if not all_dependencies_satisfied:
-                        # If at least one dependency unsatisfied, this task is also not complete
-                        return False
-
-                    mod_dates = itertools.imap(lambda output: output.modification_time, dependency_outputs)
-                    dependancy_max_mod_date = max(mod_dates)
-
-                    if max_dependency_mod_date is None or dependancy_max_mod_date > max_dependency_mod_date:
-                        max_dependency_mod_date = dependancy_max_mod_date
-
-                try:
-                    min_output_mod_date_date = min(itertools.imap(lambda output: output.modification_time, outputs))
-                except AttributeError as e:
-                    raise AttributeError(
-                        'Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
-
-                # Ensure all dependencies were built before the parent.
-                return max_dependency_mod_date < min_output_mod_date_date
+            return True
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))

@@ -6,14 +6,10 @@ import os
 import shutil
 
 from chipalign.alignment.implementations.base import AlignedReadsBase
-from chipalign.sequence.srr import SRRSequence
 from chipalign.genome.sequence import GenomeSequence
 
 
 class AlignedReadsPash(AlignedReadsBase):
-
-    genome_version = GenomeSequence.genome_version
-    srr_identifier = SRRSequence.srr_identifier
 
     @property
     def aligner_parameters(self):
@@ -33,7 +29,7 @@ class AlignedReadsPash(AlignedReadsBase):
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
         index_abspath = os.path.abspath(self.index_task.output().path)
-        fastq_abspath = os.path.abspath(self.fastq_task._filename().path)
+        fastq_abspath = os.path.abspath(self.fastq_task.output().path)
 
         with self.temporary_directory():
 
