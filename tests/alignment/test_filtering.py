@@ -18,16 +18,16 @@ class TestFiltering(unittest.TestCase):
             ('chr1', '10', '35', 'non-duplicate-to-a', '99', '-'),
             ('chr2', '10', '30', 'non-duplicate-to-a-as-chr2', '99', '+'),
             ('chr1', '16', '68', 'neg-strand-duplicate-a2', '99', '-'),
-            ('chr1', '50', '80', 'non-duplicate-to-a-as different loc', '99', '+'),
-            ('chr1', '50', '80', 'non-duplicate-to-b-as different loc-neg', '99', '-'),
+            ('chr1', '50', '80', 'non-duplicate-to-a-as-different-loc', '99', '+'),
+            ('chr1', '50', '80', 'non-duplicate-to-b-as-different-loc-neg', '99', '-'),
         ]
         input_ = pybedtools.BedTool(data)
 
         expected_output = [
             ('chr1', '10', '35', 'non-duplicate-to-a', '99', '-'),
             ('chr2', '10', '30', 'non-duplicate-to-a-as-chr2', '99', '+'),
-            ('chr1', '50', '80', 'non-duplicate-to-a-as different loc', '99', '+'),
-            ('chr1', '50', '80', 'non-duplicate-to-b-as different loc-neg', '99', '-'),
+            ('chr1', '50', '80', 'non-duplicate-to-a-as-different-loc', '99', '+'),
+            ('chr1', '50', '80', 'non-duplicate-to-b-as-different-loc-neg', '99', '-'),
         ]
         output_ = pybedtools.BedTool(expected_output)
         return input_, output_
@@ -37,7 +37,8 @@ class TestFiltering(unittest.TestCase):
 
         output_ = _remove_duplicates_from_bed(input_)
 
-        self.assertEqual(expected_output, output_)
+        self.assertEqual(expected_output, output_,
+                         msg='Outputs not equal.\nExpected:\n{}\n\nActual:\n{}'.format(expected_output, output_))
 
 
 class TestResizing(unittest.TestCase):

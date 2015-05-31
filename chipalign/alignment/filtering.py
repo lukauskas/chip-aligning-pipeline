@@ -2,11 +2,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from itertools import imap, ifilter
 import luigi
 import pybedtools
 from chipalign.alignment.aligned_reads import AlignedSRR
 from chipalign.core.task import Task
-from chipalign.core.util import clean_bedtool_history
+from chipalign.core.util import clean_bedtool_history, fast_bedtool_from_iterable
 from chipalign.genome.mappability import GenomeMappabilityTrack
 
 
@@ -34,8 +35,8 @@ def _remove_duplicates_from_bed(bedtools_object):
 
     del seen_once  # Just in case we need to free up some memory
 
-    filtered_data = filter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
-    return pybedtools.BedTool(filtered_data)
+    filtered_data = ifilter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
+    return fast_bedtool_from_iterable(filtered_data)
 
 
 def _resize_reads(bedtools_object, new_length,
@@ -63,8 +64,8 @@ def _resize_reads(bedtools_object, new_length,
 
         return row
 
-    new_data = map(_resizing_function, bedtools_object)
-    return pybedtools.BedTool(new_data)
+    new_data = imap(_resizing_function, bedtools_object)
+    return fast_bedtool_from_iterable(new_data)
 
 class FilteredReads(Task):
     """

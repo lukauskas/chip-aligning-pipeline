@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 from functools import wraps
+from itertools import imap
 import tempfile
 import os
 import shutil
@@ -161,3 +162,16 @@ def clean_bedtool_history(bedtool):
 
     for fn in to_delete:
         os.unlink(fn)
+
+def fast_bedtool_from_iterable(iterable):
+    """
+    Creates a bedtool object from provided iterable in a fast way.
+    Particularly it first creates the string representation and then creates BedTool object from string
+    This seems to be faster than compiling it from list
+
+    :param iterable: Iterable to convert to bedtool
+    :return: BedTool object
+    :rtype: pybedtools.BedTool
+    """
+    str_repr = '\n'.join(imap(str, iterable))
+    return pybedtools.BedTool(str_repr, from_string=True)
