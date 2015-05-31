@@ -120,10 +120,6 @@ class FilteredReads(Task):
         return 'tagAlign.gz'
 
     @property
-    def genome_version(self):
-        return self.alignment_task.genome_version
-
-    @property
     def standard_chromosomes_task(self):
         return Chromosomes(genome_version=self.genome_version,
                            collection='male')  # Male collection contains all of them
