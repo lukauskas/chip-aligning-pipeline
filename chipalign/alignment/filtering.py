@@ -142,7 +142,7 @@ class FilteredReads(Task):
                 logger.debug('Standard chromosomes: {}'.format(standard_chromosomes))
                 _len_before = mapped_reads.count()
                 mapped_reads = _filter_chromosomes(mapped_reads, standard_chromosomes)
-                logger.debug('Number of reads removed: {}'.format(mapped_reads.count() - _len_before))
+                logger.debug('Number of reads removed: {}'.format(_len_before - mapped_reads.count()))
 
             if self.resized_length > 0:
                 logger.info('Truncating reads to {} base pairs'.format(self.resized_length))
