@@ -54,3 +54,6 @@ class SRRSequence(Task):
             logger.debug('Done. Moving file')
 
             shutil.move(fastq_file, abspath)
+
+if __name__ == '__main__':
+    luigi.run(main_task_cls=SRRSequence)
