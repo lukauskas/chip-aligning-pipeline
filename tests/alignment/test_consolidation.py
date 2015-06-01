@@ -6,10 +6,12 @@ import gzip
 from itertools import imap, ifilter
 import os
 from random import Random
+import shutil
+
 import luigi
 import pybedtools
-import shutil
-from chipalign.alignment.implementations.consolidation import ConsolidatedReads
+
+from chipalign.alignment.consolidation import ConsolidatedReads
 from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
 from tests.helpers.task_test import TaskTestCase
