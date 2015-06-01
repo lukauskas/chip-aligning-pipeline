@@ -79,15 +79,15 @@ class ConsolidatedReads(Task):
             chromosome_filter = lambda x: True
 
         with temporary_file() as tf:
-            with open(tf, 'w') as buffer_:
+            with open(tf, 'w') as tf_file_handle:
                 for filtered_reads in self.input_alignments:
                     filtered_reads = filtered_reads.output()
                     logger.debug('Processing {}'.format(filtered_reads.path))
-                    filtered_reads_bedtool = pybedtools.BedTool(filtered_reads.path).bam_to_bed()
+                    filtered_reads_bedtool = pybedtools.BedTool(filtered_reads.path)
 
-                    buffer_.writelines(imap(str,
-                                            ifilter(chromosome_filter,
-                                                    filtered_reads_bedtool)))
+                    tf_file_handle.writelines(imap(str,
+                                              ifilter(chromosome_filter,
+                                                      filtered_reads_bedtool)))
                     logger.debug('.. Done')
 
             logger.debug('Creating bedtool')

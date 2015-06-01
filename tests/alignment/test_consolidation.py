@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import gzip
 from itertools import imap, ifilter
 import os
 from random import Random
@@ -35,8 +36,8 @@ class TestReadConsolidation(TaskTestCase):
 
         with temporary_file() as tf:
             with open(tf, 'w') as f:
-                f.writelines(imap(str, pybedtools.BedTool(reads_a.output().path).bam_to_bed()))
-                f.writelines(imap(str, pybedtools.BedTool(reads_b.output().path).bam_to_bed()))
+                f.writelines(imap(str, pybedtools.BedTool(reads_a.output().path)))
+                f.writelines(imap(str, pybedtools.BedTool(reads_b.output().path)))
 
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
@@ -91,10 +92,10 @@ class TestReadConsolidation(TaskTestCase):
             with open(tf, 'w') as f:
                 f.writelines(imap(str,
                                   ifilter(standard_chromosomes_filter,
-                                          pybedtools.BedTool(reads_a.output().path).bam_to_bed())))
+                                          pybedtools.BedTool(reads_a.output().path))))
                 f.writelines(imap(str,
                                   ifilter(standard_chromosomes_filter,
-                                          pybedtools.BedTool(reads_b.output().path).bam_to_bed())))
+                                          pybedtools.BedTool(reads_b.output().path))))
 
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
@@ -116,7 +117,7 @@ class RandomAlignedReads(Task):
 
     @property
     def _extension(self):
-        return 'bam'
+        return 'tagAlign.gz'
 
     def run(self):
         self.ensure_output_directory_exists()
@@ -128,17 +129,13 @@ class RandomAlignedReads(Task):
         random = Random(self.seed)
         nonstandard_chromosomes = filter(lambda chrom: '_' in chrom, pybedtools.chromsizes(self.genome_version).keys())
 
-        with temporary_file(suffix='.bed') as bed_tf:
-            with open(bed_tf, 'w') as f:
+        with temporary_file(suffix='.bed.gz') as bed_tf:
+            with gzip.GzipFile(bed_tf, 'w') as f:
                 for i, line in enumerate(x):
                     if i < self.number_of_nonstandard_reads:
                         line.chrom = random.choice(nonstandard_chromosomes)
-                        print(str(line))
-                    f.write(str(line))
-            x = pybedtools.BedTool(bed_tf)
-            x = x.to_bam(genome=self.genome_version)
-            with temporary_file(cleanup_on_exception=True, suffix='.bam') as bam_tf:
-                x.saveas(bam_tf)
-                shutil.move(bam_tf, abspath)
+                    f.write('{0.chrom}\t{0.start}\t{0.end}\tN\t1000\t{0.strand}\n'.format(line))
+
+            shutil.move(bed_tf, abspath)
 
         assert os.path.isfile(abspath)
