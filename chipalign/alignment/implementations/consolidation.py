@@ -107,7 +107,10 @@ class ConsolidatedReads(Task):
             logger.debug('Writing to file')
             with temporary_file() as answer:
                 master_reads_bedtool.saveas(answer)
-                self.ensure_output_directory_exists()
-                shutil.move(answer, self.output().path)
+
+                # Write the output in correct format (gzipped)
+                with self.output().open('w') as out_:
+                    with open(answer) as in_:
+                        out_.writelines(in_)
 
         logger.debug('Done')

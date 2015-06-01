@@ -34,6 +34,15 @@ class TestReadConsolidation(TaskTestCase):
                                                     use_only_standard_chromosomes=False)
         self.build_task(consolidated_reads_task)
 
+        output_filename = consolidated_reads_task.output().path
+        try:
+            with gzip.open(output_filename, 'r') as gf:
+                gf.next()  # This raises exception if it is gzipped
+        except IOError:
+            self.fail('Output file is not gzipped')
+
+        answer_bedtool = pybedtools.BedTool(output_filename)
+
         with temporary_file() as tf:
             with open(tf, 'w') as f:
                 f.writelines(imap(str, pybedtools.BedTool(reads_a.output().path)))
@@ -42,10 +51,9 @@ class TestReadConsolidation(TaskTestCase):
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
 
-            answer_bedtool = pybedtools.BedTool(consolidated_reads_task.output().path)
             self.assertListEqual(list(joint_input_bedtool), list(answer_bedtool))
 
-    def test_random_reds_subsampled_correctly(self):
+    def test_random_reads_subsampled_correctly(self):
         length_of_reads = 100
 
         reads_a = RandomAlignedReads(seed=1, length_of_reads=length_of_reads, number_of_reads=50,
@@ -61,10 +69,17 @@ class TestReadConsolidation(TaskTestCase):
                                                     use_only_standard_chromosomes=False)
         self.build_task(consolidated_reads_task)
 
-        answer_bedtool = pybedtools.BedTool(consolidated_reads_task.output().path)
+        output_filename = consolidated_reads_task.output().path
+        try:
+            with gzip.open(output_filename, 'r') as gf:
+                output_content = gf.read()  # This raises exception if it is gzipped
+        except IOError:
+            self.fail('Output file is not gzipped')
+
+        answer_bedtool = pybedtools.BedTool(output_filename)
         self.assertEqual(max_sequencing_depth, answer_bedtool.count())
         sorted_ = answer_bedtool.sort()
-        self.assertEqual(answer_bedtool, sorted_, 'Bedtool that is returned was unsorted')
+        self.assertListEqual(list(answer_bedtool), list(sorted_))
 
     def test_nonstandard_chromosomes_are_removed(self):
         length_of_reads = 100
@@ -88,6 +103,13 @@ class TestReadConsolidation(TaskTestCase):
 
         standard_chromosomes_filter = lambda x: '_' not in x.chrom
 
+        output_filename = consolidated_reads_task.output().path
+        try:
+            with gzip.open(output_filename, 'r') as gf:
+                gf.next()  # This raises exception if it is gzipped
+        except IOError:
+            self.fail('Output file is not gzipped')
+
         with temporary_file() as tf:
             with open(tf, 'w') as f:
                 f.writelines(imap(str,
@@ -100,7 +122,7 @@ class TestReadConsolidation(TaskTestCase):
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
 
-            answer_bedtool = pybedtools.BedTool(consolidated_reads_task.output().path)
+            answer_bedtool = pybedtools.BedTool(output_filename)
             self.assertEqual(joint_input_bedtool.count(), answer_bedtool.count())
             self.assertListEqual(list(joint_input_bedtool), list(answer_bedtool))
 
