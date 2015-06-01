@@ -4,8 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from contextlib import contextmanager
+import datetime
 from functools import wraps
 from itertools import imap
+import os.path
 import tempfile
 import os
 import shutil
@@ -175,3 +177,7 @@ def fast_bedtool_from_iterable(iterable):
     """
     str_repr = '\n'.join(imap(str, iterable))
     return pybedtools.BedTool(str_repr, from_string=True)
+
+
+def file_modification_time(path):
+    return datetime.datetime.fromtimestamp(os.path.getmtime(path))

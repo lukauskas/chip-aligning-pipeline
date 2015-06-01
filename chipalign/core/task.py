@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import inspect
 import logging
 import re
 import os
@@ -14,7 +15,8 @@ from chipalign.core.file_formats.file import File, GzippedFile
 
 from luigi.task import flatten
 
-from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir
+from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
+    file_modification_time
 
 
 def _file_safe_string(value):
@@ -200,6 +202,14 @@ class Task(luigi.Task):
 
     def ensure_output_directory_exists(self):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))
+
+    @classmethod
+    def _implementation_file(cls):
+        return inspect.getsourcefile(cls)
+
+    @classmethod
+    def _last_modification_for_source(cls):
+        return file_modification_time(cls._implementation_file())
 
 class MetaTask(luigi.Task):
     @property
