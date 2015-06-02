@@ -61,11 +61,12 @@ class Signal(Task):
         logger = self.logger()
 
         if self.scaling_factor == 'auto':
-            number_of_treatment_reads = len(pybedtools.BedTool(self.treatment_task.output().path))
-            number_of_input_reads = len(pybedtools.BedTool(self.input_task.output().path))
+            number_of_treatment_reads = pybedtools.BedTool(self.treatment_task.output().path).count()
+            number_of_input_reads = pybedtools.BedTool(self.input_task.output().path).count()
 
             logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
                                                                             number_of_input_reads))
+            assert number_of_input_reads > 0 and number_of_input_reads > 0
 
             scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
             logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
