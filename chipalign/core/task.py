@@ -144,7 +144,7 @@ class Task(luigi.Task):
         outputs = self._flattened_outputs()
         return all(itertools.imap(lambda output: output.exists(), outputs))
 
-    def _dependancies_have_lower_modification_dates_than_outputs(self):
+    def _dependancies_complete_and_have_lower_modification_dates_than_outputs(self):
         """
         Returns true if the dependancy modification dates are lower than the modification date of current task
         :return:
@@ -158,10 +158,9 @@ class Task(luigi.Task):
         for dependency in dependancies:
             dependency_outputs = flatten(dependency.output())
 
-            all_dependencies_satisfied = all(itertools.imap(lambda output: output.exists(), dependency_outputs))
-            if not all_dependencies_satisfied:
-                # If at least one dependency unsatisfied, this task is also not complete
-                return False
+            if not dependency.complete():
+                self.logger().debug('{} is not complete as {} is not complete'.format(self.__class__.__name__,
+                                                                                      dependency.__class__.__name__))
 
             mod_dates = itertools.imap(lambda output: output.modification_time, dependency_outputs)
             dependancy_max_mod_date = max(mod_dates)
@@ -202,7 +201,7 @@ class Task(luigi.Task):
 
         return self._all_outputs_exist() \
                and self._source_code_for_task_has_not_been_modified_since_output_was_generated() \
-               and self._dependancies_have_lower_modification_dates_than_outputs()
+               and self._dependancies_complete_and_have_lower_modification_dates_than_outputs()
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
