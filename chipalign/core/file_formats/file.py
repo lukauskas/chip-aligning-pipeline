@@ -17,6 +17,9 @@ class File(luigi.File):
         else:
             return file_modification_time(self.path)
 
+    def __repr__(self):
+        return '<{self.__class__.__name__} {self.path} (modified: {self.modification_time})>'.format(self=self)
+
 class GzippedFile(File):
 
     def __init__(self, path=None):
