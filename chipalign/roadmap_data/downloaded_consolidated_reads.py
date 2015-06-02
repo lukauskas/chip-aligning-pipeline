@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
 import os
-import shutil
 import luigi
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
@@ -37,7 +36,6 @@ class DownloadedConsolidatedReads(Task):
         logger = self.logger()
         url = self.url()
 
-        output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
         with temporary_file() as tf:
