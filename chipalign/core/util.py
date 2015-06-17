@@ -48,6 +48,22 @@ def ensure_directory_exists_for_file(filename):
             raise
 
 @contextmanager
+def timed_segment(message, logger=None):
+    if logger is None:
+        logger = logging.getLogger('chipalign.core.util.timed_segment')
+
+    logger.info('Starting {}'.format(message))
+
+    start_time = datetime.datetime.now()
+    yield
+    end_time = datetime.datetime.now()
+    diff = (end_time-start_time)
+
+    logger.info('Finished {}. Took {:.2f}s'.format(message,
+                                                   diff.total_seconds()))
+
+
+@contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     """
     A context manager to change the current working directory to a temporary directory,
