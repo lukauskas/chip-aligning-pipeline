@@ -51,7 +51,7 @@ class BedGraph(File):
 
         return ans
 
-    def to_pandas_series(self):
+    def to_pandas_series(self, name=None):
 
         with self.open('r') as f:
             if self.first_line_is_header():
@@ -64,7 +64,10 @@ class BedGraph(File):
                                    index_col=['chromosome', 'start', 'end'], skiprows=skip_rows)
 
         series = series['value']
-        series.name = self.header().get('name', None)
+        if name is None:
+            name = self.header().get('name', None)
+
+        series.name = name
         return series
 
 
