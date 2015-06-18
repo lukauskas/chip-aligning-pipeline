@@ -25,6 +25,7 @@ class TestBedGraphReading(unittest.TestCase):
                                         'value': [0.22042, 0.19921, 0.22042, 0.19921]})
         expected_series = expected_series.set_index(['chromosome', 'start', 'end'])
         expected_series = expected_series['value']
+        expected_series.name = None  # No name specified in bedgraph track
 
         with temporary_file() as tf:
             with open(tf, 'w') as tfh:
@@ -37,6 +38,7 @@ class TestBedGraphReading(unittest.TestCase):
             assert_series_equal(expected_series, bedgraph_as_series,
                                 check_series_type=True,
                                 check_names=True)
+            self.assertEqual(expected_series.name, bedgraph_as_series.name)
 
     def test_sample_gzipped_bedgraph_is_read_correctly(self):
 
@@ -51,6 +53,7 @@ class TestBedGraphReading(unittest.TestCase):
                                         'value': [0.22042, 0.19921, 0.22042, 0.19921]})
         expected_series = expected_series.set_index(['chromosome', 'start', 'end'])
         expected_series = expected_series['value']
+        expected_series.name = None  # No name specified in bedgraph track
 
         with temporary_file(suffix='.gz') as tf:
             with gzip.GzipFile(tf, 'w') as tfh:
@@ -63,3 +66,4 @@ class TestBedGraphReading(unittest.TestCase):
             assert_series_equal(expected_series, bedgraph_as_series,
                                 check_series_type=True,
                                 check_names=True)
+            self.assertEqual(expected_series.name, bedgraph_as_series.name)
