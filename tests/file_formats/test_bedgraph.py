@@ -77,7 +77,7 @@ class TestBedGraphReading(unittest.TestCase):
 
     def test_sample_bedgraph_with_header_is_read_correctly(self):
 
-        contents = u'track type="bedGraph" name="foobar" description="descr"\n' \
+        contents = u'track type="bedGraph" name="foobar" description="description with spaces"\n' \
                    u'chr1\t0\t9959\t0.22042\n' \
                    u"chr1\t9959\t10359\t0.19921\n" \
                    u"chr1\t10359\t10361\t0.22042\n" \
@@ -101,7 +101,7 @@ class TestBedGraphReading(unittest.TestCase):
             self.assertEqual(expected_series.name, bedgraph_as_series.name)
 
     def test_sample_bedgraph_with_header_is_read_correctly_from_gzip(self):
-        contents = u'track type="bedGraph" name="foobar" description="descr"\n' \
+        contents = u'track type="bedGraph" name="foobar" description="description with spaces"\n' \
                    u"chr1\t0\t9959\t0.22042\n" \
                    u"chr1\t9959\t10359\t0.19921\n" \
                    u"chr1\t10359\t10361\t0.22042\n" \
@@ -139,10 +139,10 @@ class TestBedGraphReading(unittest.TestCase):
         self.assertDictEqual(expected_header, actual_header_gzipped)
 
     def test_sample_bedgraph_header_is_parsed_correctly(self):
-        contents = u'track type="bedGraph" name="foobar" description="descr"\n' \
+        contents = u'track type="bedGraph" name=foobar description="description with spaces"\n' \
                    u"chr1\t0\t9959\t0.22042\n"
 
-        expected_header = {'type': 'bedGraph', 'name': 'foobar', 'description': 'descr'}
+        expected_header = {'type': 'bedGraph', 'name': 'foobar', 'description': 'description with spaces'}
 
         with _temporary_bedgraph(contents, gzipped=True) as bedgraph:
             actual_header = bedgraph.header()

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import re
 import luigi.format
 
 import pandas as pd
@@ -22,7 +23,27 @@ class BedGraph(File):
         super(BedGraph, self).__init__(path=path, format=format_, **kwargs)
 
     def header(self):
-        return None
+        with self.open('r') as f:
+            line = f.readline()
+
+        if not line.startswith('track'):
+            return {}
+
+        __, __, header = line.partition('track')
+        header = header.strip()
+
+        ans = {}
+        regexp = re.compile('(?P<key>\w+)=((?P<value>[^" ]*)( |$)|"(?P<value_quoted>[^"]*)")')
+        for match in regexp.finditer(header):
+            key = match.group('key')
+
+            if match.group('value'):
+                value = match.group('value')
+            else:
+                value = match.group('value_quoted')
+            ans[key] = value
+
+        return ans
 
     def to_pandas_series(self):
         series = pd.read_table(self.path,
