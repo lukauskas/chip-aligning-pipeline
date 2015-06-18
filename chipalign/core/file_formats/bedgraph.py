@@ -22,6 +22,12 @@ class BedGraph(File):
 
         super(BedGraph, self).__init__(path=path, format=format_, **kwargs)
 
+    def first_line_is_header(self):
+        with self.open('r') as f:
+            line = f.readline()
+
+        return line.startswith('track')
+
     def header(self):
         with self.open('r') as f:
             line = f.readline()
@@ -46,12 +52,19 @@ class BedGraph(File):
         return ans
 
     def to_pandas_series(self):
-        series = pd.read_table(self.path,
-                               header=None, names=['chromosome', 'start', 'end', 'value'],
-                               index_col=['chromosome', 'start', 'end'],
-                               compression='gzip' if self._is_gzipped else None)
+
+        with self.open('r') as f:
+            if self.first_line_is_header():
+                skip_rows = 1
+            else:
+                skip_rows = 0
+
+            series = pd.read_table(f,
+                                   header=None, names=['chromosome', 'start', 'end', 'value'],
+                                   index_col=['chromosome', 'start', 'end'], skiprows=skip_rows)
 
         series = series['value']
+        series.name = self.header().get('name', None)
         return series
 
 

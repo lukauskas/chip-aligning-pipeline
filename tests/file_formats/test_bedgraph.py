@@ -14,7 +14,7 @@ from pandas.util.testing import assert_series_equal
 @contextmanager
 def _temporary_bedgraph(contents, gzipped=False):
 
-    suffix = '.gz' if gzipped else None
+    suffix = '.gz' if gzipped else ''
     with temporary_file(suffix=suffix) as tf:
 
         open_ = gzip.GzipFile if gzipped else open
