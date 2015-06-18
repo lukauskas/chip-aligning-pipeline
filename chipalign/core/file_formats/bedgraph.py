@@ -21,6 +21,9 @@ class BedGraph(File):
 
         super(BedGraph, self).__init__(path=path, format=format_, **kwargs)
 
+    def header(self):
+        return None
+
     def to_pandas_series(self):
         series = pd.read_table(self.path,
                                header=None, names=['chromosome', 'start', 'end', 'value'],
