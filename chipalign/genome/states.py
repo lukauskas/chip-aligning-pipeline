@@ -100,7 +100,7 @@ class ChromatinStates(Task):
 
             try:
                 regions = pybedtools.BedTool(input_file)  # Assume sorted
-                answer = regions.map(states, c=4, o='collapse')
+                answer = regions.map(states, c=4, o='mode')
 
                 try:
                     with self.output().open('w') as output:
