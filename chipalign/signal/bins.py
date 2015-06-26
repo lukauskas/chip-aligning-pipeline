@@ -11,6 +11,8 @@ import numpy as np
 
 from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
+from chipalign.core.util import timed_segment
+
 
 class BinnedSignal(Task):
     """
@@ -18,6 +20,8 @@ class BinnedSignal(Task):
     """
     bins_task = luigi.Parameter()
     signal_task = luigi.Parameter()
+
+    binning_method = luigi.Parameter(default='weighted_mean')
 
     @property
     def parameters(self):
@@ -36,9 +40,14 @@ class BinnedSignal(Task):
         return BedGraph
 
     @classmethod
-    def compute_profile(cls, bins_abspath, signal_abspath, output_handle):
-        _compute_binned_signal(bins_abspath, signal_abspath, output_handle,
-                               logger=cls.class_logger(), check_sorted=False)
+    def compute_profile(cls, bins_abspath, signal_abspath, output_handle, method='weighted_mean'):
+        if method == 'weighted_mean':
+            _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle,
+                                          logger=cls.class_logger(), check_sorted=False)
+        elif method == 'max':
+            _compute_max_signal(bins_abspath, signal_abspath, output_handle, logger=cls.class_logger())
+        else:
+            raise ValueError('Unsupported method {!r}'.format(method))
 
     def run(self):
 
@@ -48,7 +57,8 @@ class BinnedSignal(Task):
         self.logger().info('Binning signal for {}'.format(signal_task_abspath))
 
         with self.output().open('w') as f:
-            self.compute_profile(bins_task_abspath, signal_task_abspath, f)
+            self.compute_profile(bins_task_abspath, signal_task_abspath, f,
+                                 method=self.binning_method)
 
 
 def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):
@@ -128,47 +138,61 @@ def _bedtool_is_sorted(bedtool):
 
     return True
 
-def _compute_binned_signal(bins_abspath, signal_abspath, output_handle, logger=None,
+def _compute_max_signal(bins_abspath, signal_abspath, output_handle, logger=None):
+    logger = logger if logger is not None else logging.getLogger('_compute_max_signal')
+
+    with timed_segment('Loading data', logger=logger):
+        bins = pybedtools.BedTool(bins_abspath)
+        signal = pybedtools.BedTool(signal_abspath)
+
+    with timed_segment('Mapping', logger=logger):
+        mapped = bins.map(signal, o='max', c='4', null=0.0)
+
+    with timed_segment('Writing answer'):
+        for row in mapped:
+            output_handle.write(str(row))
+
+
+def _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle, logger=None,
                            check_sorted=True):
     logger = logger if logger is not None else logging.getLogger('_compute_binned_signal')
 
-    logger.info('Loading bins up and checking if they are sorted')
-    bins = pybedtools.BedTool(bins_abspath)
-    bins_len = len(bins)
-    if check_sorted:
-        if not _bedtool_is_sorted(bins):
-            raise Exception('Bins need to be sorted')
-    logger.debug('Bins length: {}'.format(bins_len))
+    with timed_segment('Loading bins up and checking if they are sorted', logger=logger):
+        bins = pybedtools.BedTool(bins_abspath)
+        bins_len = len(bins)
+        if check_sorted:
+            if not _bedtool_is_sorted(bins):
+                raise Exception('Bins need to be sorted')
+        logger.debug('Bins length: {}'.format(bins_len))
 
-    logger.info('Loading signal up and checking if they are sorted')
-    signal = pybedtools.BedTool(signal_abspath)
-    if check_sorted:
-        if not _bedtool_is_sorted(signal):
-            raise Exception('Signal needs to be sorted')
-        logger.debug('Signal length: {}'.format(len(signal)))
+    with timed_segment('Loading signal up and checking if they are sorted', logger=logger):
+        signal = pybedtools.BedTool(signal_abspath)
+        if check_sorted:
+            if not _bedtool_is_sorted(signal):
+                raise Exception('Signal needs to be sorted')
+            logger.debug('Signal length: {}'.format(len(signal)))
 
-    logger.info('Doing the intersection, this takes a while')
-    intersection = bins.intersect(signal, loj=True, sorted=True)
+    with timed_segment('Doing the intersection, this takes a while', logger=logger):
+        intersection = bins.intersect(signal, loj=True, sorted=True)
 
     try:
-        logger.info('Doing the weighted means thing.')
-        iter_answer = weighted_means_from_intersection(intersection,
-                                                       column=4,
-                                                       null_value=0,  # As in 0 = -log_10 (p=1),
-                                                       mean_function=_log10_weighted_mean
-                                                       )
+        with timed_segment('Doing the weighted means thing, this takes a while', logger=logger):
+            iter_answer = weighted_means_from_intersection(intersection,
+                                                           column=4,
+                                                           null_value=0,  # As in 0 = -log_10 (p=1),
+                                                           mean_function=_log10_weighted_mean
+                                                           )
 
-        rows_written = 0
-        # Oh my, answer is an iterator, lets write it as we read it
-        for row in iter_answer:
-            row = '{}\t{}\t{}\t{}\n'.format(*row)
-            output_handle.write(row)
-            rows_written += 1
-            if rows_written % (bins_len / 10) == 0:
-                logging.info('Rows written: {}/{}'.format(rows_written, bins_len))
+            rows_written = 0
+            # Oh my, answer is an iterator, lets write it as we read it
+            for row in iter_answer:
+                row = '{}\t{}\t{}\t{}\n'.format(*row)
+                output_handle.write(row)
+                rows_written += 1
+                if rows_written % (bins_len / 10) == 0:
+                    logging.info('Rows written: {}/{}'.format(rows_written, bins_len))
 
         logger.info('Done. Total rows written: {}'.format(rows_written))
-
     finally:
         intersection_fn = intersection.fn
         logger.debug('Removing {}'.format(intersection_fn))
