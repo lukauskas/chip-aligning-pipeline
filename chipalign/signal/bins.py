@@ -23,11 +23,6 @@ class BinnedSignal(Task):
 
     binning_method = luigi.Parameter(default='weighted_mean')
 
-    @property
-    def parameters(self):
-        return [self.bins_task.task_class_friendly_name] + self.bins_task.parameters\
-               + [self.signal_task.task_class_friendly_name] + self.signal_task.parameters
-
     def requires(self):
         return [self.bins_task, self.signal_task]
 
@@ -44,8 +39,8 @@ class BinnedSignal(Task):
         if method == 'weighted_mean':
             _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle,
                                           logger=cls.class_logger(), check_sorted=False)
-        elif method == 'max':
-            _compute_max_signal(bins_abspath, signal_abspath, output_handle, logger=cls.class_logger())
+        elif method in ['max', 'median', 'mean', 'min']:
+            _compute_map_signal(bins_abspath, signal_abspath, output_handle, logger=cls.class_logger(), mode=method)
         else:
             raise ValueError('Unsupported method {!r}'.format(method))
 
@@ -138,7 +133,7 @@ def _bedtool_is_sorted(bedtool):
 
     return True
 
-def _compute_max_signal(bins_abspath, signal_abspath, output_handle, logger=None):
+def _compute_map_signal(bins_abspath, signal_abspath, output_handle, logger=None, mode='max'):
     logger = logger if logger is not None else logging.getLogger('_compute_max_signal')
 
     with timed_segment('Loading data', logger=logger):
@@ -146,7 +141,7 @@ def _compute_max_signal(bins_abspath, signal_abspath, output_handle, logger=None
         signal = pybedtools.BedTool(signal_abspath)
 
     with timed_segment('Mapping', logger=logger):
-        mapped = bins.map(signal, o='max', c='4', null=0.0)
+        mapped = bins.map(signal, o=mode, c='4', null=0.0)
 
     with timed_segment('Writing answer'):
         for row in mapped:
