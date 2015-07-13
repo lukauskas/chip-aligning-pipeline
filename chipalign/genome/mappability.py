@@ -12,7 +12,8 @@ import logging
 import luigi
 import pybedtools
 import numpy as np
-from chipalign.core.util import fast_bedtool_from_iterable
+from chipalign.core.file_formats.dataframe import DataFrameFile
+from chipalign.core.util import fast_bedtool_from_iterable, timed_segment
 
 from chipalign.genome.windows.genome_windows import NonOverlappingBins
 from chipalign.core.task import Task
@@ -21,7 +22,6 @@ from chipalign.core.file_formats.file import File
 
 
 class MappabilityTrack(object):
-
     __lookup_dict = None
 
     def __init__(self, lookup_dict):
@@ -42,9 +42,11 @@ class MappabilityTrack(object):
             logger.debug('Processing {}'.format(chromosome))
             chromosome_lookup = self.__lookup_dict[chromosome]
 
-            reads_for_chromosome = filter(lambda x: x.chrom == chromosome, bedtool)
+            reads_for_chromosome = filter(lambda x: x.chrom == chromosome,
+                                          bedtool)
 
-            logger.debug('Processing {} reads'.format(len(reads_for_chromosome)))
+            logger.debug(
+                'Processing {} reads'.format(len(reads_for_chromosome)))
 
             # Now the start coordinate is the one we need to check, irregardless of strand
             # this is how one should interpret the README
@@ -60,7 +62,8 @@ class MappabilityTrack(object):
         return fast_bedtool_from_iterable(answer)
 
     @classmethod
-    def maximum_mappability_score_for_bin(cls, bin_width, read_length, extension_length):
+    def maximum_mappability_score_for_bin(cls, bin_width, read_length,
+                                          extension_length):
         # see number_of_uniquely_mappable_within_a_bin below
         # [bin_.start + bin_.width] - (bin_.start - (extension_length + read_length - 1))
         # +
@@ -71,7 +74,8 @@ class MappabilityTrack(object):
         # bin_.width + extension_length + read_length - 1
         return 2 * (bin_width + extension_length + read_length - 1)
 
-    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length, extension_length):
+    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length,
+                                                 extension_length):
         logger = logging.getLogger(self.__class__.__name__)
 
         chromosomes = set(imap(lambda x: x.chrom, bins_bed))
@@ -82,34 +86,40 @@ class MappabilityTrack(object):
             chromosome_lookup = self.__lookup_dict[chromosome]
             chromosome_length = len(chromosome_lookup)
 
-            bins_for_chromosome = filter(lambda x: x.chrom == chromosome, bins_bed)
+            bins_for_chromosome = filter(lambda x: x.chrom == chromosome,
+                                         bins_bed)
 
             for bin_ in bins_for_chromosome:
-
                 # Positive strand
-                min_anchor_location = bin_.start - (extension_length + read_length - 1)  # (inclusive)
+                min_anchor_location = bin_.start - (
+                extension_length + read_length - 1)  # (inclusive)
                 max_anchor_location = bin_.end  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
-                max_anchor_location = min(chromosome_length, max_anchor_location)
+                max_anchor_location = min(chromosome_length,
+                                          max_anchor_location)
 
-                uniquely_mappable_per_bin = np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
+                uniquely_mappable_per_bin = np.sum(
+                    chromosome_lookup[min_anchor_location:max_anchor_location])
 
                 # Negative strand
-                min_anchor_location = bin_.start - (read_length - 1)  # (inclusive)
+                min_anchor_location = bin_.start - (
+                read_length - 1)  # (inclusive)
                 max_anchor_location = bin_.end + extension_length  # (not inclusive)
 
                 min_anchor_location = max(0, min_anchor_location)
-                max_anchor_location = min(chromosome_length, max_anchor_location)
+                max_anchor_location = min(chromosome_length,
+                                          max_anchor_location)
 
-                uniquely_mappable_per_bin += np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
+                uniquely_mappable_per_bin += np.sum(
+                    chromosome_lookup[min_anchor_location:max_anchor_location])
 
-                answer.append((bin_.chrom, bin_.start, bin_.end, uniquely_mappable_per_bin))
+                answer.append((bin_.chrom, bin_.start, bin_.end,
+                               uniquely_mappable_per_bin))
 
         bed_answer = pybedtools.BedTool(answer)
         bed_answer = bed_answer.sort()
         return bed_answer
-
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
         chromosome_lookup = self.__lookup_dict[chromosome]
@@ -121,8 +131,8 @@ class MappabilityTrack(object):
 
         return chromosome_lookup[anchor_locus]
 
-class MappabilityInfoFile(File):
 
+class MappabilityInfoFile(File):
     def dump(self, data, verify=True):
         logger = logging.getLogger('MappabilityInfoFile.dump')
 
@@ -136,12 +146,17 @@ class MappabilityInfoFile(File):
                 logger.debug('Verifying data was written correctly')
                 processed_tracks_loaded = np.load(tmp_location_for_archive)
 
-                if sorted(processed_tracks_loaded.keys()) != sorted(data.keys()):
-                    raise IOError('Problem dumping tracks to archive. Keys don\'t match')
+                if sorted(processed_tracks_loaded.keys()) != sorted(
+                        data.keys()):
+                    raise IOError(
+                        'Problem dumping tracks to archive. Keys don\'t match')
 
                 for key in data.keys():
-                    if not np.equal(data[key], processed_tracks_loaded[key]).all():
-                        raise IOError('Problem dumping tracks to archive. Data for {} does not match'.format(key))
+                    if not np.equal(data[key],
+                                    processed_tracks_loaded[key]).all():
+                        raise IOError(
+                            'Problem dumping tracks to archive. Data for {} does not match'.format(
+                                key))
 
             logger.debug('Moving file to correct location')
             shutil.move(tmp_location_for_archive, self.path)
@@ -158,7 +173,6 @@ class MappabilityInfoFile(File):
 
 
 class GenomeMappabilityTrack(Task):
-
     genome_version = luigi.Parameter()
     read_length = luigi.IntParameter()
 
@@ -168,9 +182,11 @@ class GenomeMappabilityTrack(Task):
             if 20 <= self.read_length <= 54:
                 return 'http://egg2.wustl.edu/roadmap/data/byFileType/mappability/encodeHg19Male/globalmap_k20tok54.tgz'
             else:
-                raise Exception('Read length: {} unsupported for {}'.format(self.read_length, self.genome_version))
+                raise Exception('Read length: {} unsupported for {}'.format(
+                    self.read_length, self.genome_version))
         else:
-            raise Exception('Mappability track unsupported for {}'.format(self.genome_version))
+            raise Exception('Mappability track unsupported for {}'.format(
+                self.genome_version))
 
     @property
     def parameters(self):
@@ -208,38 +224,35 @@ class GenomeMappabilityTrack(Task):
 
                     name = os.path.basename(member.name)
                     chromosome, dtype_str, __ = name.split('.')
+
                     logger.debug('Chromosome {}'.format(chromosome))
-                    assert chromosome not in processed_tracks # Sanity checks
+                    with timed_segment('Processing chromosome {}'.format(chromosome), logger):
+                        assert chromosome not in processed_tracks  # Sanity checks
 
-                    if dtype_str == 'uint8':
-                        dtype = np.uint8
-                    else:
-                        raise Exception('Unknown dtype: {}'.format(dtype_str))
+                        if dtype_str == 'uint8':
+                            dtype = np.uint8
+                        else:
+                            raise Exception('Unknown dtype: {}'.format(dtype_str))
 
-                    file_ = tar.extractfile(member)
-                    mappability_track = np.frombuffer(file_.read(), dtype=dtype)
+                        file_ = tar.extractfile(member)
+                        mappability_track = np.frombuffer(file_.read(), dtype=dtype)
 
-                    # straight from http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
-                    mappability_track = (mappability_track > 0) & (mappability_track <= self.read_length)
+                        # straight from http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
+                        mappability_track = (mappability_track > 0) & (
+                        mappability_track <= self.read_length)
 
-                    processed_tracks[chromosome] = mappability_track
+                        processed_tracks[chromosome] = mappability_track
 
         logger.debug('Saving output')
         self.output().dump(processed_tracks)
 
-class MappabilityOfGenomicWindows(Task):
-    genome_version = NonOverlappingBins.genome_version
-    window_size = NonOverlappingBins.window_size
+
+class BinMappability(Task):
+
+    bins_task = luigi.Parameter()
+
     read_length = GenomeMappabilityTrack.read_length
-    remove_blacklisted = NonOverlappingBins.remove_blacklisted
-
     max_ext_size = luigi.IntParameter()
-
-    @property
-    def non_overlapping_windows_task(self):
-        return NonOverlappingBins(genome_version=self.genome_version,
-                                  window_size=self.window_size,
-                                  remove_blacklisted=self.remove_blacklisted)
 
     @property
     def mappability_track_task(self):
@@ -247,63 +260,55 @@ class MappabilityOfGenomicWindows(Task):
                                       read_length=self.read_length)
 
     def requires(self):
-        return [self.non_overlapping_windows_task, self.mappability_track_task]
-
-    @property
-    def parameters(self):
-        non_overlapping_windows_task_params = self.non_overlapping_windows_task.parameters
-        mappability_track_task_params = self.mappability_track_task.parameters
-
-        specific_parameters = ['ext{}'.format(self.max_ext_size)]
-
-        return non_overlapping_windows_task_params + mappability_track_task_params + specific_parameters
+        return [self.bins_task, self.mappability_track_task]
 
     @property
     def _extension(self):
-        return 'bed.gz'
+        return 'pd'
+
+    @property
+    def _output_class(self):
+        return DataFrameFile
 
     def best_total_score(self):
-        return MappabilityTrack.maximum_mappability_score_for_bin(bin_width=self.window_size,
-                                                                  read_length=self.read_length,
-                                                                  extension_length=self.max_ext_size)
+        return MappabilityTrack.maximum_mappability_score_for_bin(
+            bin_width=self.window_size,
+            read_length=self.read_length,
+            extension_length=self.max_ext_size)
 
     def run(self):
         logger = self.logger()
-        genomic_windows = pybedtools.BedTool(self.non_overlapping_windows_task.output().path)
+        genomic_windows = pybedtools.BedTool(
+            self.bins_task.output().path)
         mappability = self.mappability_track_task.output().load()
 
         logger.debug('Computing mappability')
-        number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(genomic_windows,
-                                                                                                   read_length=self.read_length,
-                                                                                                   extension_length=self.max_ext_size)
+        number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(
+            genomic_windows,
+            read_length=self.read_length,
+            extension_length=self.max_ext_size)
 
         logger.debug('Writing output')
-        with self.output().open('w') as output:
-            for row in number_of_uniquely_mappable_per_bin:
-                output.write(str(row))
+        self.output().dump(number_of_uniquely_mappable_per_bin)
 
-class FullyMappableGenomicWindows(Task):
 
-    genome_version = MappabilityOfGenomicWindows.genome_version
-    window_size = MappabilityOfGenomicWindows.window_size
-
-    read_length = MappabilityOfGenomicWindows.read_length
-
-    max_ext_size = MappabilityOfGenomicWindows.max_ext_size
+class FullyMappableBins(Task):
+    bins_task = BinMappability.bins_task
+    read_length = BinMappability.read_length
+    max_ext_size = BinMappability.max_ext_size
 
     @property
     def task_class_friendly_name(self):
-        return 'FMapGW'
+        return 'FMB'
 
     @property
-    def genome_windows_mappability_task(self):
-        return MappabilityOfGenomicWindows(genome_version=self.genome_version,
-                                           window_size=self.window_size,
-                                           read_length=self.read_length,
-                                           max_ext_size=self.max_ext_size)
+    def bin_mappability_task(self):
+        return BinMappability(bins_task=self.bins_task,
+                              read_length=self.read_length,
+                              max_ext_size=self.max_ext_size)
 
     def requires(self):
-        return self.genome_windows_mappability_task
+        return self.bin_mappability_task
 
     @property
     def _extension(self):
@@ -311,15 +316,11 @@ class FullyMappableGenomicWindows(Task):
 
     @property
     def parameters(self):
-        return self.genome_windows_mappability_task.parameters
-
+        return self.bin_mappability_task.parameters
 
     def run(self):
-
         logger = self.logger()
-
-        max_score = self.genome_windows_mappability_task.best_total_score()
-
+        max_score = self.bin_mappability_task.best_total_score()
         logger.debug('Maximum possible score is: {}'.format(max_score))
 
         counter_total = 0
@@ -335,5 +336,6 @@ class FullyMappableGenomicWindows(Task):
                         counter_fully_mappable += 1
                         output_.write(interval + '\n')
 
-        logger.debug('Bins total: {}, bins fully mappable: {} ({}%)'.format(counter_total, counter_fully_mappable,
-                                                                            counter_fully_mappable * 100.0 / counter_total))
+        logger.debug('Bins total: {:,}, bins fully mappable: {:,} ({:%})'.format(
+            counter_total, counter_fully_mappable,
+            float(counter_fully_mappable) / counter_total))
