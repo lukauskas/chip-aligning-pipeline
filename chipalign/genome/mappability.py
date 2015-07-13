@@ -256,7 +256,7 @@ class BinMappability(Task):
 
     @property
     def mappability_track_task(self):
-        return GenomeMappabilityTrack(genome_version=self.genome_version,
+        return GenomeMappabilityTrack(genome_version=self.bins_task.genome_version,
                                       read_length=self.read_length)
 
     def requires(self):
