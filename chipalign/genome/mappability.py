@@ -32,6 +32,7 @@ class MappabilityTrack(object):
         chromosomes = set(imap(lambda x: x.chrom, bedtool))
         chromosomes_in_mappability_track = set(self.__lookup_dict.keys())
 
+        logger.info('Chromosomes in bedtool: {}, chromosomes in mappability: {}'.format(chromosomes, chromosomes_in_mappability_track))
         chromosomes_not_in_mappability_track = chromosomes - chromosomes_in_mappability_track
         if chromosomes_not_in_mappability_track:
             raise Exception('No mappability track for chromosomes {}.'.format(
@@ -83,7 +84,12 @@ class MappabilityTrack(object):
         answer = []
         for chromosome in chromosomes:
             logger.debug('Processing {}'.format(chromosome))
-            chromosome_lookup = self.__lookup_dict[chromosome]
+            try:
+                chromosome_lookup = self.__lookup_dict[chromosome]
+            except KeyError:
+                logger.warn('No mappability data for {}. Assuming unmappable'.format(chromosome))
+                continue
+
             chromosome_length = len(chromosome_lookup)
 
             bins_for_chromosome = filter(lambda x: x.chrom == chromosome,
@@ -114,12 +120,19 @@ class MappabilityTrack(object):
                 uniquely_mappable_per_bin += np.sum(
                     chromosome_lookup[min_anchor_location:max_anchor_location])
 
-                answer.append((bin_.chrom, bin_.start, bin_.end,
-                               uniquely_mappable_per_bin))
+                answer.append('{}\t{}\t{}\t{}'.format(bin_.chrom,
+                                                       bin_.start,
+                                                       bin_.end,
+                                                       uniquely_mappable_per_bin))
 
-        bed_answer = pybedtools.BedTool(answer)
+        bed_answer = fast_bedtool_from_iterable(answer)
         bed_answer = bed_answer.sort()
-        return bed_answer
+
+        df_answer = bed_answer.to_dataframe()
+        df_answer = df_answer.set_index(['chrom', 'start', 'end'])
+        df_answer = df_answer['name']
+        df_answer.name = 'mappability'
+        return df_answer
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
         chromosome_lookup = self.__lookup_dict[chromosome]
@@ -272,7 +285,7 @@ class BinMappability(Task):
 
     def best_total_score(self):
         return MappabilityTrack.maximum_mappability_score_for_bin(
-            bin_width=self.window_size,
+            bin_width=self.bins_task.window_size,
             read_length=self.read_length,
             extension_length=self.max_ext_size)
 
@@ -323,19 +336,13 @@ class FullyMappableBins(Task):
         max_score = self.bin_mappability_task.best_total_score()
         logger.debug('Maximum possible score is: {}'.format(max_score))
 
-        counter_total = 0
-        counter_fully_mappable = 0
+        mappability_scores = self.input().load()
+        fully_mappable = mappability_scores[mappability_scores == max_score]
+        logger.info(
+            'Bins total: {:,}, bins fully mappable: {:,} ({:%})'.format(
+                len(mappability_scores), len(fully_mappable),
+                float(len(fully_mappable)) / len(mappability_scores)))
 
         with self.output().open('w') as output_:
-            with self.input().open('r') as input_:
-                for row in input_:
-                    counter_total += 1
-                    interval, __, score = row.rpartition('\t')
-                    score = int(score)
-                    if score == max_score:
-                        counter_fully_mappable += 1
-                        output_.write(interval + '\n')
-
-        logger.debug('Bins total: {:,}, bins fully mappable: {:,} ({:%})'.format(
-            counter_total, counter_fully_mappable,
-            float(counter_fully_mappable) / counter_total))
+            for chrom, start, end in fully_mappable.index:
+                output_.write('{}\t{}\t{}\n'.format(chrom, start, end))

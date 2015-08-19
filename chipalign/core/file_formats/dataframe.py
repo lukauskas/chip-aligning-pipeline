@@ -33,11 +33,14 @@ class DataFrameFile(object):
 
     def dump(self, df, verify=True):
         self_path = self.path
-        try:
-            os.makedirs(os.path.dirname(self_path))
-        except OSError:
-            if not os.path.isdir(os.path.dirname(self_path)):
-                raise
+        dirname = os.path.dirname(self_path)
+        if dirname:
+            # would be empty if path is local
+            try:
+                os.makedirs(dirname)
+            except OSError:
+                if not os.path.isdir(dirname):
+                    raise
 
         with temporary_file() as temporary_filename:
             self.__dump_hdf(df, temporary_filename)
