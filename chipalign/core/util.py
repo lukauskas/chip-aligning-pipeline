@@ -59,9 +59,11 @@ def timed_segment(message, logger=None):
     end_time = datetime.datetime.now()
     diff = (end_time-start_time)
 
-    logger.info('Finished {}. Took {:.2f}s'.format(message,
-                                                   diff.total_seconds()))
+    total_seconds = diff.total_seconds()
 
+    logger.info('Finished {}. Took {:.2f}s'.format(message,
+                                                   total_seconds),
+                extra=dict(duration=total_seconds))
 
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
