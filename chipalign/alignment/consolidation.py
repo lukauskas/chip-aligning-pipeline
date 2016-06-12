@@ -29,7 +29,7 @@ class ConsolidatedReads(Task):
     The `subsample_random_seed` parameter controls the sub0-sampling
 
     """
-    input_alignments = luigi.Parameter(is_list=True)
+    input_alignments = luigi.Parameter()
 
     max_sequencing_depth = luigi.IntParameter(default=45000000)
     subsample_random_seed = luigi.IntParameter(default=0)
