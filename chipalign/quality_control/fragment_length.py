@@ -9,6 +9,14 @@ from chipalign.core.task import Task
 
 
 class FragmentLength(Task):
+    """
+        Extracts the fragment length information using `SPP pipeline`_.
+
+        :param input_task: input task.
+        :type input_task: Generally a :class:`~chipalign.alignment.consolidation.ConsolidatedReads` task
+
+        .. _SPP pipeline: https://code.google.com/p/phantompeakqualtools/
+    """
 
     input_task = luigi.Parameter()
 

@@ -9,6 +9,8 @@ from chipalign.core.task import Task, luigi
 class GenomeSequence(Task):
     """
     Downloads whole sequences of genomes from UCSC
+
+    :param genome_version: genome version to use
     """
 
     _DOWNLOAD_URIS = {

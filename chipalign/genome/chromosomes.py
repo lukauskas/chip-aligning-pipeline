@@ -6,7 +6,12 @@ from chipalign.core.file_formats.yaml_file import YamlFile
 
 class Chromosomes(Task):
     """
-    Saves chromosome information to file, allows pre-filtering
+    Saves chromosome information to file, allows pre-filtering.
+
+    :param genome_version: genome version to use
+    :param collection: collection of chromosomes to use.
+                       Either 'male', 'female', 'all' or a particular chromosome
+                       Defaults to 'all'
     """
 
     genome_version = luigi.Parameter()

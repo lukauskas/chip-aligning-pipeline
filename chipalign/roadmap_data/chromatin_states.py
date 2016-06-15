@@ -2,17 +2,32 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from itertools import imap
+
 import os
-import luigi
 import tempfile
+from itertools import imap
+
+import luigi
 import pybedtools
+
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
 from chipalign.core.util import clean_bedtool_history
 
 
 class ChromatinStates(Task):
+    """
+    Downloads the set of `chromatin states from ROADMAP consortium`_
+
+    :param genome_version: genome version to use
+    :param cell_type: cell type (as per ROADMAP naming convention)
+    :param number_of_states: which state model to use
+    :param regions_task: task determining the set of regions to return state annotations for.
+                         in case multiple state loci fall into the region, the mode state will be
+                         returned.
+
+    .. _`chromatin states from ROADMAP consortium`: http://egg2.wustl.edu/roadmap/web_portal/chr_state_learning.html
+    """
 
     genome_version = luigi.Parameter()
     cell_type = luigi.Parameter()

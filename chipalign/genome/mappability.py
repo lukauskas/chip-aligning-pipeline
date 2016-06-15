@@ -15,13 +15,16 @@ import numpy as np
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.util import fast_bedtool_from_iterable, timed_segment
 
-from chipalign.genome.windows.genome_windows import NonOverlappingBins
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.file import File
 
 
 class MappabilityTrack(object):
+    """
+    MappabilityTrack object
+    """
+
     __lookup_dict = None
 
     def __init__(self, lookup_dict):
@@ -186,6 +189,12 @@ class MappabilityInfoFile(File):
 
 
 class GenomeMappabilityTrack(Task):
+    """
+    Downloads genome mabpabbility track for a particular read length
+
+    :param genome_version:
+    :param read_length:
+    """
     genome_version = luigi.Parameter()
     read_length = luigi.IntParameter()
 
@@ -261,6 +270,13 @@ class GenomeMappabilityTrack(Task):
 
 
 class BinMappability(Task):
+    """
+    For each of the provided bins, determines how many bins are mappable.
+
+    :param bins_task: bins task to use
+    :param read_length: the length of reads that are being mapped
+    :param max_ext_size: maximum size of read extension that is used in MACS
+    """
 
     bins_task = luigi.Parameter()
 
@@ -306,6 +322,16 @@ class BinMappability(Task):
 
 
 class FullyMappableBins(Task):
+    """
+    Returns only the bins in `bins_task` that are fully mappable.
+
+    See also :class:`~chipalign.genome.mappability.BinMappability` task.
+
+    :param bins_task: bins task to use
+    :param read_length: the length of reads that are being mapped
+    :param max_ext_size: maximum size of read extension that is used in MACS
+    """
+
     bins_task = BinMappability.bins_task
     read_length = BinMappability.read_length
     max_ext_size = BinMappability.max_ext_size
