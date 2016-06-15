@@ -4,11 +4,13 @@ addons:
        packages:
             - libhdf5-serial-dev
 python:
-  - "2.6"
+  #- "2.6" # pysam dependency doesn't support it
   - "2.7"
 # command to install dependencies
 install: 
   - pip install cython
   - pip install .
 # command to run tests
-script: nosetests
+script:
+  - mv logging.screenonly.conf logging.conf # disable graypy logging
+  - nosetests
