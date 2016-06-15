@@ -9,8 +9,12 @@ from chipalign.core.task import Task
 
 class SignalPandas(Task):
     """
-    Pre-parsed bedgraph signal (as provided with `bedgraph_parameter`) to pandas series.
-    Reading SignalPandas output is much faster than parsing bedgraph
+    Wrapper around signals in bedgraph format that converts them into pandas objects which
+    are then stored in HDF5.
+
+    This is purely for efficiency reasons as reading HDF5 tables is much faster.
+
+    :param bedgraph_task: any task that returns a bedgraph
     """
 
     bedgraph_task = luigi.Parameter()

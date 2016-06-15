@@ -13,8 +13,13 @@ from chipalign.core.task import Task
 
 class RoadmapAlignedReads(Task):
     """
-    Downloads aligned reads straight from ROADMAP consortium
+    Downloads aligned reads from `ROADMAP`_. This task is designed to be a
+    drop-in replacement for :class:`~chipalign.alignment.consolidation.AlignedSRR` task.
 
+    :param url: url to download
+    :param genome_version: genome version to use
+
+    .. _ROADMAP: http://egg2.wustl.edu/roadmap/web_portal/processed_data.html
     """
 
     url = luigi.Parameter()

@@ -27,6 +27,8 @@ class FastqMetadata(Task):
     """
     Returns an YML of the data parsed from a FastQ file, namely the
     `srr_identifier`, `instrument_identifier`, `lane`, and `tile` information as parsed from the sequences.
+
+    :param fastq_sequence: a :class:`~chipalign.sequence.srr.SRRSequence` task for input.
     """
 
     # FastqSequence object as an input

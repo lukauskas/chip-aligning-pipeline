@@ -16,7 +16,21 @@ from chipalign.core.util import timed_segment
 
 class BinnedSignal(Task):
     """
-        Takes the signal and creates a bedgraph of it distributed across the bins specified in `bins_task`.
+        Takes the signal and creates a bedgraph of it distributed across the bins
+        specified in `bins_task`.
+
+        Particularly the signal is binned according to the `binning_method` specified, which
+        can be one of the following:
+
+        * `min`: the minimum signal value (note that this is not the minimum p-value
+                                           since signal is -log10(p) )
+        * `max`: the maximum signal value (again, not a p-value)
+        * `weighted_mean`: the weighted mean p-value (not signal) where weights is the number
+                           of bases covered
+
+        :params bins_task: the task returning bins to compute signal for
+        :params signal_task: the actual signal
+        :params binning_method: above described binning method to use ('weighted_mean' used here)
     """
     bins_task = luigi.Parameter()
     signal_task = luigi.Parameter()
@@ -39,7 +53,7 @@ class BinnedSignal(Task):
         if method == 'weighted_mean':
             _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle,
                                           logger=cls.class_logger(), check_sorted=False)
-        elif method in ['max', 'median', 'mean', 'min']:
+        elif method in ['max', 'min']:
             _compute_map_signal(bins_abspath, signal_abspath, output_handle, logger=cls.class_logger(), mode=method)
         else:
             raise ValueError('Unsupported method {!r}'.format(method))

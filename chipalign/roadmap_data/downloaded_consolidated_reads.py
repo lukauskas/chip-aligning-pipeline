@@ -11,6 +11,16 @@ from chipalign.core.util import temporary_file
 
 
 class DownloadedConsolidatedReads(Task):
+    """
+    Downloads consolidated reads from `ROADMAP`_. This task is designed to be a
+    drop-in replacement for :class:`~chipalign.alignment.consolidation.ConsolidatedReads` task.
+
+    :param cell_type: cell_type (using ROADMAP naming scheme)
+    :param track: track name (again, using ROADMAP naming)
+    :param genome_version: genome version to use
+
+    .. _ROADMAP: http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#ChipSeq_DNaseSeq
+    """
 
     cell_type = luigi.Parameter()
     track = luigi.Parameter()

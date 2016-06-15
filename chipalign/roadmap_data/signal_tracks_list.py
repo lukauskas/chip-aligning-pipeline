@@ -10,6 +10,12 @@ from chipalign.core.file_formats.yaml_file import YamlFile
 from chipalign.core.task import Task
 
 class SignalTracksList(Task):
+    """
+    Obtains a list of signal tracks that are available to download for a given cell type.
+
+    :param cell_type: cell type to use
+    :param genome_version: genome version
+    """
 
     cell_type = luigi.Parameter()
     genome_version = luigi.Parameter()

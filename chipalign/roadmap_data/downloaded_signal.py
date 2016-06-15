@@ -14,6 +14,16 @@ from chipalign.roadmap_data.signal_tracks_list import SignalTracksList
 
 
 class DownloadedSignal(Task):
+    """
+    Downloads signal tracks from from `ROADMAP`_. This task is designed to be a
+    drop-in replacement for :class:`~chipalign.signal.signal.Signal` task.
+
+    :param cell_type: cell_type (using ROADMAP naming scheme)
+    :param track: track name (again, using ROADMAP naming)
+    :param genome_version: genome version to use
+
+    .. _ROADMAP: http://egg2.wustl.edu/roadmap/web_portal/processed_data.html
+    """
 
     cell_type = luigi.Parameter()
     track = luigi.Parameter()
@@ -77,4 +87,3 @@ class DownloadedSignal(Task):
 
             logger.info('Moving')
             shutil.move(filtered_and_sorted, output_abspath)
-
