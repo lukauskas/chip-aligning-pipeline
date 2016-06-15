@@ -3,6 +3,8 @@ addons:
    apt:
        packages:
             - libhdf5
+            - libhdf5-dev
+            - libhdf5-serial-dev
 python:
   - "2.6"
   - "2.7"
