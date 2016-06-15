@@ -77,9 +77,11 @@ def _build_index(twobit_sequence_abspath, name, output, random_seed=0):
         shutil.rmtree(temporary_directory)
 
 class BowtieIndex(Task):
+
     """
     Downloads/creates bowtie2 index for the specified genome version
 
+    :param genome_version: Genome version
     """
     genome_version = luigi.Parameter()
 

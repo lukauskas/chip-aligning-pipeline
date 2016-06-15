@@ -12,6 +12,19 @@ from chipalign.alignment.implementations.bowtie.index import BowtieIndex
 
 
 class AlignedReadsBowtie(AlignedReadsBase):
+    """
+    Returns a set of aligned reads using `Bowtie 2`_ aligner.
+
+    see :class:`~chipalign.alignment.implementations.base.AlignedReadsBase` for list of
+    supported base parameters.
+
+    Additionally, the class takes two other parameters:
+
+    :param number_of_processes: number of threads to use using alignment. Defaults to 1
+    :param seed: the alignment seed to use. Defaults to 0 (i.e. the integer zero, not 'no seed').
+
+    .. _Bowtie 2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+    """
 
     number_of_processes = luigi.IntParameter(default=1, significant=False)
     seed = luigi.IntParameter(default=0)
@@ -39,14 +52,14 @@ class AlignedReadsBowtie(AlignedReadsBase):
         fastq_sequence_abspath = os.path.abspath(self.fastq_task.output().path)
 
         with self.temporary_directory():
-            logger.debug('Unzipping index')
+            logger.info('Unzipping index')
             unzip(index_output_abspath)
 
             sam_output_filename = 'alignments.sam'
             bam_output_filename = 'alignments.bam'
             stdout_filename = 'stats.txt'
 
-            logger.debug('Running bowtie')
+            logger.info('Running bowtie')
             bowtie2('-U', fastq_sequence_abspath,
                     '-x', self.genome_version,
                     '-p', self.number_of_processes,
@@ -56,10 +69,10 @@ class AlignedReadsBowtie(AlignedReadsBase):
                     _err=stdout_filename
                     )
 
-            logger.debug('Converting SAM to BAM')
+            logger.info('Converting SAM to BAM')
             samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
 
-            logger.debug('Moving files to correct locations')
+            logger.info('Moving files to correct locations')
             shutil.move(stdout_filename, stdout_output_abspath)
             shutil.move(bam_output_filename, bam_output_abspath)
-            logger.debug('Done')
+            logger.info('Done')

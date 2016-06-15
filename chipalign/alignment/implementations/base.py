@@ -15,6 +15,10 @@ from chipalign.sequence.srr import SRRSequence
 class AlignedReadsBase(Task):
     """
     A base class to act as a scaffold for implementing different genome aligners.
+
+    :param genome_version: Version of genome to use
+    :param srr_identifier: the SRR ID of the sequence to align
+
     """
     genome_version = luigi.Parameter()
     srr_identifier = SRRSequence.srr_identifier

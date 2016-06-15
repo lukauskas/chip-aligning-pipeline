@@ -10,6 +10,14 @@ from chipalign.genome.sequence import GenomeSequence
 
 
 class AlignedReadsPash(AlignedReadsBase):
+    """
+    Returns a set of aligned reads using `Pash 3.0`_ aligner.
+
+    see :class:`~chipalign.alignment.implementations.base.AlignedReadsBase` for list of
+    supported parameters.
+
+    .. _Pash 3.0: http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-572
+    """
 
     @property
     def aligner_parameters(self):
@@ -33,7 +41,7 @@ class AlignedReadsPash(AlignedReadsBase):
 
         with self.temporary_directory():
 
-            logger.debug('Dumping 2bit sequence to fa format')
+            logger.info('Dumping 2bit sequence to fa format')
             index_fa = 'index.fa'
             twoBitToFa(index_abspath, index_fa)
 
@@ -41,18 +49,18 @@ class AlignedReadsPash(AlignedReadsBase):
 
             stdout_filename = 'stdout'
 
-            logger.debug('Running Pash')
+            logger.info('Running Pash')
             pash3('-N', 1,                 # maximum one match per read
                   '-g', index_fa,          # reference genome
                   '-r', fastq_abspath,
                   '-o', output_file,
                   _err=stdout_filename)
 
-            logger.debug('Converting SAM to BAM')
+            logger.info('Converting SAM to BAM')
             output_file_bam = 'alignments.bam'
             samtools('view', '-b', output_file, _out=output_file_bam)
 
-            logger.debug('Moving files to correct locations')
+            logger.info('Moving files to correct locations')
             shutil.move(stdout_filename, stdout_output_abspath)
             shutil.move(output_file_bam, bam_output_abspath)
-            logger.debug('Done')
+            logger.info('Done')
