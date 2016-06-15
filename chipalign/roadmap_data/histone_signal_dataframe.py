@@ -49,8 +49,8 @@ class RoadmapHistoneSignal(Task):
     Generates a dataframe of binned signal from ROADMAP data.
     """
 
-    cell_type = luigi.Parameter(default='E008')
-    binning_method = BinnedSignal.binning_method
+    cell_type = luigi.Parameter()
+    binning_method = BinnedSignal.binning_method(default='weighted_average')
 
     def _binned_signal_tasks(self):
         return _histone_binned_signal_tracks(cell_type=self.cell_type,
