@@ -9,13 +9,13 @@ from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
+from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
 from chipalign.roadmap_data.signal_tracks_list import SignalTracksList
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.pandas import BinnedSignalPandas
 import chipalign.roadmap_data.settings as roadmap_settings
 import pandas as pd
 from chipalign.roadmap_data.util import signal_sortkey
-from pbinding.mappable_windows import RoadmapMappableBins
 
 
 @lru_cache(None)
@@ -26,7 +26,7 @@ def _histone_binned_signal_tracks(cell_type, binning_method):
 
     luigi.build([downloadable_signals])
 
-    bins = RoadmapMappableBins(cell_type)
+    bins = RoadmapMappableBins(cell_type=cell_type)
 
     tracks = downloadable_signals.output().load()
     ans = {}
