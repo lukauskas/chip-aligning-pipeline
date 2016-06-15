@@ -206,9 +206,9 @@ class Task(luigi.Task):
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))
-        cleanup_on_exception = kwargs.pop('cleanup_on_exception', False)
         return temporary_directory(logger=self.logger(),
-                                   prefix=prefix, cleanup_on_exception=cleanup_on_exception, **kwargs)
+                                   prefix=prefix,
+                                   **kwargs)
 
     def ensure_output_directory_exists(self):
         ensure_directory_exists_for_file(os.path.abspath(self.output().path))

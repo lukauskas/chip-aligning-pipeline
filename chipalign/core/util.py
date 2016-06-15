@@ -16,12 +16,13 @@ import pybedtools
 from pybedtools.helpers import _flatten_list, get_tempdir
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
+_CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' in os.environ
+
 def config_from_file():
     import yaml
     with open('chipalign.yml') as f:
         config = yaml.safe_load(f)
         return config
-
 
 def get_config():
     return config_from_file()
@@ -66,7 +67,7 @@ def timed_segment(message, logger=None):
                 extra=dict(duration=total_seconds))
 
 @contextmanager
-def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
+def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
     """
     A context manager to change the current working directory to a temporary directory,
     and change it back, removing the temporary directory afterwards
@@ -112,7 +113,7 @@ def temporary_directory(logger=None, cleanup_on_exception=False, **kwargs):
     shutil.rmtree(temp_dir)
 
 @contextmanager
-def temporary_file(logger=None, cleanup_on_exception=True, **kwargs):
+def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
 
     __, temp_file = tempfile.mkstemp(**kwargs)
     if logger is None:
