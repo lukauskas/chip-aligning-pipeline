@@ -7,7 +7,7 @@ from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
 
-class SignalPandas(Task):
+class BinnedSignalPandas(Task):
     """
     Wrapper around signals in bedgraph format that converts them into pandas objects which
     are then stored in HDF5.
