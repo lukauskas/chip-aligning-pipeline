@@ -58,7 +58,7 @@ class RoadmapHistoneSignal(Task):
 
     @property
     def chromosomes_task(self):
-        return Chromosomes(genome_version=self.genome_version,
+        return Chromosomes(genome_version=roadmap_settings.GENOME_ID,
                            collection='female')
 
     def requires(self):
