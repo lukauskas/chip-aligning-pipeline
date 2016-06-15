@@ -97,7 +97,7 @@ class FilteredReads(Task):
     genome_version = AlignedSRR.genome_version
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
 
-    ignore_non_standard_chromosomes = luigi.BooleanParameter(default=True)
+    ignore_non_standard_chromosomes = luigi.BoolParameter(default=True)
 
     @property
     def _mappability_task(self):

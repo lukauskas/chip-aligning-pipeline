@@ -26,15 +26,26 @@ class ConsolidatedReads(Task):
         the reads are sub-sampled to that size
     4. Reads are then sorted
 
-    The `subsample_random_seed` parameter controls the sub0-sampling
+    The `subsample_random_seed` parameter controls the sub0-sampling.
 
+    :param input_alignments: Input alignments to use.
+    :type input_alignments: an iterable of :class:`~chipalign.alignment.aligned_reads.AlignedSRR`
+                            tasks
+    :param max_sequencing_depth: Max sequencing depth to use, defaults to 45,000,000.
+                                 Consult the `metadata spreadsheet`_ for appropriate values
+    :param subsample_random_seed: random seed to use for subsampled data. Defaults to integer 0.
+    :param use_only_standard_chromosomes: if set to true, only standard chromosomes will be used
+                                          in subsampling Non standard chromosomes such as
+                                          'chr6_dbb_hap3' will be removed. Defaults to True.
+
+    .. _metadata spreadsheet: https://docs.google.com/spreadsheet/ccc?key=0Am6FxqAtrFDwdHU1UC13ZUxKYy1XVEJPUzV6MEtQOXc&usp=sharing
     """
     input_alignments = luigi.Parameter()
 
     max_sequencing_depth = luigi.IntParameter(default=45000000)
     subsample_random_seed = luigi.IntParameter(default=0)
 
-    use_only_standard_chromosomes = luigi.BooleanParameter(default=True)
+    use_only_standard_chromosomes = luigi.BoolParameter(default=True)
 
     @property
     def genome_version(self):
