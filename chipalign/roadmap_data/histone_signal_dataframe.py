@@ -50,7 +50,7 @@ class RoadmapHistoneSignal(Task):
     """
 
     cell_type = luigi.Parameter()
-    binning_method = BinnedSignal.binning_method(default='weighted_average')
+    binning_method = BinnedSignal.binning_method
 
     def _binned_signal_tasks(self):
         return _histone_binned_signal_tracks(cell_type=self.cell_type,
