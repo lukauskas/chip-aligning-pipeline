@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+# each can be downloaded from http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/
 
 try:
     from sh import twoBitToFa

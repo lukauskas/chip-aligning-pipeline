@@ -12,6 +12,7 @@ before_install:
   - wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
   - wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigToBedGraph
   - wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bedClip
+  - chmod +x twoBitToFa bigWigToBedGraph bedClip
 # command to install dependencies
 install: 
   - pip install cython
