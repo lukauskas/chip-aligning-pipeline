@@ -20,8 +20,10 @@ from chipalign.biomart.regulatory_features import RegulatoryFeatures
 
 
 class ExampleRegulatoryFeatures(MetaTask):
+    cell_type = RegulatoryFeatures.cell_type
+
     def requires(self):
-        return RegulatoryFeatures(genome_version='hg19')
+        return RegulatoryFeatures(genome_version='hg19', cell_type=self.cell_type)
 
 if __name__ == '__main__':
     luigi.run(main_task_cls=ExampleRegulatoryFeatures)
