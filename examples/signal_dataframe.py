@@ -16,7 +16,7 @@ the output will be stored in directory configured in chipalign.yml, which in thi
 import shutil
 
 from chipalign.core.file_formats.dataframe import DataFrameFile
-from chipalign.core.task import Task
+from chipalign.core.task import Task, MetaTask
 from chipalign.core.util import temporary_file
 from chipalign.database.encode.downloaded_signal import EncodeDownloadedSignal
 from chipalign.database.encode.metadata import EncodeTFMetadata
@@ -30,6 +30,53 @@ from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.pandas import BinnedSignalPandas
 
 INTERESTING_TFS = ['CBX5']
+
+
+class _BinnedSignalMeta(MetaTask):
+    """
+    A metaclass that creates appropriate binned signal task given the signal task function
+    """
+    genome_version = RoadmapMappableBins.genome_version
+    cell_type = RoadmapMappableBins.cell_type
+    binning_method = BinnedSignal.binning_method
+
+    def signal_task(self):
+        raise NotImplementedError
+
+    def bins_task(self):
+        return RoadmapMappableBins(genome_version=self.genome_version,
+                                   cell_type=self.cell_type)
+
+    def binned_signal(self):
+        bins = self.bins_task()
+        signal = self.signal_task()
+
+        binned_signal = BinnedSignal(bins_task=bins,
+                                     signal_task=signal,
+                                     binning_method=self.binning_method
+                                     )
+        binned_signal_pandas = BinnedSignalPandas(bedgraph_task=binned_signal)
+
+        return binned_signal_pandas
+
+    def requires(self):
+        return self.binned_signal()
+
+
+class _RoadmapBinnedSignal(_BinnedSignalMeta):
+    track = luigi.Parameter()
+
+    def signal_task(self):
+        return RoadmapDownloadedSignal(genome_version=self.genome_version,
+                                       cell_type=self.cell_type,
+                                       track=self.track)
+
+
+class _EncodeBinnedSignal(_BinnedSignalMeta):
+    accession = luigi.Parameter()
+
+    def signal_task(self):
+        return EncodeDownloadedSignal(accession=self.accession)
 
 class TFSignalDataFrame(Task):
 
@@ -75,27 +122,6 @@ class TFSignalDataFrame(Task):
 
         return pd.DataFrame(pooled_data)
 
-    def _bins_task(self, cell_type):
-        """
-        Helper function that returns appropriate bins task for a cell type
-        :param cell_type:
-        :return:
-        """
-        return RoadmapMappableBins(cell_type=cell_type)
-
-    def _binned_signal_task(self, signal_task, cell_type):
-        """
-        Helper function that return appropriate binned signal task for a given cell type
-        :param signal_task:
-        :param cell_type:
-        :return:
-        """
-        bins = self._bins_task(cell_type)
-        return BinnedSignalPandas(bedgraph_task=BinnedSignal(bins_task=bins,
-                                                             signal_task=signal_task,
-                                                             binning_method=self.binning_method
-                                                             ))
-
     def _signal_track_list_task(self, cell_type):
         """
         Creates signal track list task for cell type
@@ -114,13 +140,12 @@ class TFSignalDataFrame(Task):
         tracks = signal_track_list_task.output().load()
         ans = {}
         for track in tracks:
-            signal = RoadmapDownloadedSignal(genome_version=signal_track_list_task.genome_version,
-                                             cell_type=signal_track_list_task.cell_type,
-                                             track=track)
+            signal = _RoadmapBinnedSignal(genome_version=signal_track_list_task.genome_version,
+                                          cell_type=signal_track_list_task.cell_type,
+                                          track=track,
+                                          binning_method=self.binning_method)
 
-            binned_signal = self._binned_signal_task(signal, signal_track_list_task.cell_type)
-
-            ans[track] = binned_signal
+            ans[track] = signal
         return ans
 
     def _compile_and_write_df(self, binned_signal_tasks, output_store, output_store_key):
@@ -190,9 +215,10 @@ class TFSignalDataFrame(Task):
             for ix, row in cell_metadata.iterrows():
                 target = row['target']
                 accession = row['File accession']
-                signal = EncodeDownloadedSignal(accession=accession)
-                binned_signal = self._binned_signal_task(signal, cell_type=cell_type)
-                cell_tf_signals[target] = binned_signal
+                cell_tf_signals[target] = _EncodeBinnedSignal(accession=accession,
+                                                              cell_type=cell_type,
+                                                              genome_version=self.genome_version,
+                                                              binning_method=self.binning_method)
 
             tf_signals[cell_type] = cell_tf_signals
 
@@ -200,9 +226,12 @@ class TFSignalDataFrame(Task):
 
         # Make sure to yield the tasks at the same time:
         joint = []
-        map(joint.extend, histone_signals.values())
-        map(joint.extend, tf_signals.values())
+        for cell_type in cell_types:
+            joint.extend(histone_signals[cell_type].values())
+            joint.extend(tf_signals[cell_type].values())
 
+        # Note that luigi does not play well when you yield tasks that take other tasks as input
+        # it is one of the reasons why we use _*BinnedSignal metatasks above
         yield joint
 
         # If we are at this stage, we have all the data we need,
