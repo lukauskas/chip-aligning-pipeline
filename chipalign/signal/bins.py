@@ -9,10 +9,10 @@ import luigi
 import pybedtools
 import numpy as np
 
-from chipalign.core.file_formats.bedgraph import BedGraph
+from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
-from chipalign.core.util import timed_segment, clean_bedtool_history
-
+from chipalign.core.util import timed_segment, clean_bedtool_history, temporary_file
+import pandas as pd
 
 class BinnedSignal(Task):
     """
@@ -42,11 +42,11 @@ class BinnedSignal(Task):
 
     @property
     def _extension(self):
-        return 'bdg.gz'
+        return 'pd'
 
     @property
     def _output_class(self):
-        return BedGraph
+        return DataFrameFile
 
     @classmethod
     def compute_profile(cls, bins_abspath, signal_abspath, output_handle, method='weighted_mean'):
@@ -59,15 +59,27 @@ class BinnedSignal(Task):
             raise ValueError('Unsupported method {!r}'.format(method))
 
     def run(self):
+        logger = self.logger()
 
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)
         signal_task_abspath = os.path.abspath(self.signal_task.output().path)
 
-        self.logger().info('Binning signal for {}'.format(signal_task_abspath))
+        logger.info('Binning signal for {}'.format(signal_task_abspath))
 
-        with self.output().open('w') as f:
-            self.compute_profile(bins_task_abspath, signal_task_abspath, f,
-                                 method=self.binning_method)
+        with temporary_file() as temp_filename:
+            with open(temp_filename, 'w') as f:
+                self.compute_profile(bins_task_abspath, signal_task_abspath, f,
+                                     method=self.binning_method)
+
+            logger.info('Reading signal to pandas dataframe')
+            series = pd.read_table(temp_filename,
+                                   header=None, names=['chromosome', 'start', 'end', 'value'],
+                                   index_col=['chromosome', 'start', 'end'])
+
+        series = series['value']
+        series = series.sortlevel()
+        logger.info('Dumping output')
+        self.output().dump(series)
 
 
 def weighted_means_from_intersection(intersection, column, null_value, mean_function=None):

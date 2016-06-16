@@ -27,7 +27,6 @@ from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.database.roadmap.signal_tracks_list import SignalTracksList
 from chipalign.signal.bins import BinnedSignal
-from chipalign.signal.pandas import BinnedSignalPandas
 
 INTERESTING_TFS = ['CBX5']
 
@@ -55,9 +54,7 @@ class _BinnedSignalMeta(MetaTask):
                                      signal_task=signal,
                                      binning_method=self.binning_method
                                      )
-        binned_signal_pandas = BinnedSignalPandas(bedgraph_task=binned_signal)
-
-        return binned_signal_pandas
+        return binned_signal
 
     def requires(self):
         return self.binned_signal()

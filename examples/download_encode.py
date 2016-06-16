@@ -19,7 +19,6 @@ import chipalign.core.task
 from chipalign.database.encode.downloaded_signal import EncodeDownloadedSignal
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.signal.bins import BinnedSignal
-from chipalign.signal.pandas import BinnedSignalPandas
 
 GENOME_VERSION = 'hg19'
 
@@ -33,10 +32,10 @@ class EncodeDownloadedBinnedSignal(chipalign.core.task.MetaTask):
         signal = EncodeDownloadedSignal(accession=self.accession)
         bins = RoadmapMappableBins(cell_type=self.cell_type)
 
-        binned_signal = BinnedSignalPandas(bedgraph_task=BinnedSignal(bins_task=bins,
-                                                                      signal_task=signal,
-                                                                      binning_method=self.binning_method
-                                                                      ))
+        binned_signal = BinnedSignal(bins_task=bins,
+                                     signal_task=signal,
+                                     binning_method=self.binning_method
+                                     )
 
         return binned_signal
 

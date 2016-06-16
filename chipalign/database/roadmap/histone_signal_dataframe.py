@@ -16,7 +16,6 @@ from chipalign.core.task import Task
 from chipalign.database.roadmap.signal_tracks_list import SignalTracksList
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.signal.bins import BinnedSignal
-from chipalign.signal.pandas import BinnedSignalPandas
 
 
 @lru_cache(None)
@@ -36,10 +35,10 @@ def _histone_binned_signal_tracks(cell_type, binning_method):
                                          cell_type=cell_type,
                                          track=track)
 
-        binned_signal = BinnedSignalPandas(bedgraph_task=BinnedSignal(bins_task=bins,
-                                                                      signal_task=signal,
-                                                                      binning_method=binning_method
-                                                                      ))
+        binned_signal = BinnedSignal(bins_task=bins,
+                                     signal_task=signal,
+                                     binning_method=binning_method
+                                     )
         ans[track] = binned_signal
 
     return ans
