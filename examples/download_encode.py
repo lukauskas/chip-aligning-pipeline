@@ -8,7 +8,7 @@ by typing:
 
 You can then run this by
 
-python download_roadmap.py --cell-type E008 --track H3K4me3
+python download_encode.py --cell-type E123 --accession ENCFF077EXO
 
 the output will be stored in directory configured in chipalign.yml, which in this case is output/
 """
@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import print_function
 
 import chipalign.core.task
-from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
+from chipalign.database.encode.downloaded_signal import EncodeDownloadedSignal
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.pandas import BinnedSignalPandas
@@ -24,15 +24,13 @@ from chipalign.signal.pandas import BinnedSignalPandas
 GENOME_VERSION = 'hg19'
 
 
-class RoadmapDownloadedBinnedSignal(chipalign.core.task.MetaTask):
-    cell_type = RoadmapDownloadedSignal.cell_type
-    track = RoadmapDownloadedSignal.track
+class EncodeDownloadedBinnedSignal(chipalign.core.task.MetaTask):
+    cell_type = RoadmapMappableBins.cell_type
+    accession = EncodeDownloadedSignal.accession
     binning_method = BinnedSignal.binning_method
 
     def requires(self):
-        signal = RoadmapDownloadedSignal(
-            genome_version=GENOME_VERSION)
-
+        signal = EncodeDownloadedSignal(accession=self.accession)
         bins = RoadmapMappableBins(cell_type=self.cell_type)
 
         binned_signal = BinnedSignalPandas(bedgraph_task=BinnedSignal(bins_task=bins,
@@ -42,7 +40,7 @@ class RoadmapDownloadedBinnedSignal(chipalign.core.task.MetaTask):
 
         return binned_signal
 
+
 if __name__ == '__main__':
     import luigi
-
-    luigi.run(main_task_cls=RoadmapDownloadedBinnedSignal)
+    luigi.run(main_task_cls=EncodeDownloadedBinnedSignal)

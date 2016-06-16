@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 
 import luigi
 
-import chipalign.database.roadmap_data.settings as roadmap_settings
+import chipalign.database.roadmap.settings as roadmap_settings
 from chipalign.core.task import MetaTask
 from chipalign.genome.mappability import FullyMappableBins
 from chipalign.genome.windows.genome_windows import NonOverlappingBins

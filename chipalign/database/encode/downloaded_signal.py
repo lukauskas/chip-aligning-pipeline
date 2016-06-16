@@ -20,4 +20,4 @@ class EncodeDownloadedSignal(DownloadedSignalBase):
     accession = luigi.Parameter()
 
     def url(self):
-        return 'https://www.encodeproject.org/files/{accession}/@@download/{accession}.bigWig'.format(self.accession)
+        return 'https://www.encodeproject.org/files/{accession}/@@download/{accession}.bigWig'.format(accession=self.accession)

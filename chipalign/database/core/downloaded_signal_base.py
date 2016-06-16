@@ -1,10 +1,10 @@
 import luigi
-from luigi import Task
 import os
 import shutil
 
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.bedgraph import BedGraph
+from chipalign.core.task import Task
 
 
 def _bigwig_to_bedgraph(bigwig_filename, output_filename, logger=None):

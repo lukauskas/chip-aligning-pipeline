@@ -3,16 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
-import shutil
 
 import luigi
 
-from chipalign.core.downloader import fetch
-from chipalign.core.file_formats.bedgraph import BedGraph
-from chipalign.core.task import Task
-from chipalign.database.roadmap_data.signal_tracks_list import SignalTracksList
-
+from chipalign.database.roadmap.signal_tracks_list import SignalTracksList
 from chipalign.database.core.downloaded_signal_base import DownloadedSignalBase
 
 
