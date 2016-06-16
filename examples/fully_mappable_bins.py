@@ -19,11 +19,11 @@ from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
 
 
 class FullyMappableBinsExample(MetaTask):
-    cell_line = RoadmapMappableBins.cell_type
+    cell_type = RoadmapMappableBins.cell_type
     window_size = RoadmapMappableBins.window_size
 
     def requires(self):
-        return RoadmapMappableBins(cell_line=self.cell_line,
+        return RoadmapMappableBins(cell_type=self.cell_type,
                                    window_size=self.window_size)
 
 
