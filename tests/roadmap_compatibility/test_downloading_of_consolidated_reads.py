@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
 import pybedtools
-from chipalign.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
+
+from chipalign.database.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 

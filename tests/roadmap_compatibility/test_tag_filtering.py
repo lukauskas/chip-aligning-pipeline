@@ -2,17 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import gzip
-from itertools import izip
-import os
-import pybedtools
-from chipalign.roadmap_data.downloaded_reads import RoadmapAlignedReads
-from chipalign.alignment.filtering import FilteredReads
-from tests.helpers.external_resource import DownloadableExternalResource
 
-from tests.roadmap_compatibility.roadmap_tag import roadmap_test
-from tests.helpers.task_test import TaskTestCase
+import gzip
+import os
+from itertools import izip
+
+import pybedtools
+
+from chipalign.alignment.filtering import FilteredReads
 from chipalign.core.util import temporary_file, clean_bedtool_history
+from chipalign.database.roadmap_data.downloaded_reads import RoadmapAlignedReads
+from tests.helpers.external_resource import DownloadableExternalResource
+from tests.helpers.task_test import TaskTestCase
+from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 
 
 class FilteredReadsResource(DownloadableExternalResource):

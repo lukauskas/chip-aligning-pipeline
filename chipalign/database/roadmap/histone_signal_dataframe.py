@@ -2,20 +2,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
+import chipalign.roadmap_data.settings as roadmap_settings
 import luigi
+import pandas as pd
+from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
+from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
+from chipalign.roadmap_data.util import signal_sortkey
 from functools32 import lru_cache
 
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
+from chipalign.database.roadmap_data.signal_tracks_list import SignalTracksList
 from chipalign.genome.chromosomes import Chromosomes
-from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
-from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
-from chipalign.roadmap_data.signal_tracks_list import SignalTracksList
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.pandas import BinnedSignalPandas
-import chipalign.roadmap_data.settings as roadmap_settings
-import pandas as pd
-from chipalign.roadmap_data.util import signal_sortkey
 
 
 @lru_cache(None)

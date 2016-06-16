@@ -15,7 +15,7 @@ the output will be stored in directory configured in chipalign.yml, which in thi
 import luigi
 
 from chipalign.core.task import MetaTask
-from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
+from chipalign.database.roadmap_data.mappable_bins import RoadmapMappableBins
 
 
 class FullyMappableBinsExample(MetaTask):

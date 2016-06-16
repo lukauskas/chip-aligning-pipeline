@@ -12,8 +12,8 @@ python signal_dataframe.py --cell_type E123
 
 the output will be stored in directory configured in chipalign.yml, which in this case is output/
 """
-import chipalign.roadmap_data.histone_signal_dataframe
+import chipalign.database.roadmap_data.histone_signal_dataframe
 
 if __name__ == '__main__':
     import luigi
-    luigi.run(main_task_cls=chipalign.roadmap_data.histone_signal_dataframe.RoadmapHistoneSignal)
+    luigi.run(main_task_cls=chipalign.database.roadmap_data.histone_signal_dataframe.RoadmapHistoneSignal)

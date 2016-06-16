@@ -2,19 +2,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
 import os
 import tempfile
 from itertools import izip
 
 import luigi
+from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
 
 from chipalign.core.downloader import fetch
-from chipalign.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
+from chipalign.core.util import temporary_file
+from chipalign.database.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
 from chipalign.signal.signal import Signal
-from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
-from chipalign.core.util import temporary_file
 
 
 @roadmap_test

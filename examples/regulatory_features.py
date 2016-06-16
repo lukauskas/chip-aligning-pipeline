@@ -16,9 +16,9 @@ the output will be stored in directory configured in chipalign.yml, which in thi
 import luigi
 
 from chipalign.biomart.distance_to_regulatory_features import DistancesToRegulatoryFeatures
-from chipalign.core.task import MetaTask
 from chipalign.biomart.regulatory_features import RegulatoryFeatures
-from chipalign.roadmap_data.mappable_bins import RoadmapMappableBins
+from chipalign.core.task import MetaTask
+from chipalign.database.roadmap_data.mappable_bins import RoadmapMappableBins
 
 
 class ExampleRegulatoryFeatures(MetaTask):

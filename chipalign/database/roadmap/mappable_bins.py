@@ -3,11 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from chipalign.core.task import MetaTask
-import chipalign.roadmap_data.settings as roadmap_settings
-
 import luigi
 
+import chipalign.database.roadmap_data.settings as roadmap_settings
+from chipalign.core.task import MetaTask
 from chipalign.genome.mappability import FullyMappableBins
 from chipalign.genome.windows.genome_windows import NonOverlappingBins
 
