@@ -13,7 +13,7 @@ from chipalign.genome.windows.genome_windows import NonOverlappingBins
 
 
 class RoadmapMappableBins(MetaTask):
-    cell_line = luigi.Parameter()
+    cell_type = luigi.Parameter()
 
     genome_version = luigi.Parameter(default=roadmap_settings.GENOME_ID)
     window_size = luigi.IntParameter(default=200)
@@ -23,7 +23,7 @@ class RoadmapMappableBins(MetaTask):
 
     @property
     def max_ext_size(self):
-        return roadmap_settings.max_fraglen(self.cell_line)
+        return roadmap_settings.max_fraglen(self.cell_type)
 
     @property
     def bins_task(self):
