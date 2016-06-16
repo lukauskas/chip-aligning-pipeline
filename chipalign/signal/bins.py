@@ -11,7 +11,7 @@ import numpy as np
 
 from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
-from chipalign.core.util import timed_segment
+from chipalign.core.util import timed_segment, clean_bedtool_history
 
 
 class BinnedSignal(Task):
@@ -165,26 +165,29 @@ def _compute_map_signal(bins_abspath, signal_abspath, output_handle, logger=None
 def _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle, logger=None,
                            check_sorted=True):
     logger = logger if logger is not None else logging.getLogger('_compute_binned_signal')
-
-    with timed_segment('Loading bins up and checking if they are sorted', logger=logger):
-        bins = pybedtools.BedTool(bins_abspath)
-        bins_len = len(bins)
-        if check_sorted:
-            if not _bedtool_is_sorted(bins):
-                raise Exception('Bins need to be sorted')
-        logger.debug('Bins length: {}'.format(bins_len))
-
-    with timed_segment('Loading signal up and checking if they are sorted', logger=logger):
-        signal = pybedtools.BedTool(signal_abspath)
-        if check_sorted:
-            if not _bedtool_is_sorted(signal):
-                raise Exception('Signal needs to be sorted')
-            logger.debug('Signal length: {}'.format(len(signal)))
-
-    with timed_segment('Doing the intersection, this takes a while', logger=logger):
-        intersection = bins.intersect(signal, loj=True, sorted=True)
+    bins = None
+    signal = None
+    intersection = None
 
     try:
+        with timed_segment('Loading bins up and checking if they are sorted', logger=logger):
+            bins = pybedtools.BedTool(bins_abspath)
+            bins_len = len(bins)
+            if check_sorted:
+                if not _bedtool_is_sorted(bins):
+                    raise Exception('Bins need to be sorted')
+            logger.debug('Bins length: {}'.format(bins_len))
+
+        with timed_segment('Loading signal up and checking if they are sorted', logger=logger):
+            signal = pybedtools.BedTool(signal_abspath)
+            if check_sorted:
+                if not _bedtool_is_sorted(signal):
+                    raise Exception('Signal needs to be sorted')
+                logger.debug('Signal length: {}'.format(len(signal)))
+
+        with timed_segment('Doing the intersection, this takes a while', logger=logger):
+            intersection = bins.intersect(signal, loj=True, sorted=True)
+
         with timed_segment('Doing the weighted means thing, this takes a while', logger=logger):
             iter_answer = weighted_means_from_intersection(intersection,
                                                            column=4,
@@ -203,17 +206,9 @@ def _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle, l
 
         logger.info('Done. Total rows written: {}'.format(rows_written))
     finally:
-        intersection_fn = intersection.fn
-        logger.debug('Removing {}'.format(intersection_fn))
-
-        # Remove reference to intersection
-        del intersection
-        # Delete the file
-        try:
-            os.unlink(intersection_fn)
-        except OSError:
-            if os.path.isfile(intersection_fn):
-                raise
+        clean_bedtool_history(bins)
+        clean_bedtool_history(signal)
+        clean_bedtool_history(intersection)
 
 def _log10_weighted_mean(data):
     weighted_sum = 0
