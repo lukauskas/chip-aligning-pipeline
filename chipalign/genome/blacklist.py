@@ -76,7 +76,7 @@ class NonBlacklisted(Task):
             input_ = pybedtools.BedTool(self.input_task.output().path)
             blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
 
-            with temporary_file(cleanup_on_exception=True) as temp:
+            with temporary_file() as temp:
                 remove_blacklisted_regions(input_, blacklist).saveas(temp)
 
                 with open(temp, 'r') as read_:

@@ -50,10 +50,10 @@ class NonOverlappingBins(Task):
                 windows = remove_blacklisted_regions(windows, blacklist)
                 del blacklist
 
-            with temporary_file(cleanup_on_exception=True) as tmp_filename:
+            with temporary_file() as tmp_filename:
                 windows.saveas(tmp_filename)
 
-                with temporary_file(cleanup_on_exception=True) as gzip_tmp:
+                with temporary_file() as gzip_tmp:
                     with open(tmp_filename, 'r') as input_file:
                         with gzip.GzipFile(gzip_tmp, 'w') as gzipped_file:
                                 gzipped_file.writelines(input_file)
