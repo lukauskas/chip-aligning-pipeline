@@ -3,16 +3,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
-import tempfile
 from itertools import imap
 
 import luigi
-import pybedtools
 
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
-from chipalign.core.util import clean_bedtool_history
+from chipalign.core.util import autocleaning_pybedtools, temporary_file
 
 
 class ChromatinStates(Task):
@@ -104,30 +101,18 @@ class ChromatinStates(Task):
 
     def run(self):
 
-        __, tmp_download_file = tempfile.mkstemp()
         input_file = self.input().path
 
-        try:
-            with open(tmp_download_file, 'w') as f:
-                fetch(self._data_url, f)
+        with autocleaning_pybedtools() as pybedtools:
 
-            states = pybedtools.BedTool(tmp_download_file).sort()
+            with temporary_file() as tmp_download_file:
+                with open(tmp_download_file, 'w') as f:
+                    fetch(self._data_url, f)
 
-            try:
+                states = pybedtools.BedTool(tmp_download_file).sort()
+
                 regions = pybedtools.BedTool(input_file)  # Assume sorted
                 answer = regions.map(states, c=4, o='mode')
 
-                try:
-                    with self.output().open('w') as output:
-                        output.writelines(imap(str, answer))
-                finally:
-                    clean_bedtool_history(answer)
-            finally:
-                clean_bedtool_history(states)
-
-        finally:
-            try:
-                os.unlink(tmp_download_file)
-            except OSError:
-                if os.path.isfile(tmp_download_file):
-                    raise
+                with self.output().open('w') as output:
+                    output.writelines(imap(str, answer))

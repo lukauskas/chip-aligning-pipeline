@@ -7,12 +7,10 @@ import luigi
 import os
 import pandas as pd
 
-import pybedtools
-
 from chipalign.biomart.regulatory_features import RegulatoryFeatures
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
-from chipalign.core.util import timed_segment
+from chipalign.core.util import timed_segment, autocleaning_pybedtools
 
 
 class DistancesToRegulatoryFeatures(Task):
@@ -51,36 +49,37 @@ class DistancesToRegulatoryFeatures(Task):
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)
         regulatory_features_abspath = os.path.abspath(self.regulatory_features_task.output().path)
 
-        bins = pybedtools.BedTool(bins_task_abspath)
+        with autocleaning_pybedtools() as pybedtools:
+            bins = pybedtools.BedTool(bins_task_abspath)
 
-        logger.debug('bins_task_abspath: {}'.format(bins_task_abspath))
-        features_bedtool = pybedtools.BedTool(regulatory_features_abspath)
+            logger.debug('bins_task_abspath: {}'.format(bins_task_abspath))
+            features_bedtool = pybedtools.BedTool(regulatory_features_abspath)
 
-        feature_types = {row.name for row in features_bedtool}
+            feature_types = {row.name for row in features_bedtool}
 
-        feature_columns = []
-        for feature in feature_types:
-            with timed_segment('Processing feature: {!r}'.format(feature)):
-                features_filtered = features_bedtool.filter(lambda x: x.name == feature)
-                closest_to_feature = bins.closest(features_filtered, D='ref', t='first')
+            feature_columns = []
+            for feature in feature_types:
+                with timed_segment('Processing feature: {!r}'.format(feature)):
+                    features_filtered = features_bedtool.filter(lambda x: x.name == feature)
+                    closest_to_feature = bins.closest(features_filtered, D='ref', t='first')
 
-                closest_df = closest_to_feature.to_dataframe()
-                closest_df = closest_df[['chrom', 'start', 'end', 'thickEnd']]
-                closest_df.columns = ['chromosome', 'start', 'end', feature]
+                    closest_df = closest_to_feature.to_dataframe()
+                    closest_df = closest_df[['chrom', 'start', 'end', 'thickEnd']]
+                    closest_df.columns = ['chromosome', 'start', 'end', feature]
 
-                closest_df = closest_df.set_index(['chromosome', 'start', 'end'])[feature]
-                if closest_df.dtype != int:
-                    logger.debug('closest_df.dtype: {} is not int, '
-                                 'probably there are loci that are not matched'.format(closest_df.dtype))
-                    closest_df = closest_df[closest_df != '.'].astype(int)
+                    closest_df = closest_df.set_index(['chromosome', 'start', 'end'])[feature]
+                    if closest_df.dtype != int:
+                        logger.debug('closest_df.dtype: {} is not int, '
+                                     'probably there are loci that are not matched'.format(closest_df.dtype))
+                        closest_df = closest_df[closest_df != '.'].astype(int)
 
-                feature_columns.append(closest_df)
+                    feature_columns.append(closest_df)
 
-        feature_df = pd.concat(feature_columns, axis=1)
+            feature_df = pd.concat(feature_columns, axis=1)
 
-        logger.info('Sorting indices and outputting')
+            logger.info('Sorting indices and outputting')
 
-        feature_df.sort_index(axis=0, inplace=True)
-        feature_df.sort_index(axis=1, inplace=True)
+            feature_df.sort_index(axis=0, inplace=True)
+            feature_df.sort_index(axis=1, inplace=True)
 
-        self.output().dump(feature_df)
+            self.output().dump(feature_df)

@@ -12,8 +12,6 @@ import tempfile
 import os
 import shutil
 import logging
-import pybedtools
-from pybedtools.helpers import _flatten_list, get_tempdir
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
 _CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' in os.environ
@@ -141,56 +139,34 @@ def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAU
         if os.path.isfile(temp_file):
             raise
 
-def memoised(f):
+
+@contextmanager
+def autocleaning_pybedtools():
     """
-    A wrapper that memoises the answer of function `f` and therefore does execute it only once
-
-    :param f:
-    :return:
+    Returns a pybedtools instance that will clean-up after the context is over.
+    Unfortunately, this is the only way for pybedtools to work with luigi and not cause
+    memory leaks
     """
-    function_cache = f.__memoisation_cache__ = {}
+    import pybedtools
 
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        key = tuple(args), frozenset(kwargs)
-        try:
-            return function_cache[key]
-        except KeyError:
-            pass
+    if len(pybedtools.BedTool.TEMPFILES) != 0:
+        raise Exception('pybedtools.BedTool.TEMPFILES not empty on context entry. '
+                        'Maybe you\'re nesting `autocleaning_pybedtools` contexts?')
 
-        ans = f(*args, **kwargs)
-        function_cache[key] = ans
-        return ans
-
-    return wrapper
+    try:
+        yield pybedtools
+    finally:
+        pybedtools.cleanup()
 
 
-def clean_bedtool_history(bedtool):
-    if not isinstance(bedtool, pybedtools.BedTool):
-        return
-
-    flattened_history = _flatten_list(bedtool.history)
-    to_delete = []
-    tempdir = get_tempdir()
-    for i in flattened_history:
-        fn = i.fn
-        if not fn:
-            continue
-        if fn.startswith(os.path.join(os.path.abspath(tempdir),
-                                      'pybedtools')):
-            if fn.endswith('.tmp'):
-                to_delete.append(fn)
-
-    for fn in to_delete:
-        os.unlink(fn)
-
-def fast_bedtool_from_iterable(iterable):
+def fast_bedtool_from_iterable(iterable, pybedtools):
     """
     Creates a bedtool object from provided iterable in a fast way.
     Particularly it first creates the string representation and then creates BedTool object from string
     This seems to be faster than compiling it from list
 
     :param iterable: Iterable to convert to bedtool
+    :param pybedtools: a pybedtools instance. See :func:`~chipalign.core.util.autocleaning_pybedtools`
     :return: BedTool object
     :rtype: pybedtools.BedTool
     """

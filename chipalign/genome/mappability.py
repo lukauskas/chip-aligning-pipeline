@@ -10,10 +10,9 @@ import tempfile
 import logging
 
 import luigi
-import pybedtools
 import numpy as np
 from chipalign.core.file_formats.dataframe import DataFrameFile
-from chipalign.core.util import fast_bedtool_from_iterable, timed_segment
+from chipalign.core.util import fast_bedtool_from_iterable, timed_segment, autocleaning_pybedtools
 
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
@@ -30,7 +29,7 @@ class MappabilityTrack(object):
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
 
-    def filter_uniquely_mappables(self, bedtool):
+    def filter_uniquely_mappables(self, bedtool, pybedtools):
         logger = logging.getLogger(self.__class__.__name__)
         chromosomes = set(imap(lambda x: x.chrom, bedtool))
         chromosomes_in_mappability_track = set(self.__lookup_dict.keys())
@@ -63,7 +62,7 @@ class MappabilityTrack(object):
             answer.extend(chromosome_answer)
             logger.debug('Done')
 
-        return fast_bedtool_from_iterable(answer)
+        return fast_bedtool_from_iterable(answer, pybedtools)
 
     @classmethod
     def maximum_mappability_score_for_bin(cls, bin_width, read_length,
@@ -79,7 +78,7 @@ class MappabilityTrack(object):
         return 2 * (bin_width + extension_length + read_length - 1)
 
     def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length,
-                                                 extension_length):
+                                                 extension_length, pybedtools):
         logger = logging.getLogger(self.__class__.__name__)
 
         chromosomes = set(imap(lambda x: x.chrom, bins_bed))
@@ -128,7 +127,7 @@ class MappabilityTrack(object):
                                                        bin_.end,
                                                        uniquely_mappable_per_bin))
 
-        bed_answer = fast_bedtool_from_iterable(answer)
+        bed_answer = fast_bedtool_from_iterable(answer, pybedtools)
         bed_answer = bed_answer.sort()
 
         df_answer = bed_answer.to_dataframe()
@@ -307,18 +306,21 @@ class BinMappability(Task):
 
     def run(self):
         logger = self.logger()
-        genomic_windows = pybedtools.BedTool(
-            self.bins_task.output().path)
-        mappability = self.mappability_track_task.output().load()
 
-        logger.debug('Computing mappability')
-        number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(
-            genomic_windows,
-            read_length=self.read_length,
-            extension_length=self.max_ext_size)
+        with autocleaning_pybedtools() as pybedtools:
+            genomic_windows = pybedtools.BedTool(
+                self.bins_task.output().path)
+            mappability = self.mappability_track_task.output().load()
 
-        logger.debug('Writing output')
-        self.output().dump(number_of_uniquely_mappable_per_bin)
+            logger.debug('Computing mappability')
+            number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(
+                genomic_windows,
+                pybedtools=pybedtools,
+                read_length=self.read_length,
+                extension_length=self.max_ext_size)
+
+            logger.debug('Writing output')
+            self.output().dump(number_of_uniquely_mappable_per_bin)
 
 
 class FullyMappableBins(Task):

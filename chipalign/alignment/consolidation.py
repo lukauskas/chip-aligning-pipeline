@@ -5,10 +5,9 @@ from __future__ import unicode_literals
 from itertools import imap, ifilter
 import os
 import luigi
-import pybedtools
 import shutil
 from chipalign.core.task import Task
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, autocleaning_pybedtools
 from chipalign.genome.chromosomes import Chromosomes
 
 
@@ -89,39 +88,40 @@ class ConsolidatedReads(Task):
         else:
             chromosome_filter = lambda x: True
 
-        with temporary_file() as tf:
-            with open(tf, 'w') as tf_file_handle:
-                for filtered_reads in self.input_alignments:
-                    filtered_reads = filtered_reads.output()
-                    logger.debug('Processing {}'.format(filtered_reads.path))
-                    filtered_reads_bedtool = pybedtools.BedTool(filtered_reads.path)
+        with autocleaning_pybedtools() as pybedtools:
+            with temporary_file() as tf:
+                with open(tf, 'w') as tf_file_handle:
+                    for filtered_reads in self.input_alignments:
+                        filtered_reads = filtered_reads.output()
+                        logger.debug('Processing {}'.format(filtered_reads.path))
+                        filtered_reads_bedtool = pybedtools.BedTool(filtered_reads.path)
 
-                    tf_file_handle.writelines(imap(str,
-                                              ifilter(chromosome_filter,
-                                                      filtered_reads_bedtool)))
-                    logger.debug('.. Done')
+                        tf_file_handle.writelines(imap(str,
+                                                  ifilter(chromosome_filter,
+                                                          filtered_reads_bedtool)))
+                        logger.debug('.. Done')
 
-            logger.debug('Creating bedtool')
-            master_reads_bedtool = pybedtools.BedTool(tf)
-            length_of_master_reads = master_reads_bedtool.count()
-            logger.debug('Total {} reads'.format(length_of_master_reads))
+                logger.debug('Creating bedtool')
+                master_reads_bedtool = pybedtools.BedTool(tf)
+                length_of_master_reads = master_reads_bedtool.count()
+                logger.debug('Total {} reads'.format(length_of_master_reads))
 
-            if length_of_master_reads > self.max_sequencing_depth:
-                logger.debug('Subsampling')
+                if length_of_master_reads > self.max_sequencing_depth:
+                    logger.debug('Subsampling')
 
-                master_reads_bedtool = master_reads_bedtool.sample(n=self.max_sequencing_depth,
-                                                                   seed=self.subsample_random_seed)
+                    master_reads_bedtool = master_reads_bedtool.sample(n=self.max_sequencing_depth,
+                                                                       seed=self.subsample_random_seed)
 
-            logger.debug('Sorting')
-            master_reads_bedtool = master_reads_bedtool.sort()
+                logger.debug('Sorting')
+                master_reads_bedtool = master_reads_bedtool.sort()
 
-            logger.debug('Writing to file')
-            with temporary_file() as answer:
-                master_reads_bedtool.saveas(answer)
+                logger.debug('Writing to file')
+                with temporary_file() as answer:
+                    master_reads_bedtool.saveas(answer)
 
-                # Write the output in correct format (gzipped)
-                with self.output().open('w') as out_:
-                    with open(answer) as in_:
-                        out_.writelines(in_)
+                    # Write the output in correct format (gzipped)
+                    with self.output().open('w') as out_:
+                        with open(answer) as in_:
+                            out_.writelines(in_)
 
         logger.debug('Done')

@@ -4,15 +4,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from itertools import imap, ifilter
 import luigi
-import pybedtools
 from chipalign.alignment.aligned_reads import AlignedSRR
 from chipalign.core.task import Task
-from chipalign.core.util import clean_bedtool_history, fast_bedtool_from_iterable
+from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack
 
 
-def _remove_duplicates_from_bed(bedtools_object):
+def _remove_duplicates_from_bed(bedtools_object, pybedtools):
 
     def _key_for_row(row):
         if row.strand == '+':
@@ -37,11 +36,12 @@ def _remove_duplicates_from_bed(bedtools_object):
     del seen_once  # Just in case we need to free up some memory
 
     filtered_data = ifilter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
-    return fast_bedtool_from_iterable(filtered_data)
+    return fast_bedtool_from_iterable(filtered_data, pybedtools)
 
 
 def _resize_reads(bedtools_object, new_length,
                   chromsizes,
+                  pybedtools,
                   can_extend=True,
                   can_shorten=True):
 
@@ -66,13 +66,13 @@ def _resize_reads(bedtools_object, new_length,
         return row
 
     new_data = imap(_resizing_function, bedtools_object)
-    return fast_bedtool_from_iterable(new_data)
+    return fast_bedtool_from_iterable(new_data, pybedtools)
 
-def _filter_chromosomes(bedtools_object, allowed_chromosomes):
+def _filter_chromosomes(bedtools_object, allowed_chromosomes, pybedtools):
     allowed_chromosomes = frozenset(allowed_chromosomes)
 
     new_data = ifilter(lambda x: x.chrom in allowed_chromosomes, bedtools_object)
-    return fast_bedtool_from_iterable(new_data)
+    return fast_bedtool_from_iterable(new_data, pybedtools)
 
 class FilteredReads(Task):
     """
@@ -134,7 +134,7 @@ class FilteredReads(Task):
         bam_output = self.alignment_task.bam_output().path
 
         mapped_reads = None
-        try:
+        with autocleaning_pybedtools() as pybedtools:
             logger.info('Loading {}'.format(bam_output))
             mapped_reads = pybedtools.BedTool(bam_output)
             logger.info('Converting BAM to BED')
@@ -145,7 +145,7 @@ class FilteredReads(Task):
                 standard_chromosomes = self.standard_chromosomes_task.output().load().keys()
                 logger.debug('Standard chromosomes: {}'.format(standard_chromosomes))
                 _len_before = mapped_reads.count()
-                mapped_reads = _filter_chromosomes(mapped_reads, standard_chromosomes)
+                mapped_reads = _filter_chromosomes(mapped_reads, standard_chromosomes, pybedtools)
                 logger.debug('Number of reads removed: {}'.format(_len_before - mapped_reads.count()))
 
             if self.resized_length > 0:
@@ -160,17 +160,18 @@ class FilteredReads(Task):
                                               # and we are working with raw reads, some datasets actually have shorter
                                               # ones. Meaning their mappability unification routine is a bit off.
                                               can_extend=True,
+                                              pybedtools=pybedtools,
                                               )
 
                 mapped_reads.delete_temporary_history(ask=False)
                 mapped_reads = resized_reads
 
             logger.info('Removing duplicates. Length before: {}'.format(mapped_reads.count()))
-            mapped_reads = _remove_duplicates_from_bed(mapped_reads)
+            mapped_reads = _remove_duplicates_from_bed(mapped_reads, pybedtools)
             logger.info('Done removing duplicates. Length after: {}'.format(mapped_reads.count()))
 
             logger.info('Filtering uniquely mappable')
-            mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads)
+            mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads, pybedtools)
 
             logger.info('Sorting reads')
             mapped_reads = mapped_reads.sort()
@@ -182,6 +183,3 @@ class FilteredReads(Task):
                     row.name = 'N'  # The alignments from ROADMAP have this
                     row.score = '1000'  # And this... for some reason
                     f.write(str(row))
-        finally:
-            if mapped_reads:
-                clean_bedtool_history(mapped_reads)

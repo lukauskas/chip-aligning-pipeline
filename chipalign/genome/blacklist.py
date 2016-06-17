@@ -4,12 +4,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import os
 import shutil
-import pybedtools
 import luigi
 
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, autocleaning_pybedtools
 
 
 class BlacklistedRegions(Task):
@@ -72,15 +71,17 @@ class NonBlacklisted(Task):
         return 'bed.gz'
 
     def run(self):
-        input_ = pybedtools.BedTool(self.input_task.output().path)
-        blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
 
-        with temporary_file(cleanup_on_exception=True) as temp:
-            remove_blacklisted_regions(input_, blacklist).saveas(temp)
+        with autocleaning_pybedtools() as pybedtools:
+            input_ = pybedtools.BedTool(self.input_task.output().path)
+            blacklist = pybedtools.BedTool(self._blacklist_task.output().path)
 
-            with open(temp, 'r') as read_:
-                with self.output().open('w') as f:
-                    f.writelines(read_)
+            with temporary_file(cleanup_on_exception=True) as temp:
+                remove_blacklisted_regions(input_, blacklist).saveas(temp)
+
+                with open(temp, 'r') as read_:
+                    with self.output().open('w') as f:
+                        f.writelines(read_)
 
     @property
     def task_class_friendly_name(self):

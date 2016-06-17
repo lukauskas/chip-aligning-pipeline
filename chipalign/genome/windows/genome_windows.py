@@ -5,11 +5,11 @@ from __future__ import unicode_literals
 import gzip
 
 import luigi
-import pybedtools
 import shutil
 
 from chipalign.core.task import Task
-from chipalign.core.util import ensure_directory_exists_for_file, temporary_file, clean_bedtool_history
+from chipalign.core.util import ensure_directory_exists_for_file, temporary_file, \
+    autocleaning_pybedtools
 from chipalign.genome.blacklist import BlacklistedRegions, remove_blacklisted_regions
 
 
@@ -40,8 +40,7 @@ class NonOverlappingBins(Task):
 
     def run(self):
         ensure_directory_exists_for_file(self.output().path)
-        windows = None
-        try:
+        with autocleaning_pybedtools() as pybedtools:
             windows = pybedtools.BedTool().window_maker(w=self.window_size,
                                                         g=pybedtools.chromsizes(self.genome_version))
             windows = windows.sort()
@@ -61,9 +60,6 @@ class NonOverlappingBins(Task):
 
                     shutil.move(gzip_tmp, self.output().path)
 
-        finally:
-            if windows:
-                clean_bedtool_history(windows)
 
 if __name__ == '__main__':
     luigi.run(main_task_cls=NonOverlappingBins)

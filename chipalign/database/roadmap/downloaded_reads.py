@@ -6,9 +6,9 @@ import gzip
 import os
 import shutil
 import luigi
-import pybedtools
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
+from chipalign.core.util import autocleaning_pybedtools
 
 
 class RoadmapAlignedReads(Task):
@@ -65,10 +65,11 @@ class RoadmapAlignedReads(Task):
 
             # Now one needs to convert the bed to BAM
             tmp_bam = 'temporary.bam'
-            pybedtools.BedTool(fixed_bed).to_bam(genome=self.genome_version).saveas(tmp_bam)
+            with autocleaning_pybedtools() as pybedtools:
+                pybedtools.BedTool(fixed_bed).to_bam(genome=self.genome_version).saveas(tmp_bam)
 
-            # Finally, move the bam
-            shutil.move(tmp_bam, output_abspath)
+                # Finally, move the bam
+                shutil.move(tmp_bam, output_abspath)
 
     def bam_output(self):
         return self.output()

@@ -1,8 +1,9 @@
-import pybedtools
 import luigi
 
 from chipalign.core.task import Task
 from chipalign.core.file_formats.yaml_file import YamlFile
+from chipalign.core.util import autocleaning_pybedtools
+
 
 class Chromosomes(Task):
     """
@@ -31,24 +32,25 @@ class Chromosomes(Task):
 
     def run(self):
 
-        chromsizes = pybedtools.chromsizes(self.genome_version)
-        chromsizes = dict(chromsizes)
+        with autocleaning_pybedtools() as pybedtools:
+            chromsizes = pybedtools.chromsizes(self.genome_version)
+            chromsizes = dict(chromsizes)
 
-        if not self.genome_version.startswith('hg'):
-            raise Exception('Not sure how to parse collections for genome {}'.format(self.genome_version))
+            if not self.genome_version.startswith('hg'):
+                raise Exception('Not sure how to parse collections for genome {}'.format(self.genome_version))
 
-        female_chromosomes = {'chr{}'.format(x) for x in (range(1, 23) + ['X', 'M'])}
-        male_chromosomes = female_chromosomes | {'chrY'}
+            female_chromosomes = {'chr{}'.format(x) for x in (range(1, 23) + ['X', 'M'])}
+            male_chromosomes = female_chromosomes | {'chrY'}
 
-        if self.collection == 'male':
-            chromsizes = {k: chromsizes[k] for k in male_chromosomes}
-        elif self.collection == 'female':
-            chromsizes = {k: chromsizes[k] for k in female_chromosomes}
-        elif self.collection == 'all':
-            pass
-        elif self.collection in chromsizes:
-            chromsizes = {self.collection: chromsizes[self.collection]}
-        else:
-            raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
+            if self.collection == 'male':
+                chromsizes = {k: chromsizes[k] for k in male_chromosomes}
+            elif self.collection == 'female':
+                chromsizes = {k: chromsizes[k] for k in female_chromosomes}
+            elif self.collection == 'all':
+                pass
+            elif self.collection in chromsizes:
+                chromsizes = {self.collection: chromsizes[self.collection]}
+            else:
+                raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
 
-        self.output().dump(chromsizes)
+            self.output().dump(chromsizes)

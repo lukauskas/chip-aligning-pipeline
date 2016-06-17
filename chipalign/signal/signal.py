@@ -8,11 +8,10 @@ import shutil
 import tarfile
 
 import luigi
-import pybedtools
 
 from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
-from chipalign.core.util import clean_bedtool_history
+from chipalign.core.util import autocleaning_pybedtools
 from chipalign.signal.peaks import MACSResults
 
 class Signal(Task):
@@ -91,74 +90,74 @@ class Signal(Task):
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
-        with self.temporary_directory():
+        with autocleaning_pybedtools() as pybedtools:
+            with self.temporary_directory():
 
-            macs_basename = MACSResults.OUTPUT_BASENAME
-            treat_pileup_filename = '{}_treat_pileup.bdg'.format(macs_basename)
-            control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
+                macs_basename = MACSResults.OUTPUT_BASENAME
+                treat_pileup_filename = '{}_treat_pileup.bdg'.format(macs_basename)
+                control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
 
-            logger.debug('Extracting files')
-            with tarfile.open(macs_callpeaks_files_abspath, 'r') as tf:
-                tf.extract(treat_pileup_filename)
-                tf.extract(control_lambda_filename)
+                logger.debug('Extracting files')
+                with tarfile.open(macs_callpeaks_files_abspath, 'r') as tf:
+                    tf.extract(treat_pileup_filename)
+                    tf.extract(control_lambda_filename)
 
-            logger.debug('Now running bdgcmp')
-            pval_signal_output_raw = 'pval.unclipped.signal'
-            macs2('bdgcmp',
-                  t=treat_pileup_filename,
-                  c=control_lambda_filename,
-                  o=pval_signal_output_raw,
-                  m='ppois',
-                  S=scaling_factor
-                  )
-            logger.info('Clipping the output')
+                logger.debug('Now running bdgcmp')
+                pval_signal_output_raw = 'pval.unclipped.signal'
+                macs2('bdgcmp',
+                      t=treat_pileup_filename,
+                      c=control_lambda_filename,
+                      o=pval_signal_output_raw,
+                      m='ppois',
+                      S=scaling_factor
+                      )
+                logger.info('Clipping the output')
 
-            tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
-                genome=self.treatment_task.genome_version)
-            tmp_bedtool.saveas(pval_signal_output_raw)
-            clean_bedtool_history(tmp_bedtool)
+                tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
+                    genome=self.treatment_task.genome_version)
+                tmp_bedtool.saveas(pval_signal_output_raw)
 
-            chromsizes_file = 'chromsizes'
-            pybedtools.chromsizes_to_file(self.treatment_task.genome_version, chromsizes_file)
-            pval_signal_output = 'pval.signal'
-            bedClip(pval_signal_output_raw, chromsizes_file, pval_signal_output)
-            os.unlink(pval_signal_output_raw)
+                chromsizes_file = 'chromsizes'
+                pybedtools.chromsizes_to_file(self.treatment_task.genome_version, chromsizes_file)
+                pval_signal_output = 'pval.signal'
+                bedClip(pval_signal_output_raw, chromsizes_file, pval_signal_output)
+                os.unlink(pval_signal_output_raw)
 
-            logger.info('Writing the output in a sorted order')
-            # MACS returns sorted signal output, but the chromosomes are in random order
-            # Let's fix that
-            chromosomes = set()
-            with open(pval_signal_output, 'r') as f:
-                for row in f:
-                    chrom, __, __ = row.partition('\t')
-                    chromosomes.add(chrom)
+                logger.info('Writing the output in a sorted order')
+                # MACS returns sorted signal output, but the chromosomes are in random order
+                # Let's fix that
+                chromosomes = set()
+                with open(pval_signal_output, 'r') as f:
+                    for row in f:
+                        chrom, __, __ = row.partition('\t')
+                        chromosomes.add(chrom)
 
-            sorted_chromosomes = sorted(chromosomes)
+                sorted_chromosomes = sorted(chromosomes)
 
-            tmp_gzip_file = 'output.gz'
-            with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
-                for chrom in sorted_chromosomes:
-                    logger.info('Processing chromosome: {}'.format(chrom))
+                tmp_gzip_file = 'output.gz'
+                with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
+                    for chrom in sorted_chromosomes:
+                        logger.info('Processing chromosome: {}'.format(chrom))
 
-                    # This loops through the input file, and writes it to out_ file chromosome by chromosome as defined
-                    # in sorted_chromosomes
-                    with open(pval_signal_output, 'r') as in_:
-                        seen_chrom = False
-                        for row in in_:
-                            in_chrom, __, __ = row.partition('\t')
+                        # This loops through the input file, and writes it to out_ file chromosome by chromosome as defined
+                        # in sorted_chromosomes
+                        with open(pval_signal_output, 'r') as in_:
+                            seen_chrom = False
+                            for row in in_:
+                                in_chrom, __, __ = row.partition('\t')
 
-                            # If chromosomes match, write it
-                            if chrom == in_chrom:
-                                out_.write(row)
-                                seen_chrom = True
-                            # Else either stop (if we already processed chromosome required)
-                            # .. or continue looking for it
-                            else:
-                                if seen_chrom:
-                                    break
+                                # If chromosomes match, write it
+                                if chrom == in_chrom:
+                                    out_.write(row)
+                                    seen_chrom = True
+                                # Else either stop (if we already processed chromosome required)
+                                # .. or continue looking for it
                                 else:
-                                    continue
+                                    if seen_chrom:
+                                        break
+                                    else:
+                                        continue
 
-            logger.info('Moving')
-            shutil.move(tmp_gzip_file, output_abspath)
-            logger.info('Done')
+                logger.info('Moving')
+                shutil.move(tmp_gzip_file, output_abspath)
+                logger.info('Done')
