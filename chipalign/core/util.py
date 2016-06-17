@@ -14,7 +14,7 @@ import shutil
 import logging
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
-_CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' in os.environ
+_CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' not in os.environ
 
 def config_from_file():
     import yaml
@@ -81,7 +81,7 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
 
     # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
     dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
-    # Encsure this directory exists
+    # Ensure this directory exists
     try:
         os.makedirs(dir_)
     except OSError:
@@ -102,6 +102,8 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
             # If exception, and cleanup_on_exception is set -- remove directory
             logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_dir))
             shutil.rmtree(temp_dir)
+        else:
+            logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_dir))
         raise
     finally:
         os.chdir(current_working_directory)
@@ -112,8 +114,11 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
 
 @contextmanager
 def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
+    prefix = kwargs.pop('prefix', default='tmp.chipalign')
+    # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
+    dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
 
-    __, temp_file = tempfile.mkstemp(**kwargs)
+    __, temp_file = tempfile.mkstemp(prefix=prefix, dir=dir_, **kwargs)
     if logger is None:
         logger = logging.getLogger('chipalign.core.util.temporary_file')
 
@@ -129,6 +134,9 @@ def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAU
             except OSError:
                 if os.path.isfile(temp_file):
                     raise
+        else:
+            logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_file))
+
         raise
 
     # If we are here, no exception occurred
