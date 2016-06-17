@@ -28,8 +28,9 @@ from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.database.roadmap.signal_tracks_list import SignalTracksList
 from chipalign.signal.bins import BinnedSignal
 
-INTERESTING_TFS = ['CBX5']
+INTERESTING_TFS = ['BPTF', 'PHF2', 'YNG1', 'ING4', 'TAF3', 'RAG2', 'PYGO', 'MLL1', 'JARID1A', 'BHC80', 'AIRE', 'DNMT3L', 'TRIM24', 'DPF3B', 'PHF19', 'GCN5', 'BMI1', 'PRC1', 'PRC2', 'RING1', 'RING2', 'JMJD5', 'JMJD6', 'UTX', 'UTY', 'JMJD3', 'CHD1', 'CHD2', 'CBX1', 'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
 
+INTERESTING_CELL_TYPES = ['E003', 'E017']
 
 class _BinnedSignalMeta(MetaTask):
     """
@@ -155,7 +156,7 @@ class TFSignalDataFrame(Task):
         :return:
         """
         df = {}
-        for key, task in binned_signal_tasks:
+        for key, task in binned_signal_tasks.items():
             df[key] = task.output().load()
 
         df = pd.DataFrame(df)
@@ -176,9 +177,14 @@ class TFSignalDataFrame(Task):
         logger.info('Loading metadata')
         metadata = self._load_metadata()
 
-        cell_types = metadata['roadmap_cell_type'].unique()
+        cell_types = list(metadata['roadmap_cell_type'].unique())
+	cell_types = cell_types + INTERESTING_CELL_TYPES
+
         logger.info('Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
         logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
+
+	found_tfs = metadata['target'].value_counts()
+	logger.debug('TFs found: {}'.format(found_tfs))
 
         # The code below assumes only one dataset per cell line.
         # Therefore lets make this explicit and fail if there are more.
