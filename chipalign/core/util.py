@@ -114,9 +114,12 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
 
 @contextmanager
 def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
-    prefix = kwargs.pop('prefix', default='tmp.chipalign')
+    prefix = kwargs.pop('prefix', 'tmp.chipalign')
     # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
     dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
+
+    if not os.path.isdir(dir_):
+        os.makedirs(dir_)
 
     __, temp_file = tempfile.mkstemp(prefix=prefix, dir=dir_, **kwargs)
     if logger is None:
