@@ -9,6 +9,7 @@ import luigi
 
 from chipalign.alignment.implementations.base import AlignedReadsBase
 from chipalign.alignment.implementations.bowtie.index import BowtieIndex
+from chipalign.core.util import timed_segment
 
 
 class AlignedReadsBowtie(AlignedReadsBase):
@@ -59,15 +60,15 @@ class AlignedReadsBowtie(AlignedReadsBase):
             bam_output_filename = 'alignments.bam'
             stdout_filename = 'stats.txt'
 
-            logger.info('Running bowtie')
-            bowtie2('-U', fastq_sequence_abspath,
-                    '-x', self.genome_version,
-                    '-p', self.number_of_processes,
-                    '--seed', self.seed,
-                    '-S', sam_output_filename,
-                    '--mm',
-                    _err=stdout_filename
-                    )
+            with timed_segment('Running bowtie', logger=logger):
+                bowtie2('-U', fastq_sequence_abspath,
+                        '-x', self.genome_version,
+                        '-p', self.number_of_processes,
+                        '--seed', self.seed,
+                        '-S', sam_output_filename,
+                        '--mm',
+                        _err=stdout_filename
+                        )
 
             logger.info('Converting SAM to BAM')
             samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
