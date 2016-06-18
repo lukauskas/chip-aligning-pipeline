@@ -15,24 +15,17 @@ class SRRSequence(Task):
     Takes three parameters:
 
     :param srr_identifier: the SRR identifier of the sequence
-    :param file_format: either `fastq` or `fasta`, default `fastq`
     :param spot_limit: Spot limit, equivalent to -X parameter in --fastq-dump (default: None -- no limit)
     """
 
     srr_identifier = luigi.Parameter()
-    file_format = luigi.Parameter(default='fastq')
 
     # Mostly for testing purposes -- equivalent to the -X parameter in --fastq-dump
     spot_limit = luigi.IntParameter(default=None)
 
     @property
     def _extension(self):
-        if self.file_format == 'fastq':
-            return 'fastq.gz'
-        elif self.file_format == 'fasta':
-            return 'fasta.gz'
-        else:
-            raise ValueError('File format not understood: {!r}'.format(self.file_format))
+        return 'fastq.gz'
 
     @property
     def parameters(self):
@@ -55,13 +48,7 @@ class SRRSequence(Task):
             if self.spot_limit:
                 args.extend(['-X', self.spot_limit])
 
-            if self.file_format == 'fasta':
-                args.append('--fasta')
-                fastq_file = '{}.fasta.gz'.format(self.srr_identifier)
-            elif self.file_format == 'fastq':
-                fastq_file = '{}.fastq.gz'.format(self.srr_identifier)
-            else:
-                raise ValueError('Unsupported file format {!r}'.format(self.file_format))
+            fastq_file = '{}.fastq.gz'.format(self.srr_identifier)
 
             fastq_dump(*args)
 
