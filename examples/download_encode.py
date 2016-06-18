@@ -16,7 +16,7 @@ from __future__ import division
 from __future__ import print_function
 
 import chipalign.core.task
-from chipalign.database.encode.downloaded_signal import EncodeDownloadedSignal
+from chipalign.database.encode.download import EncodeDownloadedSignal
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.signal.bins import BinnedSignal
 

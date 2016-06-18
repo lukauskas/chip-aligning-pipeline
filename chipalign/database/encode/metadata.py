@@ -15,6 +15,7 @@ def _find_roadmap(encode_cell_line):
     except KeyError:
         return None
 
+
 class EncodeTFMetadata(Task):
 
     genome_version = luigi.Parameter(default='hg19')

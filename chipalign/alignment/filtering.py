@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from itertools import imap, ifilter
 import luigi
-from chipalign.alignment.aligned_reads import AlignedSRR
+from chipalign.alignment.aligned_reads import AlignedReads
 from chipalign.core.task import Task
 from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools
 from chipalign.genome.chromosomes import Chromosomes
@@ -94,7 +94,7 @@ class FilteredReads(Task):
     # Task that will be aligned
     alignment_task = luigi.Parameter()
 
-    genome_version = AlignedSRR.genome_version
+    genome_version = AlignedReads.genome_version
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
 
     ignore_non_standard_chromosomes = luigi.BoolParameter(default=True)

@@ -9,7 +9,7 @@ import luigi
 from chipalign.core.file_formats.file import File
 from chipalign.core.task import Task
 from chipalign.core.util import ensure_directory_exists_for_file
-from chipalign.sequence.srr import SRRSequence
+from chipalign.sequence.short_reads import ShortReads
 
 
 class AlignedReadsBase(Task):
@@ -21,11 +21,12 @@ class AlignedReadsBase(Task):
 
     """
     genome_version = luigi.Parameter()
-    srr_identifier = SRRSequence.srr_identifier
+    source = ShortReads.source
+    accession = ShortReads.accession
 
     @property
     def fastq_task(self):
-        return SRRSequence(srr_identifier=self.srr_identifier)
+        return ShortReads(source=self.source, accession=self.accession)
 
     @property
     def index_task(self):

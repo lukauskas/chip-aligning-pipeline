@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import unittest
 import yaml
 from chipalign.sequence.metadata import _parse_fastq_read_header, FastqMetadata
-from chipalign.sequence.srr import SRRSequence
+from chipalign.sequence.short_reads import ShortReads
 from tests.helpers.task_test import TaskTestCase
 
 
@@ -32,7 +32,7 @@ class TestTestSequenceMetadataTask(TaskTestCase):
         srr_identifier = 'SRR001392'
         spot_limit = 5
 
-        fastq_sequence_task = SRRSequence(srr_identifier=srr_identifier, spot_limit=spot_limit)
+        fastq_sequence_task = ShortReads(srr_identifier=srr_identifier, spot_limit=spot_limit)
         sequence_metadata_task = FastqMetadata(fastq_sequence=fastq_sequence_task)
 
         self.build_task(sequence_metadata_task)

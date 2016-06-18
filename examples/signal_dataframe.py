@@ -18,7 +18,7 @@ import shutil
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task, MetaTask
 from chipalign.core.util import temporary_file
-from chipalign.database.encode.downloaded_signal import EncodeDownloadedSignal
+from chipalign.database.encode.download import EncodeDownloadedSignal
 from chipalign.database.encode.metadata import EncodeTFMetadata
 import pandas as pd
 import luigi

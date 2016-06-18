@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from chipalign.sequence import SRRSequence
+from chipalign.sequence import ShortReads
 from tests.helpers.task_test import TaskTestCase
 
 
@@ -12,7 +12,7 @@ class TestTestSequenceMetadataTask(TaskTestCase):
         srr_identifier = 'SRR001392'
         spot_limit = 2
 
-        fastq_sequence_task = SRRSequence(srr_identifier=srr_identifier, spot_limit=spot_limit)
+        fastq_sequence_task = ShortReads(srr_identifier=srr_identifier, spot_limit=spot_limit)
 
         expected_output = """@SRR001392.1 USI-EAS21_0019_3909:2:1:909:882 length=24
 GGGGTAACGGAGGCACAGATTTAA

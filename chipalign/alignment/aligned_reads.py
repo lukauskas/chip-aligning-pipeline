@@ -8,13 +8,14 @@ import luigi
 from chipalign.alignment.implementations.bowtie import AlignedReadsBowtie
 from chipalign.alignment.implementations.pash import AlignedReadsPash
 from chipalign.core.task import MetaTask
-from chipalign.sequence.srr import SRRSequence
+from chipalign.sequence.short_reads import ShortReads
 
 
-class AlignedSRR(MetaTask):
+class AlignedReads(MetaTask):
 
     genome_version = luigi.Parameter()
-    srr_identifier = SRRSequence.srr_identifier
+    source = ShortReads.source
+    accession = ShortReads.accession
 
     aligner = luigi.Parameter()
 
@@ -26,7 +27,9 @@ class AlignedSRR(MetaTask):
         else:
             raise Exception('Aligner {} is not supported'.format(self.aligner))
 
-        return class_(genome_version=self.genome_version, srr_identifier=self.srr_identifier)
+        return class_(genome_version=self.genome_version,
+                      source=self.source,
+                      accession=self.accession)
 
     @property
     def self_parameters(self):
@@ -37,4 +40,4 @@ class AlignedSRR(MetaTask):
 
     @property
     def task_class_friendly_name(self):
-        return 'SRR'
+        return 'AR'

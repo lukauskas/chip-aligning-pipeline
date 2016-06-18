@@ -10,33 +10,14 @@ from chipalign.core.task import Task
 from chipalign.database.core.downloaded_signal_base import DownloadedSignalBase
 
 
-def _encode_download_url(accession, file_type):
+def encode_download_url(accession, file_type):
     url = 'https://www.encodeproject.org/files/{accession}/@@download/{accession}.{file_type}'.format(
         accession=accession,
         file_type=file_type)
     return url
 
-
-def _fetch_from_encode(accession, file_type, output):
-    fetch(_encode_download_url(accession, file_type), output)
-
-
-class EncodeRawReads(Task):
-    """
-    Downloads the short reads from `ENCODE`_.
-    Should be a drop-in replacement for :class:`~chipalign.sequence.srr` task.
-    .. _ENCODE: https://www.encodeproject.org/
-    """
-
-    @property
-    def _extension(self):
-        return 'fastq.gz'
-
-    accession = luigi.Parameter()
-
-    def run(self):
-        with self.output().open('w') as output:
-            _fetch_from_encode(self.accession, 'fastq', output)
+def fetch_from_encode(accession, file_type, output):
+    fetch(encode_download_url(accession, file_type), output)
 
 
 class EncodeAlignedReads(Task):
@@ -58,7 +39,7 @@ class EncodeAlignedReads(Task):
 
     def run(self):
         with self.output().open('w') as output:
-            _fetch_from_encode(self.accession, 'bam', output)
+            fetch_from_encode(self.accession, 'bam', output)
 
     def bam_output(self):
         return self.output()
@@ -77,4 +58,4 @@ class EncodeDownloadedSignal(DownloadedSignalBase):
     accession = luigi.Parameter()
 
     def url(self):
-        return _encode_download_url(self.accession, 'bigWig')
+        return encode_download_url(self.accession, 'bigWig')
