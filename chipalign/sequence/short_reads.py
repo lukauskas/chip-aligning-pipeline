@@ -49,7 +49,7 @@ class ShortReads(Task):
         abspath = os.path.abspath(self.output().path)
         with temporary_file() as tf_name:
             with open(tf_name, 'w') as handle:
-                fetch_from_encode(self.accession, 'fastq.dz', handle)
+                fetch_from_encode(self.accession, 'fastq.gz', handle)
 
             shutil.move(tf_name, abspath)
 
