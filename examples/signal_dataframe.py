@@ -32,13 +32,9 @@ from chipalign.database.roadmap.metadata import roadmap_targets_for_cell_line, \
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.signal import Signal
 
-# INTERESTING_TFS = ['BPTF', 'PHF2', 'YNG1', 'ING4', 'TAF3', 'RAG2', 'PYGO', 'MLL1', 'JARID1A', 'BHC80',
-#                    'AIRE', 'DNMT3L', 'TRIM24', 'DPF3B', 'PHF19', 'GCN5', 'BMI1',
-#                    'PRC1', 'PRC2', 'RING1', 'RING2', 'JMJD5', 'JMJD6',
-#                    'UTX', 'UTY', 'JMJD3', 'CHD1', 'CHD2', 'CBX1',
-#                    'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
+INTERESTING_TFS = ['CHD1', 'CHD2', 'CBX1',
+                   'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
 
-INTERESTING_TFS = ['CHD1']
 INTERESTING_CELL_TYPES = ['E003', 'E017']
 
 
