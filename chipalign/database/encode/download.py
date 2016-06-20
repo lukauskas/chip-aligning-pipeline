@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
+
 import luigi
 
 from chipalign.core.downloader import fetch
@@ -17,7 +19,13 @@ def encode_download_url(accession, file_type):
     return url
 
 def fetch_from_encode(accession, file_type, output):
-    fetch(encode_download_url(accession, file_type), output)
+    logger = logging.getLogger('chipalign.database.encode.download.fetch_from_encode')
+    url = encode_download_url(accession, file_type)
+    try:
+        fetch(url, output)
+    except Exception as e:
+        logger.error('Error while downloading {}:\n{!r}'.format(url, e))
+        raise
 
 
 class EncodeAlignedReads(Task):

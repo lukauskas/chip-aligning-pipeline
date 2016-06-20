@@ -46,6 +46,7 @@ class EncodeTFMetadata(Task):
             data = pd.read_table(temp_filename)
             data['roadmap_cell_type'] = data['Biosample term name'].apply(_find_roadmap)
             data['target'] = data['Experiment target'].str.replace('-human$', '')
+            data['is_input'] = data['target'].apply(lambda x: 'control' in x.lower())
 
             def count_replicates(str_):
                 if str_ is None or (isinstance(str_, float) and np.isnan(str_)):

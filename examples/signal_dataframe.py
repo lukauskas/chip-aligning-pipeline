@@ -15,22 +15,71 @@ the output will be stored in directory configured in chipalign.yml, which in thi
 """
 import shutil
 
+from chipalign.alignment.consolidation import ConsolidatedReads
+from chipalign.alignment.filtering import FilteredReads
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task, MetaTask
 from chipalign.core.util import temporary_file
-from chipalign.database.encode.download import EncodeDownloadedSignal
+from chipalign.database.encode.download import EncodeDownloadedSignal, EncodeAlignedReads
 from chipalign.database.encode.metadata import EncodeTFMetadata
 import pandas as pd
 import luigi
 
-from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
+from chipalign.database.roadmap.downloaded_filtered_reads import RoadmapDownloadedFilteredReads
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
-from chipalign.database.roadmap.signal_tracks_list import SignalTracksList
+from chipalign.database.roadmap.metadata import roadmap_targets_for_cell_line, \
+    roadmap_consolidated_read_download_uris
 from chipalign.signal.bins import BinnedSignal
+from chipalign.signal.signal import Signal
 
-INTERESTING_TFS = ['BPTF', 'PHF2', 'YNG1', 'ING4', 'TAF3', 'RAG2', 'PYGO', 'MLL1', 'JARID1A', 'BHC80', 'AIRE', 'DNMT3L', 'TRIM24', 'DPF3B', 'PHF19', 'GCN5', 'BMI1', 'PRC1', 'PRC2', 'RING1', 'RING2', 'JMJD5', 'JMJD6', 'UTX', 'UTY', 'JMJD3', 'CHD1', 'CHD2', 'CBX1', 'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
+# INTERESTING_TFS = ['BPTF', 'PHF2', 'YNG1', 'ING4', 'TAF3', 'RAG2', 'PYGO', 'MLL1', 'JARID1A', 'BHC80',
+#                    'AIRE', 'DNMT3L', 'TRIM24', 'DPF3B', 'PHF19', 'GCN5', 'BMI1',
+#                    'PRC1', 'PRC2', 'RING1', 'RING2', 'JMJD5', 'JMJD6',
+#                    'UTX', 'UTY', 'JMJD3', 'CHD1', 'CHD2', 'CBX1',
+#                    'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
 
+INTERESTING_TFS = ['CHD1']
 INTERESTING_CELL_TYPES = ['E003', 'E017']
+
+
+class _ConsolidatedInputs(MetaTask):
+
+    cell_type = RoadmapMappableBins.cell_type
+    genome_version = RoadmapMappableBins.genome_version
+    encode_accessions_str = luigi.Parameter()
+
+    _parameter_names_to_hash = ('encode_accessions_str', )
+
+    def _roadmap_filtered_inputs(self):
+        uris = roadmap_consolidated_read_download_uris(self.cell_type, 'Input')
+        filtered_read_tasks = [RoadmapDownloadedFilteredReads(uri=uri,
+                                                              genome_version=self.genome_version) for uri in uris]
+        return filtered_read_tasks
+
+    @property
+    def metadata_task(self):
+        return EncodeTFMetadata(genome_version=self.genome_version)
+
+    def _encode_filtered_inputs(self):
+        ans = []
+        # passing as string works around luigis problems with serialising
+        encode_accessions = self.encode_accessions_str.split(';')
+
+        for accession in encode_accessions:
+            aligned_reads = EncodeAlignedReads(accession=accession)
+            filtered_reads = FilteredReads(genome_version=self.genome_version,
+                                           alignment_task=aligned_reads)
+
+            ans.append(filtered_reads)
+
+        return ans
+
+    def requires(self):
+        subtasks = self._roadmap_filtered_inputs()
+        subtasks.extend(self._encode_filtered_inputs())
+
+        return ConsolidatedReads(input_alignments=subtasks)
+
 
 class _BinnedSignalMeta(MetaTask):
     """
@@ -40,8 +89,19 @@ class _BinnedSignalMeta(MetaTask):
     cell_type = RoadmapMappableBins.cell_type
     binning_method = BinnedSignal.binning_method
 
-    def signal_task(self):
+    encode_input_accessions_str = luigi.Parameter()
+
+    def input_task(self):
+        return _ConsolidatedInputs(cell_type=self.cell_type,
+                                   genome_version=self.genome_version,
+                                   encode_accessions_str=self.encode_input_accessions_str)
+
+    def treatment_task(self):
         raise NotImplementedError
+
+    def signal_task(self):
+        return Signal(input_task=self.input_task(),
+                      treatment_task=self.treatment_task())
 
     def bins_task(self):
         return RoadmapMappableBins(genome_version=self.genome_version,
@@ -64,17 +124,33 @@ class _BinnedSignalMeta(MetaTask):
 class _RoadmapBinnedSignal(_BinnedSignalMeta):
     track = luigi.Parameter()
 
-    def signal_task(self):
-        return RoadmapDownloadedSignal(genome_version=self.genome_version,
-                                       cell_type=self.cell_type,
-                                       track=self.track)
+    def treatment_task(self):
+        uris = roadmap_consolidated_read_download_uris(self.cell_type,
+                                                       self.track)
+
+        filtered = [RoadmapDownloadedFilteredReads(uri=uri,
+                                                   genome_version=self.genome_version) for uri in uris]
+        return ConsolidatedReads(input_alignments=filtered)
 
 
 class _EncodeBinnedSignal(_BinnedSignalMeta):
-    accession = luigi.Parameter()
+    target_accessions_str = luigi.Parameter()
 
-    def signal_task(self):
-        return EncodeDownloadedSignal(accession=self.accession)
+    def treatment_task(self):
+        filtered = []
+
+        # luigi will automatically do a repr on the list if scheduled by yield
+        # work around this by pushing it as a semi-colon separated string
+        target_accessions = self.target_accessions_str.split(';')
+
+        for accession in target_accessions:
+            aligned_reads = EncodeAlignedReads(accession=accession)
+            filtered_reads = FilteredReads(genome_version=self.genome_version,
+                                           alignment_task=aligned_reads)
+
+            filtered.append(filtered_reads)
+
+        return ConsolidatedReads(input_alignments=filtered)
 
 class TFSignalDataFrame(Task):
 
@@ -105,43 +181,43 @@ class TFSignalDataFrame(Task):
         metadata = pd.read_csv(self.metadata_task.output().path)
         # Remove cell lines for which we have no roadmap data for
         metadata = metadata.dropna(subset=['roadmap_cell_type'])
-        # Drop all files that are non-signal-p-values
-        metadata = metadata[metadata['Output type'] == 'signal p-value']
+        # Only keep aligned reads
+        metadata = metadata[metadata['Output type'] == 'alignments']
         # Remove all targets that are not interesting
         # the replace command gets rid of the eGFP- and FLAG- bits
         # which indicate tags used to pull down
-        metadata = metadata[metadata['target'].str.replace('^eGFP-|FLAG-', '').isin(INTERESTING_TFS)]
+        tf_metadata = metadata[metadata['target'].str.replace('^eGFP-|FLAG-', '').isin(INTERESTING_TFS)]
 
-        # Get only the files that contain pooled data from multiple experiments
-        pooled_data = []
-        for experiment, group_ in metadata.groupby('Experiment accession'):
-            row = group_.loc[group_['n_replicates'].argmax()]
-            pooled_data.append(row)
+        logger = self.logger()
+        biosamples = tf_metadata['Biosample term id'].unique()
+        logger.debug('Biosample ids found: {!r}'.format(biosamples))
 
-        return pd.DataFrame(pooled_data)
+        input_metadata = metadata[metadata['Biosample term id'].isin(biosamples) & metadata['is_input']]
 
-    def _signal_track_list_task(self, cell_type):
+        return tf_metadata, input_metadata
+
+    def _roadmap_histone_target_list(self, cell_type):
         """
-        Creates signal track list task for cell type
         :param cell_type:
         :return:
         """
-        return SignalTracksList(genome_version=self.genome_version,
-                                cell_type=cell_type)
+        return roadmap_targets_for_cell_line(cell_type)
 
-    def _load_signal_tasks(self, signal_track_list_task):
+    def _load_histone_signal_tasks(self, cell_type, targets, input_accessions):
         """
         Loads signal tasks from SignalTrackList task
-        :param signal_track_list_task:
+        :param cell_type: cell type to use
+        :param target: targets
+        :param input_accessions: ENCODE accessions for the inputs from encode datasets
         :return:
         """
-        tracks = signal_track_list_task.output().load()
         ans = {}
-        for track in tracks:
-            signal = _RoadmapBinnedSignal(genome_version=signal_track_list_task.genome_version,
-                                          cell_type=signal_track_list_task.cell_type,
+        for track in targets:
+            signal = _RoadmapBinnedSignal(genome_version=self.genome_version,
+                                          cell_type=cell_type,
                                           track=track,
-                                          binning_method=self.binning_method)
+                                          binning_method=self.binning_method,
+                                          encode_input_accessions_str=';'.join(input_accessions))
 
             ans[track] = signal
         return ans
@@ -175,38 +251,35 @@ class TFSignalDataFrame(Task):
         logger.debug('Interesting TFs are: {!r}'.format(INTERESTING_TFS))
 
         logger.info('Loading metadata')
-        metadata = self._load_metadata()
+        metadata, input_metadata = self._load_metadata()
 
+        assert len(input_metadata) > 0
+
+        input_accessions = input_metadata['File accession'].unique()
+
+        logger.debug('Input accessions: {!r}'.format(input_accessions))
         cell_types = list(metadata['roadmap_cell_type'].unique())
-	cell_types = cell_types + INTERESTING_CELL_TYPES
+        cell_types = cell_types
 
         logger.info('Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
         logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
 
-	found_tfs = metadata['target'].value_counts()
-	logger.debug('TFs found: {}'.format(found_tfs))
-
-        # The code below assumes only one dataset per cell line.
-        # Therefore lets make this explicit and fail if there are more.
-        # Particularly, there are five TFs at the point of writing this that don't satisfy this
-        # condition
-        assert (metadata.groupby(['roadmap_cell_type', 'target']).count()['File format'] == 1).all()
+        found_tfs = metadata['target'].value_counts()
+        logger.debug('TFs found: {}'.format(found_tfs))
 
         logger.debug('Number of datasets found: {:,}'.format(len(metadata)))
 
         logger.info('Fetching available signals from roadmap')
 
         # Once we know the cell lines we can fetch the tracklist from roadmap
-        downloadable_signal_tasks = [self._signal_track_list_task(cell_type)
-                                     for cell_type in cell_types]
-
-        # this tells luigi that we need to wait for these tasks to finish before we can continue
-        yield downloadable_signal_tasks
+        roadmap_histone_targets = {cell_type: self._roadmap_histone_target_list(cell_type)
+                                   for cell_type in cell_types}
 
         # At this point we have response so we can create the histone tasks directly
         histone_signals = {}
-        for dst in downloadable_signal_tasks:
-            histone_signals[dst.cell_type] = self._load_signal_tasks(dst)
+        for cell_type, targets in roadmap_histone_targets.items():
+            histone_signals[cell_type] = self._load_histone_signal_tasks(cell_type,
+                                                                         targets, input_accessions)
 
         logger.debug('Got {:,} histone tasks'.format(sum(map(len, histone_signals.values()))))
 
@@ -215,13 +288,15 @@ class TFSignalDataFrame(Task):
         for cell_type in cell_types:
             cell_tf_signals = {}
             cell_metadata = metadata.query('roadmap_cell_type == @cell_type')
-            for ix, row in cell_metadata.iterrows():
-                target = row['target']
-                accession = row['File accession']
-                cell_tf_signals[target] = _EncodeBinnedSignal(accession=accession,
+            unique_targets_for_cell = cell_metadata['target'].unique()
+            for target in unique_targets_for_cell:
+                accessions = cell_metadata.query('target == @target')['File accession'].unique()
+
+                cell_tf_signals[target] = _EncodeBinnedSignal(target_accessions_str=';'.join(accessions),
                                                               cell_type=cell_type,
                                                               genome_version=self.genome_version,
-                                                              binning_method=self.binning_method)
+                                                              binning_method=self.binning_method,
+                                                              encode_input_accessions_str=';'.join(input_accessions))
 
             tf_signals[cell_type] = cell_tf_signals
 

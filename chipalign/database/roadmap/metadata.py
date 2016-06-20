@@ -70,8 +70,11 @@ def consolidated_filename_patterns(cell_type, target):
 
         clean_fnames = []
         for fname in fnames:
+            # For some of the filenames these are '1' or the cell type for some reason
+            if fname == '1' or (len(fname) == 4 and fname.startswith('E')):
+                continue
             # Not entirely sure why they give .bed.gz sometimes
-            if fname.endswith('.bed.gz'):
+            elif fname.endswith('.bed.gz'):
                 fname = fname.replace('.bed.gz', '.filt.tagAlign.gz')
 
             clean_fnames.append(fname)
@@ -80,7 +83,7 @@ def consolidated_filename_patterns(cell_type, target):
 
 
 @lru_cache(None)
-def consolidated_read_download_uris(cell_type, target):
+def roadmap_consolidated_read_download_uris(cell_type, target):
     patterns = consolidated_filename_patterns(cell_type, target)
     if not patterns:
         return []
@@ -137,7 +140,7 @@ def downloadable_unconsolidated_reads():
 
 
 @lru_cache(100)
-def targets_for_cell_line(cell_line):
+def roadmap_targets_for_cell_line(cell_line):
 
     metadata = consolidation_summary_metadata()
     tracks = metadata.loc[cell_line, 'Pool Filenames'].dropna().index

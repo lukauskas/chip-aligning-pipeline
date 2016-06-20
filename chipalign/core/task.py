@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
+import hashlib
 import inspect
 import logging
 import re
@@ -25,8 +27,12 @@ def _file_safe_string(value):
     value = re.sub('__+', '_', value)
     return value.strip('_')
 
-def _collapse_parameters(luigi_params, param_kwargs):
+def _collapse_parameters(luigi_params, param_kwargs, hash_params=None):
     ans = []
+
+    if hash_params is None:
+        hash_params = set()
+
     for param_name, param in luigi_params:
         if param.significant:
             value = param_kwargs[param_name]
@@ -36,22 +42,29 @@ def _collapse_parameters(luigi_params, param_kwargs):
             else:
                 param_values = [value]
 
+            param_ans = []
             for param_value in param_values:
                 if isinstance(param_value, Task) or isinstance(param_value, MetaTask):
                     # If we got a Task object as a parameter
 
                     # Add the friendly name of the task to our parameters
-                    ans.append(param_value.task_class_friendly_name)
+                    param_ans.append(param_value.task_class_friendly_name)
                     # Add the parameters of the task to our parameters
-                    ans.extend(param_value.parameters)
+                    param_ans.extend(param_value.parameters)
                 else:
                     # Else just add parameter
-                    ans.append(param_value)
+                    param_ans.append(param_value)
+
+            if param_name in hash_params:
+                ans.extend(hashlib.sha1(str(param_ans)).hexdigest()[:8])
+            else:
+                ans.extend(param_ans)
     return ans
 
 
 class Task(luigi.Task):
     _MAX_LENGTH_FOR_FILENAME = 255 - len('-luigi-tmp-10000000000')
+    _parameter_names_to_hash = None
 
     def __init__(self, *args, **kwargs):
         super(Task, self).__init__(*args, **kwargs)
@@ -70,7 +83,8 @@ class Task(luigi.Task):
         param_kwargs = self.param_kwargs
 
         # Create the parameters array from significant parameters list
-        ans = _collapse_parameters(luigi_params, param_kwargs)
+        ans = _collapse_parameters(luigi_params, param_kwargs,
+                                   hash_params=self._parameter_names_to_hash)
 
         return ans
 
@@ -222,6 +236,8 @@ class Task(luigi.Task):
         return file_modification_time(cls._implementation_file())
 
 class MetaTask(luigi.Task):
+    _parameter_names_to_hash = None
+
     @property
     def task_class_friendly_name(self):
         return self.__class__.__name__
@@ -253,6 +269,6 @@ class MetaTask(luigi.Task):
         param_kwargs = self.param_kwargs
 
         # Create the parameters array from significant parameters list
-        ans = _collapse_parameters(luigi_params, param_kwargs)
+        ans = _collapse_parameters(luigi_params, param_kwargs, hash_params=self._parameter_names_to_hash)
 
         return ans

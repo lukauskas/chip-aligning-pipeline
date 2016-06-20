@@ -46,6 +46,8 @@ class ConsolidatedReads(Task):
 
     use_only_standard_chromosomes = luigi.BoolParameter(default=True)
 
+    _parameter_names_to_hash = ('input_alignments', )
+
     @property
     def genome_version(self):
         genome_version = None

@@ -23,6 +23,7 @@ class RoadmapDownloadedFilteredReads(Task):
     .. seealso:: :func:`~chipalign.database.roadmap.settings.downloadable_unconsolidated_reads`
     """
 
+    genome_version = luigi.Parameter(significant=False)  # Genome version (ConsolidatedReads Task requires it)
     uri = luigi.Parameter()  # URI of the read to download
 
     @property
@@ -41,7 +42,7 @@ class RoadmapDownloadedFilteredReads(Task):
 
     def run(self):
         logger = self.logger()
-        url = self.url()
+        url = self.uri
 
         self.ensure_output_directory_exists()
 

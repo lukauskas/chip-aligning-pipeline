@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import chipalign.database.roadmap.settings as roadmap_settings
+import chipalign.database.roadmap.metadata as roadmap_settings
 import luigi
 import pandas as pd
 from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
