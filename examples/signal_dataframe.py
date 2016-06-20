@@ -255,7 +255,7 @@ class TFSignalDataFrame(Task):
 
         logger.debug('Input accessions: {!r}'.format(input_accessions))
         cell_types = list(metadata['roadmap_cell_type'].unique())
-        cell_types = cell_types
+        cell_types = cell_types + INTERESTING_CELL_TYPES
 
         logger.info('Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
         logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
