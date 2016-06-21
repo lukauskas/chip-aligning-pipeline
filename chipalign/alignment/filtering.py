@@ -6,42 +6,25 @@ from itertools import imap, ifilter
 import luigi
 from chipalign.alignment.aligned_reads import AlignedReads
 from chipalign.core.task import Task
-from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools
+from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools, temporary_file
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack
+import pandas as pd
+
+def _remove_duplicate_reads(bedtools_df):
+
+    ans = bedtools_df.copy()
+    ans['pos'] = ans.apply(lambda x: x.end if x.strand == '-' else x.start,
+                           axis=1)
+
+    ans = ans.drop_duplicates(subset=['strand', 'chrom', 'pos'], keep=False)
+    del ans['pos']
+
+    return ans
 
 
-def _remove_duplicates_from_bed(bedtools_object, pybedtools):
-
-    def _key_for_row(row):
-        if row.strand == '+':
-            return row.strand, row.chrom, row.start
-        elif row.strand == '-':
-            return row.strand, row.chrom, row.end
-        else:
-            raise Exception('No strand information for {!r}'.format(bed_row))
-
-    seen_once = set({})
-    seen_more_than_once = set({})
-
-    for bed_row in bedtools_object:
-
-        key = _key_for_row(bed_row)
-
-        if key in seen_once:
-            seen_more_than_once.add(key)
-
-        seen_once.add(key)
-
-    del seen_once  # Just in case we need to free up some memory
-
-    filtered_data = ifilter(lambda x: _key_for_row(x) not in seen_more_than_once, bedtools_object)
-    return fast_bedtool_from_iterable(filtered_data, pybedtools)
-
-
-def _resize_reads(bedtools_object, new_length,
+def _resize_reads(bedtools_df, new_length,
                   chromsizes,
-                  pybedtools,
                   can_extend=True,
                   can_shorten=True):
 
@@ -64,15 +47,9 @@ def _resize_reads(bedtools_object, new_length,
             raise Exception('Data without strand information provided to _resize_reads')
 
         return row
+    new_data = bedtools_df.apply(_resizing_function, axis=1)
+    return new_data
 
-    new_data = imap(_resizing_function, bedtools_object)
-    return fast_bedtool_from_iterable(new_data, pybedtools)
-
-def _filter_chromosomes(bedtools_object, allowed_chromosomes, pybedtools):
-    allowed_chromosomes = frozenset(allowed_chromosomes)
-
-    new_data = ifilter(lambda x: x.chrom in allowed_chromosomes, bedtools_object)
-    return fast_bedtool_from_iterable(new_data, pybedtools)
 
 class FilteredReads(Task):
     """
@@ -139,47 +116,50 @@ class FilteredReads(Task):
             mapped_reads = pybedtools.BedTool(bam_output)
             logger.info('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
+            del mapped_reads  # so we don't accidentally use it
+            mapped_reads_df = mapped_reads.to_dataframe()
 
             if self.ignore_non_standard_chromosomes:
                 logger.info('Leaving only reads within standard chromosomes')
-                standard_chromosomes = self.standard_chromosomes_task.output().load().keys()
+                standard_chromosomes = frozenset(self.standard_chromosomes_task.output().load().keys())
                 logger.debug('Standard chromosomes: {}'.format(standard_chromosomes))
-                _len_before = mapped_reads.count()
-                mapped_reads = _filter_chromosomes(mapped_reads, standard_chromosomes, pybedtools)
-                logger.debug('Number of reads removed: {}'.format(_len_before - mapped_reads.count()))
+                _len_before = len(mapped_reads_df)
+                mapped_reads_df = mapped_reads_df[mapped_reads_df.chrom.isin(standard_chromosomes)]
+                _len_after = len(mapped_reads_df)
+                logger.debug('Number of reads removed: {:,}'.format(_len_before - _len_after))
 
             if self.resized_length > 0:
                 logger.info('Truncating reads to {} base pairs'.format(self.resized_length))
-                resized_reads = _resize_reads(mapped_reads,
-                                              new_length=self.resized_length,
-                                              chromsizes=pybedtools.chromsizes(self.genome_version),
-                                              can_shorten=True,
-                                              # According to the Roadmap protocol
-                                              # this should be false
-                                              # but since the reads they are pre-processing are 200 bp long
-                                              # and we are working with raw reads, some datasets actually have shorter
-                                              # ones. Meaning their mappability unification routine is a bit off.
-                                              can_extend=True,
-                                              pybedtools=pybedtools,
-                                              )
 
-                mapped_reads.delete_temporary_history(ask=False)
-                mapped_reads = resized_reads
+                mapped_reads_df = _resize_reads(mapped_reads_df,
+                                                new_length=self.resized_length,
+                                                chromsizes=pybedtools.chromsizes(
+                                                    self.genome_version),
+                                                can_shorten=True,
+                                                # According to the Roadmap protocol
+                                                # this should be false
+                                                # but since the reads they are pre-processing are 200 bp long
+                                                # and we are working with raw reads, some datasets actually have shorter
+                                                # ones. Meaning their mappability unification routine is a bit off.
+                                                can_extend=True,
+                                                )
 
-            logger.info('Removing duplicates. Length before: {}'.format(mapped_reads.count()))
-            mapped_reads = _remove_duplicates_from_bed(mapped_reads, pybedtools)
-            logger.info('Done removing duplicates. Length after: {}'.format(mapped_reads.count()))
+            logger.info('Removing duplicates. Length before: {:,}'.format(len(mapped_reads_df)))
+            mapped_reads_df = _remove_duplicate_reads(mapped_reads_df)
+            logger.info('Done removing duplicates. Length after: {:,}'.format(len(mapped_reads_df)))
 
             logger.info('Filtering uniquely mappable')
-            mapped_reads = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads, pybedtools)
+            mapped_reads_df = self._mappability_task.output().load().filter_uniquely_mappables(mapped_reads,
+                                                                                            pybedtools)
 
             logger.info('Sorting reads')
-            mapped_reads = mapped_reads.sort()
+            mapped_reads_df = mapped_reads_df.sort(['chrom', 'start', 'end'])
 
             logger.info('Writing to file')
             with self.output().open('w') as f:
 
-                for row in mapped_reads:
+                for __, row in mapped_reads_df.iterrows():
                     row.name = 'N'  # The alignments from ROADMAP have this
                     row.score = '1000'  # And this... for some reason
-                    f.write(str(row))
+                    template = '{row.chrom}\t{row.start}\t{row.end}\t{row.name}\t{row.score}\t{row.strand}'
+                    f.write(template.format(row))
