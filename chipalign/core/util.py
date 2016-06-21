@@ -166,7 +166,13 @@ def autocleaning_pybedtools():
     logger = logging.getLogger('chipalign.core.util.autocleaning_pybedtools')
     dir_ = os.path.join(output_dir(), '.tmp/.pybedtools/')
     if not os.path.isdir(dir_):
-        os.makedirs(dir_)
+        try:
+            os.makedirs(dir_)
+        except OSError:
+            # Sometimes due to race conditions we will try to create the dir multiple times
+            # Detect such case and ignore the error if it happens, else raise it
+            if not os.path.isdir(dir_):
+                raise
     pybedtools.set_tempdir(dir_)
 
     try:
