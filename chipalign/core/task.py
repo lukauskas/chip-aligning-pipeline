@@ -56,7 +56,7 @@ def _collapse_parameters(luigi_params, param_kwargs, hash_params=None):
                     param_ans.append(param_value)
 
             if param_name in hash_params:
-                ans.extend(hashlib.sha1(str(param_ans)).hexdigest()[:8])
+                ans.append(hashlib.sha1(str(param_ans)).hexdigest()[:8])
             else:
                 ans.extend(param_ans)
     return ans
