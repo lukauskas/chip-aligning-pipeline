@@ -4,12 +4,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import unittest
 
-import pybedtools
-
 from chipalign.alignment.filtering import _remove_duplicates_from_bed, _resize_reads
 
+import pybedtools
 
 class TestFiltering(unittest.TestCase):
+
     def sample_data(self):
         data = [
             ('chr1', '10', '30', 'duplicate-a1', '99', '+'),
@@ -35,7 +35,7 @@ class TestFiltering(unittest.TestCase):
     def test_duplicate_filtering_works(self):
         input_, expected_output = self.sample_data()
 
-        output_ = _remove_duplicates_from_bed(input_)
+        output_ = _remove_duplicates_from_bed(input_, pybedtools)
 
         self.assertEqual(expected_output, output_,
                          msg='Outputs not equal.\nExpected:\n{}\n\nActual:\n{}'.format(expected_output, output_))
@@ -43,7 +43,6 @@ class TestFiltering(unittest.TestCase):
 
 class TestResizing(unittest.TestCase):
     def test_resizing_produces_correct_length(self):
-
         data = [
             # Need to shorten
             ('chr1', '10', '30', 'a', '99', '+'),  # Length: 20
@@ -60,11 +59,12 @@ class TestResizing(unittest.TestCase):
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
         new_length = 20
-
         actual_output = _resize_reads(input_, new_length=new_length,
                                       chromsizes=chromsizes,
                                       can_shorten=True,
-                                      can_extend=True)
+                                      can_extend=True,
+                                      pybedtools=pybedtools
+                                      )
 
         lengths = map(lambda x: x.length, actual_output)
         lengths_equal_to_truncation_length = [l == new_length for l in lengths]
@@ -95,7 +95,6 @@ class TestResizing(unittest.TestCase):
             ('chr1', '10', '30', 'e', '99', '+'),  # Length: 5
             ('chr2', '40', '60', 'f', '99', '-')  # Length: 10
         ]
-
         input_ = pybedtools.BedTool(data)
         expected_output = pybedtools.BedTool(new_data)
 
@@ -105,12 +104,14 @@ class TestResizing(unittest.TestCase):
         actual_output = _resize_reads(input_, new_length=new_length,
                                       chromsizes=chromsizes,
                                       can_shorten=True,
-                                      can_extend=True)
+                                      can_extend=True,
+                                      pybedtools=pybedtools)
 
         self.assertEqual(expected_output, actual_output,
                          msg="Expected:\n{}\nActual:\n{}".format(expected_output, actual_output))
 
     def test_resizing_raises_exception_if_needed(self):
+
         shorten_data = [
             # Need to shorten
             ('chr1', '18', '68', 'b', '99', '-'),  # Length: 50
@@ -132,7 +133,8 @@ class TestResizing(unittest.TestCase):
             _resize_reads(pybedtools.BedTool(shorten_data),
                           new_length, chromsizes=chromsizes,
                           can_shorten=True,
-                          can_extend=False)
+                          can_extend=False,
+                          pybedtools=pybedtools)
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
 
@@ -141,14 +143,16 @@ class TestResizing(unittest.TestCase):
                           pybedtools.BedTool(shorten_data + [extend_data[0]]),
                           new_length, chromsizes=chromsizes,
                           can_shorten=True,
-                          can_extend=False
+                          can_extend=False,
+                          pybedtools=pybedtools
                           )
 
         try:
             _resize_reads(pybedtools.BedTool(extend_data),
                           new_length, chromsizes=chromsizes,
                           can_shorten=False,
-                          can_extend=True)
+                          can_extend=True,
+                          pybedtools=pybedtools)
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
 
@@ -184,7 +188,8 @@ class TestResizing(unittest.TestCase):
         actual_output = _resize_reads(input_, new_length=new_length,
                                       chromsizes=chromsizes,
                                       can_shorten=True,
-                                      can_extend=True)
+                                      can_extend=True,
+                                      pybedtools=pybedtools)
 
         self.assertEqual(expected_output, actual_output,
                          msg="Expected:\n{}\nActual:\n{}".format(expected_output, actual_output))
