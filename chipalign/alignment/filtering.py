@@ -116,8 +116,9 @@ class FilteredReads(Task):
             mapped_reads = pybedtools.BedTool(bam_output)
             logger.info('Converting BAM to BED')
             mapped_reads = mapped_reads.bam_to_bed()
-            del mapped_reads  # so we don't accidentally use it
+
             mapped_reads_df = mapped_reads.to_dataframe()
+            del mapped_reads  # so we don't accidentally use it
 
             if self.ignore_non_standard_chromosomes:
                 logger.info('Leaving only reads within standard chromosomes')
