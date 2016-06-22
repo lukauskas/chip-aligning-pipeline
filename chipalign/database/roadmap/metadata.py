@@ -151,4 +151,7 @@ def roadmap_targets_for_cell_line(cell_line):
                and track != 'WGBS' and track != 'mCRF'
 
     tracks = filter(is_histone, tracks)
+    tracks = [track for track in tracks
+              if roadmap_consolidated_read_download_uris(cell_line, track)]
+
     return tracks

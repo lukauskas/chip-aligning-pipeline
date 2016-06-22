@@ -17,6 +17,7 @@ from chipalign.core.util import fast_bedtool_from_iterable, timed_segment, autoc
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
 from chipalign.core.file_formats.file import File
+import pandas as pd
 
 
 class MappabilityTrack(object):
@@ -29,13 +30,14 @@ class MappabilityTrack(object):
     def __init__(self, lookup_dict):
         self.__lookup_dict = lookup_dict
 
-    def filter_uniquely_mappables(self, bedtool, pybedtools):
+    def filter_uniquely_mappables(self, bedtool_df):
         logger = logging.getLogger(self.__class__.__name__)
-        chromosomes = set(imap(lambda x: x.chrom, bedtool))
+        chromosomes = bedtool_df.chrom.unique()
         chromosomes_in_mappability_track = set(self.__lookup_dict.keys())
 
-        logger.info('Chromosomes in bedtool: {}, chromosomes in mappability: {}'.format(chromosomes, chromosomes_in_mappability_track))
-        chromosomes_not_in_mappability_track = chromosomes - chromosomes_in_mappability_track
+        logger.info('Chromosomes in bedtool: {}, chromosomes in mappability: {}'.format(chromosomes,
+                                                                                        chromosomes_in_mappability_track))
+        chromosomes_not_in_mappability_track = set(chromosomes) - chromosomes_in_mappability_track
         if chromosomes_not_in_mappability_track:
             raise Exception('No mappability track for chromosomes {}.'.format(
                 sorted(chromosomes_not_in_mappability_track)))
@@ -45,24 +47,22 @@ class MappabilityTrack(object):
             logger.debug('Processing {}'.format(chromosome))
             chromosome_lookup = self.__lookup_dict[chromosome]
 
-            reads_for_chromosome = filter(lambda x: x.chrom == chromosome,
-                                          bedtool)
+            chromosome_df = bedtool_df[bedtool_df.chrom == chromosome]
 
             logger.debug(
-                'Processing {} reads'.format(len(reads_for_chromosome)))
+                'Processing {:,} reads'.format(len(chromosome_df)))
 
             # Now the start coordinate is the one we need to check, irregardless of strand
             # this is how one should interpret the README
             # http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
-            is_unique = lambda x: chromosome_lookup[x.start]
-
-            chromosome_answer = filter(is_unique, reads_for_chromosome)
+            unique = chromosome_df.start.apply(lambda x: chromosome_lookup[x])
+            chromosome_df = chromosome_df[unique]
 
             logger.debug('Done. Extending answer')
-            answer.extend(chromosome_answer)
+            answer.append(chromosome_df)
             logger.debug('Done')
 
-        return fast_bedtool_from_iterable(answer, pybedtools)
+        return pd.concat(answer)
 
     @classmethod
     def maximum_mappability_score_for_bin(cls, bin_width, read_length,

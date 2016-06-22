@@ -4,7 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import unittest
 
-from chipalign.alignment.filtering import _remove_duplicates_from_bed, _resize_reads
+from numpy.testing import assert_array_equal
+from pandas.util.testing import assert_frame_equal
+
+from chipalign.alignment.filtering import _remove_duplicate_reads, _resize_reads
 
 import pybedtools
 
@@ -35,10 +38,19 @@ class TestFiltering(unittest.TestCase):
     def test_duplicate_filtering_works(self):
         input_, expected_output = self.sample_data()
 
-        output_ = _remove_duplicates_from_bed(input_, pybedtools)
+        input_ = input_.to_dataframe()
+        expected_output = expected_output.to_dataframe()
 
-        self.assertEqual(expected_output, output_,
-                         msg='Outputs not equal.\nExpected:\n{}\n\nActual:\n{}'.format(expected_output, output_))
+        output_ = _remove_duplicate_reads(input_)
+
+        expected_output_sorted = expected_output.sort(['chrom', 'start', 'end', 'strand'])
+        expected_output_sorted = expected_output_sorted[['chrom', 'start', 'end', 'strand']]
+
+        output_sorted = output_.sort(['chrom', 'start', 'end', 'strand'])
+        output_sorted = output_sorted[['chrom', 'start', 'end', 'strand']]
+
+        assert_array_equal(expected_output_sorted.values, output_sorted.values)
+        self.assertTrue(output_.columns.equals(expected_output.columns))
 
 
 class TestResizing(unittest.TestCase):
@@ -53,7 +65,7 @@ class TestResizing(unittest.TestCase):
             ('chr1', '10', '15', 'e', '99', '+'),  # Length: 5
             ('chr2', '50', '60', 'f', '99', '-')  # Length: 10
         ]
-        input_ = pybedtools.BedTool(data)
+        input_ = pybedtools.BedTool(data).to_dataframe()
 
         # Large enough so we do not need to worry about boundaries
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
@@ -61,12 +73,9 @@ class TestResizing(unittest.TestCase):
         new_length = 20
         actual_output = _resize_reads(input_, new_length=new_length,
                                       chromsizes=chromsizes,
-                                      can_shorten=True,
-                                      can_extend=True,
-                                      pybedtools=pybedtools
                                       )
 
-        lengths = map(lambda x: x.length, actual_output)
+        lengths = (actual_output.end - actual_output.start).abs()
         lengths_equal_to_truncation_length = [l == new_length for l in lengths]
         self.assertTrue(all(lengths_equal_to_truncation_length), repr(lengths))
 
@@ -95,20 +104,17 @@ class TestResizing(unittest.TestCase):
             ('chr1', '10', '30', 'e', '99', '+'),  # Length: 5
             ('chr2', '40', '60', 'f', '99', '-')  # Length: 10
         ]
-        input_ = pybedtools.BedTool(data)
-        expected_output = pybedtools.BedTool(new_data)
+
+        input_ = pybedtools.BedTool(data).to_dataframe()
+        expected_output = pybedtools.BedTool(new_data).to_dataframe()
 
         # Large enough so we do not need to worry about boundaries
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
         actual_output = _resize_reads(input_, new_length=new_length,
-                                      chromsizes=chromsizes,
-                                      can_shorten=True,
-                                      can_extend=True,
-                                      pybedtools=pybedtools)
+                                      chromsizes=chromsizes)
 
-        self.assertEqual(expected_output, actual_output,
-                         msg="Expected:\n{}\nActual:\n{}".format(expected_output, actual_output))
+        assert_frame_equal(expected_output, actual_output)
 
     def test_resizing_raises_exception_if_needed(self):
 
@@ -130,11 +136,9 @@ class TestResizing(unittest.TestCase):
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
         try:
-            _resize_reads(pybedtools.BedTool(shorten_data),
+            _resize_reads(pybedtools.BedTool(shorten_data).to_dataframe(),
                           new_length, chromsizes=chromsizes,
-                          can_shorten=True,
-                          can_extend=False,
-                          pybedtools=pybedtools)
+                          )
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
 
@@ -142,27 +146,14 @@ class TestResizing(unittest.TestCase):
                           _resize_reads,
                           pybedtools.BedTool(shorten_data + [extend_data[0]]),
                           new_length, chromsizes=chromsizes,
-                          can_shorten=True,
-                          can_extend=False,
                           pybedtools=pybedtools
                           )
 
         try:
-            _resize_reads(pybedtools.BedTool(extend_data),
-                          new_length, chromsizes=chromsizes,
-                          can_shorten=False,
-                          can_extend=True,
-                          pybedtools=pybedtools)
+            _resize_reads(pybedtools.BedTool(extend_data).to_dataframe(),
+                          new_length, chromsizes=chromsizes)
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
-
-        self.assertRaises(Exception,
-                          _resize_reads,
-                          pybedtools.BedTool(extend_data + [shorten_data[0]]),
-                          new_length, chromsizes=chromsizes,
-                          can_shorten=False,
-                          can_extend=True
-                          )
 
     def test_resizing_respects_chromosome_bounds(self):
 
@@ -182,14 +173,10 @@ class TestResizing(unittest.TestCase):
         # Specific, and rather unusual boundaries
         chromsizes = {'chr1': (0, 35), 'chr2': (2, 300)}
 
-        input_ = pybedtools.BedTool(data)
-        expected_output = pybedtools.BedTool(new_data)
+        input_ = pybedtools.BedTool(data).to_dataframe()
+        expected_output = pybedtools.BedTool(new_data).to_dataframe()
 
         actual_output = _resize_reads(input_, new_length=new_length,
-                                      chromsizes=chromsizes,
-                                      can_shorten=True,
-                                      can_extend=True,
-                                      pybedtools=pybedtools)
+                                      chromsizes=chromsizes)
 
-        self.assertEqual(expected_output, actual_output,
-                         msg="Expected:\n{}\nActual:\n{}".format(expected_output, actual_output))
+        assert_frame_equal(expected_output, actual_output)

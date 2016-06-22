@@ -123,7 +123,8 @@ class _RoadmapBinnedSignal(_BinnedSignalMeta):
     def treatment_task(self):
         uris = roadmap_consolidated_read_download_uris(self.cell_type,
                                                        self.track)
-
+        assert len(uris) > 0, 'No uris returned: {!r} for {}, {}'.format(uris,
+                                                                         self.cell_type, self.track)
         filtered = [RoadmapDownloadedFilteredReads(uri=uri,
                                                    genome_version=self.genome_version) for uri in uris]
         return ConsolidatedReads(input_alignments=filtered)
