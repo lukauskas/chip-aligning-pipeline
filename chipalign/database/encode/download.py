@@ -4,11 +4,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import shutil
 
 import luigi
 
 from chipalign.core.downloader import fetch
 from chipalign.core.task import Task
+from chipalign.core.util import temporary_file, autocleaning_pybedtools, capture_output
 from chipalign.database.core.downloaded_signal_base import DownloadedSignalBase
 
 
@@ -45,9 +47,47 @@ class EncodeAlignedReads(Task):
     def _extension(self):
         return 'bam'
 
+    def _download_file_and_verify(self):
+
+        with temporary_file() as tf:
+            with open(tf, 'w') as handle:
+                fetch_from_encode(self.accession, 'bam', handle)
+
+            # Verify integrity of BAM file
+            with autocleaning_pybedtools() as pybedtools:
+                with capture_output() as output:
+                    bed = pybedtools.BedTool(tf).bam_to_bed()
+
+            if output['stdout'] or output['stderr']:
+                joint_output = ''.join([output['stdout'], output['stderr']])
+                raise Exception(
+                    'Not empty output while loading BAM file: {}'.format(joint_output))
+            else:
+                # Otherwise integrity has been verified
+                shutil.move(tf, self.output().path)
+
     def run(self):
-        with self.output().open('w') as output:
-            fetch_from_encode(self.accession, 'bam', output)
+        self.ensure_output_directory_exists()
+
+        attempt_number = 0
+        n_attempts = 2
+
+        while attempt_number < n_attempts:
+            attempt_number += 1
+            try:
+                self._download_file_and_verify()
+            except Exception as e:
+                if attempt_number == n_attempts:
+                    logging.error('Got {} while verifying the file, '
+                                  'exhausted number of attempts'.format(e))
+                    raise
+                else:
+                    logging.warning('Got {} while verifying the file, '
+                                    'attempting to redownload'.format(e))
+                    continue
+            else:
+                # No error - no need to do second attempt
+                break
 
     def bam_output(self):
         return self.output()

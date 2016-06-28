@@ -3,15 +3,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from cStringIO import StringIO
 from contextlib import contextmanager
 import datetime
-from functools import wraps
 from itertools import imap
 import os.path
 import tempfile
 import os
 import shutil
 import logging
+import sys
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
 _CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' not in os.environ
@@ -30,7 +31,7 @@ def output_dir():
     try:
         return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
     except KeyError:
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = get_config()['output_directory']
+        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = os.path.abspath(get_config()['output_directory'])
         return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
 
 def ensure_directory_exists_for_file(filename):
@@ -97,20 +98,36 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
         logger.debug('Working on: {}'.format(temp_dir))
         os.chdir(temp_dir)
         yield temp_dir
-    except:
+    except BaseException as main_exception:
+        os.chdir(current_working_directory)
         if cleanup_on_exception:
             # If exception, and cleanup_on_exception is set -- remove directory
             logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_dir))
-            shutil.rmtree(temp_dir)
+
+            try:
+                shutil.rmtree(temp_dir)
+            except OSError as e:
+                if os.path.isdir(temp_dir):
+                    logger.error('Error while removing {}: got {!r}'.format(temp_dir, e))
+                    # do not re-raise as not to hide main exception
+                else:
+                    logger.warning(
+                        'Tried to remove {}, but it was already deleted'.format(temp_dir))
         else:
             logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_dir))
-        raise
-    finally:
+        raise main_exception
+    else:
         os.chdir(current_working_directory)
-
-    # No exception case - remove always
-    logger.debug('Removing {}'.format(temp_dir))
-    shutil.rmtree(temp_dir)
+        # No exception case - remove always
+        logger.debug('Removing {}'.format(temp_dir))
+        try:
+            shutil.rmtree(temp_dir)
+        except OSError as e:
+            if os.path.isdir(temp_dir):
+                logger.error('Error while removing {}: got {!r}'.format(temp_dir, e))
+                raise
+            else:
+                logger.warning('Tried to remove {}, but it was already deleted'.format(temp_dir))
 
 @contextmanager
 def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
@@ -128,19 +145,20 @@ def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAU
     try:
         logger.debug('Working with temporary file: {}'.format(temp_file))
         yield temp_file
-    except:
+    except BaseException as main_exception:
         if cleanup_on_exception:
             # If exception, and cleanup_on_exception is set -- remove file
             logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_file))
             try:
                 os.unlink(temp_file)
-            except OSError:
+            except OSError as e:
                 if os.path.isfile(temp_file):
-                    raise
+                    logger.error('Error while removing {}, got {!r}'.format(temp_file, e))
+                    # Do not re-raise as not to hide the main exception
         else:
             logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_file))
 
-        raise
+        raise main_exception
 
     # If we are here, no exception occurred
     logger.debug('Removing {}'.format(temp_file))
@@ -164,7 +182,7 @@ def autocleaning_pybedtools():
                         'Maybe you\'re nesting `autocleaning_pybedtools` contexts?')
 
     logger = logging.getLogger('chipalign.core.util.autocleaning_pybedtools')
-    dir_ = os.path.join(output_dir(), '.tmp/.pybedtools/')
+    dir_ = os.path.abspath(os.path.join(output_dir(), '.tmp/.pybedtools/'))
     if not os.path.isdir(dir_):
         try:
             os.makedirs(dir_)
@@ -181,6 +199,37 @@ def autocleaning_pybedtools():
         logger.debug('Cleaning up {:,} pybedtools files'.format(len(pybedtools.BedTool.TEMPFILES)))
         pybedtools.cleanup()
 
+
+@contextmanager
+def capture_output(stdout=True, stderr=True):
+    """
+    Context manager that captures standard output and error streams
+    :param stdout: boolean, whether to capture stdout
+    :param stderr: boolean, whether to capture stderr
+    :return:
+    """
+    # implementation inspired by
+    # https://stackoverflow.com/questions/5136611/capture-stdout-from-a-script-in-python
+    old_stdout, old_stderr = sys.stdout, sys.stderr
+
+    new_outputs = {}
+    try:
+        if stdout:
+            new_outputs['stdout'] = StringIO()
+            sys.stdout = new_outputs['stdout']
+        if stderr:
+            new_outputs['stderr'] = StringIO()
+            sys.stderr = new_outputs['stderr']
+
+        yield new_outputs
+    finally:
+        if stdout:
+            sys.stdout = old_stdout
+        if stderr:
+            sys.stderr = old_stderr
+
+        for key, stream in new_outputs.items():
+            new_outputs[key] = stream.getvalue()
 
 def fast_bedtool_from_iterable(iterable, pybedtools):
     """

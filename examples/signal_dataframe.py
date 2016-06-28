@@ -35,8 +35,12 @@ from chipalign.signal.signal import Signal
 INTERESTING_TFS = ['CHD1', 'CHD2', 'CBX1',
                    'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
 
-INTERESTING_CELL_TYPES = ['E003', 'E017']
-
+# INTERESTING_TFS = ['CBX1']
+# INTERESTING_CELL_TYPES = []
+INTERESTING_CELL_TYPES = ['E003', 'E017', 'E008']
+# There's something wrong with fragment length calculation for these, TODO: debug.
+ROADMAP_BLACKLIST = [('E116', 'h3k36me3'),
+                     ('E117', 'h3k36me3')]
 
 class _ConsolidatedInputs(MetaTask):
 
@@ -59,14 +63,15 @@ class _ConsolidatedInputs(MetaTask):
     def _encode_filtered_inputs(self):
         ans = []
         # passing as string works around luigis problems with serialising
-        encode_accessions = self.encode_accessions_str.split(';')
+        if self.encode_accessions_str:
+            encode_accessions = self.encode_accessions_str.split(';')
 
-        for accession in encode_accessions:
-            aligned_reads = EncodeAlignedReads(accession=accession)
-            filtered_reads = FilteredReads(genome_version=self.genome_version,
-                                           alignment_task=aligned_reads)
+            for accession in encode_accessions:
+                aligned_reads = EncodeAlignedReads(accession=accession)
+                filtered_reads = FilteredReads(genome_version=self.genome_version,
+                                               alignment_task=aligned_reads)
 
-            ans.append(filtered_reads)
+                ans.append(filtered_reads)
 
         return ans
 
@@ -198,7 +203,9 @@ class TFSignalDataFrame(Task):
         :param cell_type:
         :return:
         """
-        return roadmap_targets_for_cell_line(cell_type)
+        tracks = roadmap_targets_for_cell_line(cell_type)
+        tracks = [track for track in tracks if (cell_type, track.lower()) not in ROADMAP_BLACKLIST]
+        return tracks
 
     def _load_histone_signal_tasks(self, cell_type, targets, input_accessions):
         """
@@ -252,33 +259,8 @@ class TFSignalDataFrame(Task):
 
         assert len(input_metadata) > 0
 
-        input_accessions = input_metadata['File accession'].unique()
-
-        logger.debug('Input accessions: {!r}'.format(input_accessions))
-        cell_types = list(metadata['roadmap_cell_type'].unique())
-        cell_types = cell_types + INTERESTING_CELL_TYPES
-
-        logger.info('Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
-        logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
-
-        found_tfs = metadata['target'].value_counts()
-        logger.debug('TFs found: {}'.format(found_tfs))
-
-        logger.debug('Number of datasets found: {:,}'.format(len(metadata)))
-
-        logger.info('Fetching available signals from roadmap')
-
-        # Once we know the cell lines we can fetch the tracklist from roadmap
-        roadmap_histone_targets = {cell_type: self._roadmap_histone_target_list(cell_type)
-                                   for cell_type in cell_types}
-
-        # At this point we have response so we can create the histone tasks directly
-        histone_signals = {}
-        for cell_type, targets in roadmap_histone_targets.items():
-            histone_signals[cell_type] = self._load_histone_signal_tasks(cell_type,
-                                                                         targets, input_accessions)
-
-        logger.debug('Got {:,} histone tasks'.format(sum(map(len, histone_signals.values()))))
+        cell_types, input_accessions = self._parse_metadata(metadata, input_metadata)
+        histone_signals = self._get_histone_signals(cell_types, input_accessions)
 
         # We have the histone tasks, now we only need to create the TF tasks
         tf_signals = {}
@@ -293,7 +275,8 @@ class TFSignalDataFrame(Task):
                                                               cell_type=cell_type,
                                                               genome_version=self.genome_version,
                                                               binning_method=self.binning_method,
-                                                              encode_input_accessions_str=';'.join(input_accessions))
+                                                              encode_input_accessions_str=';'.join(
+                                                                  input_accessions[cell_type]))
 
             tf_signals[cell_type] = cell_tf_signals
 
@@ -337,6 +320,42 @@ class TFSignalDataFrame(Task):
                 logger.info('Copying output')
                 self.ensure_output_directory_exists()
                 shutil.move(compressed_temp_filename, self.output().path)
+
+    def _parse_metadata(self, metadata, input_metadata):
+        logger = self.logger()
+
+        cell_types = list(metadata['roadmap_cell_type'].unique())
+        cell_types = cell_types + INTERESTING_CELL_TYPES
+        input_accessions = {}
+        for cell_type in cell_types:
+            input_accessions[cell_type] = input_metadata.query('roadmap_cell_type == @cell_type')[
+                'File accession'].unique()
+            logger.debug('Input accessions for {}: {!r}'.format(cell_type,
+                                                                input_accessions[cell_type]))
+        logger.info(
+            'Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
+        logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
+        found_tfs = metadata['target'].value_counts()
+        logger.debug('TFs found: {}'.format(found_tfs))
+        logger.debug('Number of datasets found: {:,}'.format(len(metadata)))
+        return cell_types, input_accessions
+
+    def _get_histone_signals(self, cell_types, input_accessions):
+        logger = self.logger()
+        logger.info('Fetching available signals from roadmap')
+        # Once we know the cell lines we can fetch the tracklist from roadmap
+        roadmap_histone_targets = {cell_type: self._roadmap_histone_target_list(cell_type)
+                                   for cell_type in cell_types}
+        # At this point we have response so we can create the histone tasks directly
+        histone_signals = {}
+        for cell_type, targets in roadmap_histone_targets.items():
+            histone_signals[cell_type] = self._load_histone_signal_tasks(cell_type,
+                                                                         targets,
+                                                                         input_accessions[
+                                                                             cell_type])
+        logger.debug('Got {:,} histone tasks'.format(sum(map(len, histone_signals.values()))))
+        return histone_signals
+
 
 if __name__ == '__main__':
     luigi.run(main_task_cls=TFSignalDataFrame)
