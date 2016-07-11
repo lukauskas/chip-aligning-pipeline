@@ -10,6 +10,7 @@ from chipalign.core.task import Task
 from chipalign.core.util import temporary_file, autocleaning_pybedtools
 from chipalign.genome.chromosomes import Chromosomes
 
+import pandas as pd
 
 class ConsolidatedReads(Task):
     """
@@ -85,45 +86,39 @@ class ConsolidatedReads(Task):
         if self.use_only_standard_chromosomes:
             chromosomes = self.standard_chromosomes_task.output().load()
             chromosomes = frozenset(chromosomes.keys())
-
-            chromosome_filter = lambda x: x.chrom in chromosomes
         else:
-            chromosome_filter = lambda x: True
+            chromosomes = None
 
-        with autocleaning_pybedtools() as pybedtools:
-            with temporary_file() as tf:
-                with open(tf, 'w') as tf_file_handle:
-                    for filtered_reads in self.input_alignments:
-                        filtered_reads = filtered_reads.output()
-                        logger.debug('Processing {}'.format(filtered_reads.path))
-                        filtered_reads_bedtool = pybedtools.BedTool(filtered_reads.path)
+        reads = []
 
-                        tf_file_handle.writelines(imap(str,
-                                                  ifilter(chromosome_filter,
-                                                          filtered_reads_bedtool)))
-                        logger.debug('.. Done')
+        for filtered_reads in self.input_alignments:
+            filtered_reads = filtered_reads.output()
+            logger.debug('Processing {}'.format(filtered_reads.path))
+            fr = pd.read_table(filtered_reads.path,
+                               header=None,
+                               names=['chromosome', 'start', 'end', 'name', 'score', 'strand'])
 
-                logger.debug('Creating bedtool')
-                master_reads_bedtool = pybedtools.BedTool(tf)
-                length_of_master_reads = master_reads_bedtool.count()
-                logger.debug('Total {} reads'.format(length_of_master_reads))
+            if chromosomes:
+                fr = fr[fr.chromosome.isin(chromosomes)]
 
-                if length_of_master_reads > self.max_sequencing_depth:
-                    logger.debug('Subsampling')
+            reads.append(fr)
+            logger.debug('.. Done')
 
-                    master_reads_bedtool = master_reads_bedtool.sample(n=self.max_sequencing_depth,
-                                                                       seed=self.subsample_random_seed)
+        logger.debug('Concatenating')
+        reads = pd.concat(reads)
+        n_reads = len(reads)
+        logger.debug('Total {:,} reads'.format(n_reads))
 
-                logger.debug('Sorting')
-                master_reads_bedtool = master_reads_bedtool.sort()
+        if n_reads > self.max_sequencing_depth:
+            logger.debug('Subsampling')
+            reads = reads.sample(n=self.max_sequencing_depth,
+                                 random_state=self.subsample_random_seed)
 
-                logger.debug('Writing to file')
-                with temporary_file() as answer:
-                    master_reads_bedtool.saveas(answer)
+        logger.debug('Sorting')
+        reads = reads.sort_values(by=['chromosome', 'start', 'end'])
 
-                    # Write the output in correct format (gzipped)
-                    with self.output().open('w') as out_:
-                        with open(answer) as in_:
-                            out_.writelines(in_)
+        logger.info("Writing to file")
+        with self.output().open('w') as out_:
+            reads.to_csv(out_, sep=str('\t'), header=False, index=False)
 
-        logger.debug('Done')
+        logger.info('Done')

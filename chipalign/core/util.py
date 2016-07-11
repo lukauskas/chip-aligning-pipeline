@@ -177,6 +177,10 @@ def autocleaning_pybedtools():
     memory leaks
     """
     import pybedtools
+    if '_SKIP_PYBEDTOOLS_AUTOCLEANING' in os.environ:
+        yield pybedtools
+        return
+
     if len(pybedtools.BedTool.TEMPFILES) != 0:
         raise Exception('pybedtools.BedTool.TEMPFILES not empty on context entry. '
                         'Maybe you\'re nesting `autocleaning_pybedtools` contexts?')
