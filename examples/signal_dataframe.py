@@ -34,6 +34,7 @@ from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.signal import Signal
 
 INTERESTING_TFS = ['CHD1', 'CHD2', 'CBX1',
+                   'CTCF',
                    'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
 
 # INTERESTING_TFS = ['CBX1']
@@ -170,9 +171,25 @@ class TFSignalDataFrame(Task):
         return EncodeTFMetadata(genome_version=self.genome_version)
 
     def additional_tfs(self):
+        """
+        Override this function in subclass to inject other TFs that might be potentially interesting
+        :return:
+        """
         return {}
 
     def additional_inputs(self):
+        """
+        Override this function in subclass to inject other input
+        files from experiments in `additional_tfs` and `additional_histones`
+        :return:
+        """
+        return {}
+
+    def additional_histones(self):
+        """
+        Override this function in subclass to inject other histone signals that might be potentially interesting
+        :return:
+        """
         return {}
 
     def requires(self):
@@ -251,7 +268,19 @@ class TFSignalDataFrame(Task):
             except KeyError:
                 input_accessions[cell_type] = [('roadmap', 'Input')]
 
+        for cell_type, cell_additional_inputs in self.additional_inputs().items():
+            input_accessions[cell_type].extend(cell_additional_inputs)
+
         histone_accessions = self._get_roadmap_histone_accessions(cell_types)
+        for cell_type, cell_additional_histones in self.additional_histones().items():
+            if cell_type not in histone_accessions:
+                histone_accessions[cell_type] = {}
+
+            for target, additional_accessions in cell_additional_histones.items():
+                try:
+                    histone_accessions[cell_type][target].extend(additional_accessions)
+                except KeyError:
+                    histone_accessions[cell_type][target] = additional_accessions
 
         # We have the histone tasks, now we only need to create the TF tasks
         tf_accessions = {}
@@ -265,6 +294,16 @@ class TFSignalDataFrame(Task):
                 cell_tf_accessions[target] = accessions
 
             tf_accessions[cell_type] = cell_tf_accessions
+
+        for cell_type, cell_additional_tfs in self.additional_tfs().items():
+            if cell_type not in tf_accessions:
+                tf_accessions[cell_type] = {}
+
+            for target, additional_accessions in cell_additional_tfs.items():
+                try:
+                    tf_accessions[cell_type][target].extend(additional_accessions)
+                except KeyError:
+                    tf_accessions[cell_type][target] = additional_accessions
 
         logger.debug('Got {:,} TF tasks'.format(sum(map(len, tf_accessions.values()))))
 
