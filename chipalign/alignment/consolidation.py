@@ -42,7 +42,7 @@ class ConsolidatedReads(Task):
     """
     input_alignments = luigi.Parameter()
 
-    max_sequencing_depth = luigi.IntParameter(default=45000000)
+    max_sequencing_depth = luigi.IntParameter(default=30000000)
     subsample_random_seed = luigi.IntParameter(default=0)
 
     use_only_standard_chromosomes = luigi.BoolParameter(default=True)
