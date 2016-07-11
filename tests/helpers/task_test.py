@@ -16,16 +16,18 @@ from chipalign.core.util import _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR, temporary_f
 
 class TaskTestCase(TestCase):
 
-    def setUp(self):
-        self.__temporary_output_directory = tempfile.mkdtemp(prefix='tests-temp')
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.__temporary_output_directory
-
-    def tearDown(self):
-        try:
-            shutil.rmtree(self.__temporary_output_directory)
-        except OSError:
-            if os.path.isdir(self.__temporary_output_directory):
-                raise
+    # def setUp(self):
+    #
+    #     self.__temporary_output_directory = tempfile.mkdtemp(prefix='tests-temp',
+    #                                                          dir=os.path.abspath(os.path.dirname(__file__)))
+    #     os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = self.__temporary_output_directory
+    #
+    # def tearDown(self):
+    #     try:
+    #         shutil.rmtree(self.__temporary_output_directory)
+    #     except OSError:
+    #         if os.path.isdir(self.__temporary_output_directory):
+    #             raise
 
     def build_task(self, task):
         task.class_logger().setLevel(logging.DEBUG)
