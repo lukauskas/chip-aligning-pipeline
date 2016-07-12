@@ -34,8 +34,6 @@ class ShortReads(Task):
             logger.debug('Dumping {} to fastq.gz'.format(self.accession))
 
             args = [self.accession, '--gzip']
-            if self.spot_limit:
-                args.extend(['-X', self.spot_limit])
 
             fastq_file = '{}.fastq.gz'.format(self.accession)
 
