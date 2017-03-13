@@ -4,7 +4,7 @@ import os
 import fnmatch
 import klepto
 import pandas as pd
-from functools32 import lru_cache
+from functools import lru_cache
 import requests
 import re
 

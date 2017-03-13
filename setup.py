@@ -74,8 +74,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['luigi', 'numpy', 'pandas', 'sh', 'pyyaml', 'pybedtools', 'requests', 'tables',
-                      'functools32'],
+    install_requires=['luigi', 'numpy', 'pandas', 'sh', 'pyyaml', 'pybedtools', 'requests', 'tables'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

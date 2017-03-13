@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from functools32 import lru_cache
+from functools import lru_cache
 
 from chipalign.alignment.aligned_reads import AlignedReads
 from chipalign.alignment.consolidation import ConsolidatedReads

@@ -9,7 +9,7 @@ import pandas as pd
 from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
 from chipalign.database.roadmap.util import signal_sortkey
-from functools32 import lru_cache
+from functools import lru_cache
 
 from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task
