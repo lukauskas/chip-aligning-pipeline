@@ -80,6 +80,7 @@ class Signal(Task):
     def run(self):
         from chipalign.command_line_applications.macs import macs2
         from chipalign.command_line_applications.ucsc_suite import bedClip
+        from chipalign.command_line_applications.seven_z import seven_z
 
         logger = self.logger()
 
@@ -98,9 +99,7 @@ class Signal(Task):
                 control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
 
                 logger.debug('Extracting files')
-                with tarfile.open(macs_callpeaks_files_abspath, 'r') as tf:
-                    tf.extract(treat_pileup_filename)
-                    tf.extract(control_lambda_filename)
+                seven_z('x', macs_callpeaks_files_abspath, treat_pileup_filename, control_lambda_filename)
 
                 logger.debug('Now running bdgcmp')
                 pval_signal_output_raw = 'pval.unclipped.signal'

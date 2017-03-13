@@ -24,7 +24,7 @@ class MACSResults(Task):
 
     @property
     def _extension(self):
-        return 'tar.gz'
+        return '7z'
 
     def fragment_length_is_known(self):
         try:
@@ -53,6 +53,7 @@ class MACSResults(Task):
 
     def run(self):
         from chipalign.command_line_applications.macs import macs2
+        from chipalign.command_line_applications.seven_z import seven_z
 
         logger = self.logger()
 
@@ -89,13 +90,19 @@ class MACSResults(Task):
                   p=1e-2,
                   )
 
-            logger.info('All done, creating tar archive')
-            archive_filename = 'archive.tar.gz'
-            with tarfile.open(archive_filename, 'w') as tf:
-                tf.add('{}_control_lambda.bdg'.format(output_basename))
-                tf.add('{}_treat_pileup.bdg'.format(output_basename))
-                tf.add('{}_peaks.narrowPeak'.format(output_basename))
-                tf.add('{}_summits.bed'.format(output_basename))
+            logger.info('Compressing MACS output. This is expected to take some time.')
+
+            archive_filename = 'archive.7z'
+
+            files = ['{}_control_lambda.bdg'.format(output_basename),
+                     '{}_treat_pileup.bdg'.format(output_basename),
+                     '{}_peaks.narrowPeak'.format(output_basename),
+                     '{}_summits.bed'.format(output_basename)]
+
+            # Previously here we used uncompressed .tar files
+            # while they were faster to compress, each file took 5GB
+            # 7z will take longer should compress them to ~300GB (gzip does ~900GB)
+            seven_z('a', archive_filename, *files)
 
             logger.info('Moving')
             shutil.move(archive_filename, output_abspath)
