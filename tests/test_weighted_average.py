@@ -10,7 +10,8 @@ from nose.tools import assert_almost_equal
 def weights_and_values(draw):
     length = draw(integers(min_value=2, max_value=200))
 
-    v = draw(lists(floats(min_value=0, max_value=10000, allow_infinity=False, allow_nan=False), min_size=length,
+    v = draw(lists(floats(min_value=0, max_value=10000, allow_infinity=False, allow_nan=False),
+                   min_size=length,
                    max_size=length))
     w = draw(lists(integers(min_value=1, max_value=200), min_size=length, max_size=length))
     return w, v
