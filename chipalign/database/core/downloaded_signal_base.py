@@ -71,7 +71,7 @@ class DownloadedSignalBase(Task):
         with self.temporary_directory():
             logger.info('Fetching: {}'.format(url))
             filename = 'download.bigwig'
-            with open(filename, 'w') as f:
+            with open(filename, 'wb') as f:
                 fetch(url, f)
 
             _bigwig_to_bedgraph(filename, output_abspath, logger=logger)

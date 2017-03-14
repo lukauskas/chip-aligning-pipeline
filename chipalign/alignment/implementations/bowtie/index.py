@@ -106,7 +106,7 @@ class BowtieIndex(Task):
 
     def run(self):
         if self.genome_version in self._DOWNLOADABLE_INDICES:
-            with self.output().open('w') as output_file:
+            with self.output().open('wb') as output_file:
                 fetch(self._DOWNLOADABLE_INDICES[self.genome_version], output_file)
         else:
             sequence_filename = os.path.abspath(self._genome_sequence_task.output().path)

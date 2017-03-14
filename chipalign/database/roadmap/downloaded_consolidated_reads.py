@@ -50,7 +50,7 @@ class DownloadedConsolidatedReads(Task):
 
         with temporary_file() as tf:
             logger.info('Fetching: {} to {}'.format(url, tf))
-            with open(tf, 'w') as f:
+            with open(tf, 'wb') as f:
                 fetch(url, f)
 
             # Essentially this re-gzips the downloaded reads output

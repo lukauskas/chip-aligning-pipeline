@@ -37,7 +37,7 @@ class BlacklistedRegions(Task):
         with self.temporary_directory():
             tmp_file = 'download.gz'
 
-            with open(tmp_file, 'w') as f:
+            with open(tmp_file, 'wb') as f:
                 fetch(url, f)
 
             shutil.move(tmp_file, output_abspath)

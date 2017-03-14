@@ -106,7 +106,7 @@ class ChromatinStates(Task):
         with autocleaning_pybedtools() as pybedtools:
 
             with temporary_file() as tmp_download_file:
-                with open(tmp_download_file, 'w') as f:
+                with open(tmp_download_file, 'wb') as f:
                     fetch(self._data_url, f)
 
                 states = pybedtools.BedTool(tmp_download_file).sort()

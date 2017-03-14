@@ -42,7 +42,7 @@ class RoadmapAlignedReads(Task):
 
             tmp_file = 'downloaded.bed.gz'
 
-            with open(tmp_file, 'w') as tf:
+            with open(tmp_file, 'wb') as tf:
                 fetch(self.url, tf)
 
             # Their BED files are broken, to fix:

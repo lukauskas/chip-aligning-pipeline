@@ -10,7 +10,7 @@ import requests
 import tempfile
 import shutil
 
-from urlparse import urlparse
+from six.moves.urllib.parse import urlparse
 
 def _fetch_from_ftp(url, output):
     parsed_url = urlparse(url)

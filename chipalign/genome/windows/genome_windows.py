@@ -18,7 +18,7 @@ class NonOverlappingBins(Task):
     genome_version = luigi.Parameter()
     window_size = luigi.IntParameter()
 
-    remove_blacklisted = luigi.BooleanParameter(default=True)
+    remove_blacklisted = luigi.Parameter(default=True)
 
     @property
     def task_class_friendly_name(self):

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from builtins import str
 
 import hashlib
 import inspect
@@ -20,9 +21,11 @@ from luigi.task import flatten
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time
 
+from six.moves import map as imap
+
 
 def _file_safe_string(value):
-    value = unicode(value)
+    value = str(value)
     value = re.sub('[^a-zA-Z0-9]', '_', value)
     value = re.sub('__+', '_', value)
     return value.strip('_')
@@ -56,7 +59,7 @@ def _collapse_parameters(luigi_params, param_kwargs, hash_params=None):
                     param_ans.append(param_value)
 
             if param_name in hash_params:
-                ans.append(hashlib.sha1(str(param_ans)).hexdigest()[:8])
+                ans.append(hashlib.sha1(str(param_ans).encode('utf-8')).hexdigest()[:8])
             else:
                 ans.extend(param_ans)
     return ans
@@ -156,7 +159,7 @@ class Task(luigi.Task):
         :return:
         """
         outputs = self._flattened_outputs()
-        return all(itertools.imap(lambda output: output.exists(), outputs))
+        return all(imap(lambda output: output.exists(), outputs))
 
     def _dependancies_complete_and_have_lower_modification_dates_than_outputs(self):
         """

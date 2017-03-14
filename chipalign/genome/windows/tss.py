@@ -56,7 +56,7 @@ class BinsAroundTSS(Task):
         biomart_url = self._biomart_query_url()
 
         with temporary_file() as tf_name:
-            with open(tf_name, 'w') as tf:
+            with open(tf_name, 'wb') as tf:
                 fetch(biomart_url, tf)
 
             # Read file and collect lines

@@ -55,7 +55,7 @@ class DownloadableExternalResource(ExternalResource):
         return '{}-cache'.format(os.path.basename(self.url))
 
     def _fetch_resource(self, temp_file):
-        with open(temp_file, 'w') as tf:
+        with open(temp_file, 'wb') as tf:
             fetch(self.url, tf)
         assert os.path.isfile(temp_file)
 

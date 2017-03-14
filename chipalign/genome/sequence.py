@@ -37,5 +37,5 @@ class GenomeSequence(Task):
         except KeyError:
             raise ValueError('Unsupported genome version: {!r}'.format(self.genome_version))
 
-        with self.output().open('w') as output_file:
+        with self.output().open('wb') as output_file:
             fetch(uri, output_file)

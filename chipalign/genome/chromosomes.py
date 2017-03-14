@@ -39,7 +39,7 @@ class Chromosomes(Task):
             if not self.genome_version.startswith('hg'):
                 raise Exception('Not sure how to parse collections for genome {}'.format(self.genome_version))
 
-            female_chromosomes = {'chr{}'.format(x) for x in (range(1, 23) + ['X', 'M'])}
+            female_chromosomes = {'chr{}'.format(x) for x in (list(range(1, 23)) + ['X', 'M'])}
             male_chromosomes = female_chromosomes | {'chrY'}
 
             if self.collection == 'male':

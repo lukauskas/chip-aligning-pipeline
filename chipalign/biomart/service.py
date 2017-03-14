@@ -19,7 +19,7 @@ def fetch_query_from_ensembl(genome_version, query, output_file_handle):
     query = query.replace('\n', '')
     url = biomart_service_url.format(query)
 
-    with tempfile.TemporaryFile('w+') as temp_file:
+    with tempfile.TemporaryFile('wb+') as temp_file:
         fetch(url, temp_file)
 
         # Read temp file now

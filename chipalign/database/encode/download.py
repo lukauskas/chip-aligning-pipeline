@@ -50,7 +50,7 @@ class EncodeAlignedReads(Task):
     def _download_file_and_verify(self):
 
         with temporary_file() as tf:
-            with open(tf, 'w') as handle:
+            with open(tf, 'wb') as handle:
                 fetch_from_encode(self.accession, 'bam', handle)
 
             # Verify integrity of BAM file

@@ -2,7 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from itertools import imap
+from six.moves import map as imap
+
 import os
 import tarfile
 import shutil
@@ -233,7 +234,7 @@ class GenomeMappabilityTrack(Task):
 
             logger.debug('Fetching the mappability data from {}'.format(uri))
             track_file = os.path.basename(uri)
-            with open(track_file, 'w') as buffer:
+            with open(track_file, 'wb') as buffer:
                 fetch(uri, buffer)
 
             logger.debug('Processing {}'.format(track_file))

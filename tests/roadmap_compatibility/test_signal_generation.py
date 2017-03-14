@@ -38,7 +38,7 @@ class TestMacsPileup(TaskTestCase):
 
         with temporary_file(prefix='tmp-signal', suffix='.bigWig') as tmp_bigwig_file:
 
-            with open(tmp_bigwig_file, 'w') as f:
+            with open(tmp_bigwig_file, 'wb') as f:
                 fetch(answer_url, f)
 
             with temporary_file(prefix='tmp-signal', suffix='.bdg') as tmp_bdg_file:

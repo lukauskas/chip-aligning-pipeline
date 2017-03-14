@@ -40,7 +40,7 @@ class EncodeTFMetadata(Task):
         with temporary_file() as temp_filename:
 
             logger.info('Fetching data table')
-            with open(temp_filename, 'w') as fw:
+            with open(temp_filename, 'wb') as fw:
                 fetch(self.url(), fw)
 
             data = pd.read_table(temp_filename)
