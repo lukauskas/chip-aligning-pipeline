@@ -145,14 +145,15 @@ class FilteredReads(Task):
                 mapped_reads_df = self._mappability_task.output().load().filter_uniquely_mappables(
                     mapped_reads_df)
 
-            with timed_segment('Sorting reads', logger=logger):
-                mapped_reads_df = mapped_reads_df.sort_values(by=['chrom', 'start', 'end'])
+            with timed_segment('Sorting reads inplace', logger=logger):
+                mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)
 
             with timed_segment('Writing to file', logger=logger):
                 with self.output().open('w') as f:
-                    mapped_reads_df = mapped_reads_df[['chrom', 'start', 'end', 'name',
-                                                       'score', 'strand']]
+
                     mapped_reads_df['name'] = "N"  # The alignments from ROADMAP have this
                     mapped_reads_df['score'] = 1000  # And this... for some reason
 
-                    mapped_reads_df.to_csv(f, sep='\t', header=False, index=False)
+                    mapped_reads_df.to_csv(f, sep='\t', header=False, index=False,
+                                           columns=['chrom', 'start', 'end', 'name',
+                                                    'score', 'strand'])
