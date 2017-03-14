@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import shutil
+
 import luigi
 from chipalign.alignment.aligned_reads import AlignedReads
 from chipalign.core.task import Task
@@ -90,6 +92,7 @@ class FilteredReads(Task):
 
     def run(self):
         logger = self.logger()
+        self.ensure_output_directory_exists()
 
         bam_output = self.alignment_task.bam_output().path
 
@@ -141,11 +144,13 @@ class FilteredReads(Task):
             mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)
 
         with timed_segment('Writing to file', logger=logger):
-            with self.output().open('w') as f:
-
+            with temporary_file() as tf:
                 mapped_reads_df['name'] = "N"  # The alignments from ROADMAP have this
                 mapped_reads_df['score'] = 1000  # And this... for some reason
 
-                mapped_reads_df.to_csv(f, sep='\t', header=False, index=False,
+                mapped_reads_df.to_csv(tf, sep='\t', header=False, index=False,
+                                       compression='gzip',
                                        columns=['chrom', 'start', 'end', 'name',
                                                 'score', 'strand'])
+                
+                shutil.move(tf, self.output().path)
