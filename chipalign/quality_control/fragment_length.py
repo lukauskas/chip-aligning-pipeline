@@ -58,8 +58,8 @@ class FragmentLength(Task):
         filename, num_reads, estimated_fragment_length, corr_estimated_fragment_length, \
         phantom_peak, corr_phantom_peak, argmin_corr, min_corr, nsc, rsc, quality_tag = data
 
-        estimated_fragment_length = map(int, estimated_fragment_length.split(','))
-        corr_estimated_fragment_length = map(float, corr_estimated_fragment_length.split(','))
+        estimated_fragment_length = list(map(int, estimated_fragment_length.split(',')))
+        corr_estimated_fragment_length = list(map(float, corr_estimated_fragment_length.split(',')))
         assert len(estimated_fragment_length) == len(corr_estimated_fragment_length)
 
         fragment_lengths = [{'length': x, 'correlation': y}

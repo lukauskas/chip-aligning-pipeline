@@ -3,12 +3,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import shutil
 from os.path import splitext
 import os
 import logging
 import tempfile
 
 import luigi
+from chipalign.core.util import temporary_file
 
 from chipalign.genome.sequence import GenomeSequence
 from chipalign.core.task import Task
@@ -105,10 +107,15 @@ class BowtieIndex(Task):
             return self._genome_sequence_task
 
     def run(self):
+        self.ensure_output_directory_exists()
         if self.genome_version in self._DOWNLOADABLE_INDICES:
-            with self.output().open('wb') as output_file:
-                fetch(self._DOWNLOADABLE_INDICES[self.genome_version], output_file)
+            url = self._DOWNLOADABLE_INDICES[self.genome_version]
+            with temporary_file() as tf:
+                with open(tf, 'wb') as handle:
+                    fetch(url, handle)
+
+                shutil.move(tf, self.output().path)
         else:
             sequence_filename = os.path.abspath(self._genome_sequence_task.output().path)
-            with self.output().open('w') as output_file:
+            with self.output().open('wb') as output_file:
                 _build_index(sequence_filename, self.genome_version, output_file)
