@@ -54,7 +54,7 @@ class NonOverlappingBins(Task):
                 windows.saveas(tmp_filename)
 
                 with temporary_file() as gzip_tmp:
-                    with open(tmp_filename, 'r') as input_file:
+                    with open(tmp_filename, 'rb') as input_file:
                         with gzip.GzipFile(gzip_tmp, 'w') as gzipped_file:
                                 gzipped_file.writelines(input_file)
 
