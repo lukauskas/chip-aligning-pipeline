@@ -150,8 +150,9 @@ class FilteredReads(Task):
 
             with timed_segment('Writing to file', logger=logger):
                 with self.output().open('w') as f:
-                    mapped_reads_df = mapped_reads_df[['chrom', 'start', 'end', 'name', 'score', 'strand']]
+                    mapped_reads_df = mapped_reads_df[['chrom', 'start', 'end', 'name',
+                                                       'score', 'strand']]
                     mapped_reads_df['name'] = "N"  # The alignments from ROADMAP have this
                     mapped_reads_df['score'] = 1000  # And this... for some reason
 
-                    mapped_reads_df.to_csv(f, sep=str('\t'), header=False, index=False)
+                    mapped_reads_df.to_csv(f, sep='\t', header=False, index=False)
