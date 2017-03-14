@@ -226,9 +226,18 @@ def _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle,
 
 def _log10_weighted_mean(data):
 
+
     values, weights = zip(*data)
     weights = np.array(weights)
     values = np.array(values)
 
-    return -np.log10(np.sum((np.power(10.0, -values) * weights)) / np.sum(weights))
+    # Computes weighted average log(sum(w_i * exp(-v_i)) / sum(w_i))
+    # using log-sum-exp trick
 
+    min_v = values.min()
+    adjusted_values = -values + min_v
+
+    ans = min_v + np.log10(np.sum(weights))
+    ans += -np.log10(np.sum(weights * np.power(10.0, adjusted_values)))
+
+    return ans
