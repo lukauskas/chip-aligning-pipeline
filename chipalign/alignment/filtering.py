@@ -27,22 +27,19 @@ def _remove_duplicate_reads(bedtools_df):
     return ans
 
 
-def _resize_reads(bedtools_df, new_length,
-                  chromsizes):
+def _resize_reads_inplace(bedtools_df, new_length,
+                          chromsizes):
 
-    new_data = bedtools_df.copy()
-    positive_strand = new_data.strand == '+'
-    negative_strand = new_data.strand == '-'
+    positive_strand = bedtools_df.strand == '+'
+    negative_strand = bedtools_df.strand == '-'
     assert (positive_strand | negative_strand).all()
 
-    new_data.loc[positive_strand, 'end'] = new_data.loc[positive_strand, 'start'] + new_length
-    new_data.loc[negative_strand, 'start'] = new_data.loc[negative_strand, 'end'] - new_length
+    bedtools_df.loc[positive_strand, 'end'] = bedtools_df.loc[positive_strand, 'start'] + new_length
+    bedtools_df.loc[negative_strand, 'start'] = bedtools_df.loc[negative_strand, 'end'] - new_length
 
     for chrom, (low, high) in chromsizes.items():
-        lookup = new_data['chrom'] == chrom
-        new_data.loc[lookup, ['start', 'end']] = new_data.loc[lookup, ['start', 'end']].clip(low, high)
-
-    return new_data
+        lookup = bedtools_df['chrom'] == chrom
+        bedtools_df.loc[lookup, ['start', 'end']] = bedtools_df.loc[lookup, ['start', 'end']].clip(low, high)
 
 
 class FilteredReads(Task):
@@ -127,11 +124,10 @@ class FilteredReads(Task):
                 with timed_segment('Truncating reads to be {}bp'.format(self.resized_length),
                                    logger=logger):
 
-                    mapped_reads_df = _resize_reads(mapped_reads_df,
-                                                    new_length=self.resized_length,
-                                                    chromsizes=pybedtools.chromsizes(
-                                                        self.genome_version),
-                                                    )
+                    chromsizes = pybedtools.chromsizes(self.genome_version)
+                    _resize_reads_inplace(mapped_reads_df,
+                                          new_length=self.resized_length,
+                                          chromsizes=chromsizes)
 
             with timed_segment('Removing duplicates', logger=logger):
                 _len_before = len(mapped_reads_df)

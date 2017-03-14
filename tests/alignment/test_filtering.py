@@ -7,7 +7,7 @@ import unittest
 from numpy.testing import assert_array_equal
 from pandas.util.testing import assert_frame_equal
 
-from chipalign.alignment.filtering import _remove_duplicate_reads, _resize_reads
+from chipalign.alignment.filtering import _remove_duplicate_reads, _resize_reads_inplace
 
 import pybedtools
 
@@ -43,10 +43,10 @@ class TestFiltering(unittest.TestCase):
 
         output_ = _remove_duplicate_reads(input_)
 
-        expected_output_sorted = expected_output.sort(['chrom', 'start', 'end', 'strand'])
+        expected_output_sorted = expected_output.sort_values(by=['chrom', 'start', 'end', 'strand'])
         expected_output_sorted = expected_output_sorted[['chrom', 'start', 'end', 'strand']]
 
-        output_sorted = output_.sort(['chrom', 'start', 'end', 'strand'])
+        output_sorted = output_.sort_values(by=['chrom', 'start', 'end', 'strand'])
         output_sorted = output_sorted[['chrom', 'start', 'end', 'strand']]
 
         assert_array_equal(expected_output_sorted.values, output_sorted.values)
@@ -71,11 +71,11 @@ class TestResizing(unittest.TestCase):
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
         new_length = 20
-        actual_output = _resize_reads(input_, new_length=new_length,
-                                      chromsizes=chromsizes,
-                                      )
+        _resize_reads_inplace(input_, new_length=new_length,
+                              chromsizes=chromsizes,
+                              )
 
-        lengths = (actual_output.end - actual_output.start).abs()
+        lengths = (input_.end - input_.start).abs()
         lengths_equal_to_truncation_length = [l == new_length for l in lengths]
         self.assertTrue(all(lengths_equal_to_truncation_length), repr(lengths))
 
@@ -111,10 +111,10 @@ class TestResizing(unittest.TestCase):
         # Large enough so we do not need to worry about boundaries
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
-        actual_output = _resize_reads(input_, new_length=new_length,
-                                      chromsizes=chromsizes)
+        _resize_reads_inplace(input_, new_length=new_length,
+                              chromsizes=chromsizes)
 
-        assert_frame_equal(expected_output, actual_output)
+        assert_frame_equal(expected_output, input_)
 
     def test_resizing_raises_exception_if_needed(self):
 
@@ -136,22 +136,22 @@ class TestResizing(unittest.TestCase):
         chromsizes = {'chr1': (0, 300), 'chr2': (0, 300)}
 
         try:
-            _resize_reads(pybedtools.BedTool(shorten_data).to_dataframe(),
-                          new_length, chromsizes=chromsizes,
-                          )
+            _resize_reads_inplace(pybedtools.BedTool(shorten_data).to_dataframe(),
+                                  new_length, chromsizes=chromsizes,
+                                  )
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
 
         self.assertRaises(Exception,
-                          _resize_reads,
+                          _resize_reads_inplace,
                           pybedtools.BedTool(shorten_data + [extend_data[0]]),
                           new_length, chromsizes=chromsizes,
                           pybedtools=pybedtools
                           )
 
         try:
-            _resize_reads(pybedtools.BedTool(extend_data).to_dataframe(),
-                          new_length, chromsizes=chromsizes)
+            _resize_reads_inplace(pybedtools.BedTool(extend_data).to_dataframe(),
+                                  new_length, chromsizes=chromsizes)
         except Exception as e:
             self.fail('Unexpected exception {!r}'.format(e))
 
@@ -176,7 +176,7 @@ class TestResizing(unittest.TestCase):
         input_ = pybedtools.BedTool(data).to_dataframe()
         expected_output = pybedtools.BedTool(new_data).to_dataframe()
 
-        actual_output = _resize_reads(input_, new_length=new_length,
-                                      chromsizes=chromsizes)
+        _resize_reads_inplace(input_, new_length=new_length,
+                              chromsizes=chromsizes)
 
-        assert_frame_equal(expected_output, actual_output)
+        assert_frame_equal(expected_output, input_)
