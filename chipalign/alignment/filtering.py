@@ -110,46 +110,50 @@ class FilteredReads(Task):
             mapped_reads_df = mapped_reads.to_dataframe()
             del mapped_reads  # so we don't accidentally use it
 
-            if self.ignore_non_standard_chromosomes:
-                standard_chromosomes = frozenset(
-                    self.standard_chromosomes_task.output().load().keys())
-                with timed_segment('Leaving only reads within standard chromosomes', logger=logger):
-                    _len_before = len(mapped_reads_df)
-                    mapped_reads_df = mapped_reads_df[mapped_reads_df.chrom.isin(standard_chromosomes)]
-                    _len_after = len(mapped_reads_df)
-                    logger.debug('Removed {:,} reads because they are not within standard nucleosomes'.format(_len_after - _len_before))
+            # Get chromsizes
+            chromsizes = pybedtools.chromsizes(self.genome_version)
 
-            if self.resized_length > 0:
+        # Go out of pybedtools scope so it can clean up
 
-                with timed_segment('Truncating reads to be {}bp'.format(self.resized_length),
-                                   logger=logger):
-
-                    chromsizes = pybedtools.chromsizes(self.genome_version)
-                    _resize_reads_inplace(mapped_reads_df,
-                                          new_length=self.resized_length,
-                                          chromsizes=chromsizes)
-
-            with timed_segment('Removing duplicates', logger=logger):
+        if self.ignore_non_standard_chromosomes:
+            standard_chromosomes = frozenset(
+                self.standard_chromosomes_task.output().load().keys())
+            with timed_segment('Leaving only reads within standard chromosomes', logger=logger):
                 _len_before = len(mapped_reads_df)
-                mapped_reads_df = _remove_duplicate_reads(mapped_reads_df)
+                mapped_reads_df = mapped_reads_df[mapped_reads_df.chrom.isin(standard_chromosomes)]
                 _len_after = len(mapped_reads_df)
-                logger.debug(
-                    'Removed {:,} reads because they were duplicates'.format(
-                        _len_after - _len_before))
+                logger.debug('Removed {:,} reads because they are not within standard nucleosomes'.format(_len_after - _len_before))
 
-            with timed_segment('Filtering uniquely mappable', logger=logger):
-                mapped_reads_df = self._mappability_task.output().load().filter_uniquely_mappables(
-                    mapped_reads_df)
+        if self.resized_length > 0:
 
-            with timed_segment('Sorting reads inplace', logger=logger):
-                mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)
+            with timed_segment('Truncating reads to be {}bp'.format(self.resized_length),
+                               logger=logger):
 
-            with timed_segment('Writing to file', logger=logger):
-                with self.output().open('w') as f:
+                _resize_reads_inplace(mapped_reads_df,
+                                      new_length=self.resized_length,
+                                      chromsizes=chromsizes)
 
-                    mapped_reads_df['name'] = "N"  # The alignments from ROADMAP have this
-                    mapped_reads_df['score'] = 1000  # And this... for some reason
+        with timed_segment('Removing duplicates', logger=logger):
+            _len_before = len(mapped_reads_df)
+            mapped_reads_df = _remove_duplicate_reads(mapped_reads_df)
+            _len_after = len(mapped_reads_df)
+            logger.debug(
+                'Removed {:,} reads because they were duplicates'.format(
+                    _len_after - _len_before))
 
-                    mapped_reads_df.to_csv(f, sep='\t', header=False, index=False,
-                                           columns=['chrom', 'start', 'end', 'name',
-                                                    'score', 'strand'])
+        with timed_segment('Filtering uniquely mappable', logger=logger):
+            mapped_reads_df = self._mappability_task.output().load().filter_uniquely_mappables(
+                mapped_reads_df)
+
+        with timed_segment('Sorting reads inplace', logger=logger):
+            mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)
+
+        with timed_segment('Writing to file', logger=logger):
+            with self.output().open('w') as f:
+
+                mapped_reads_df['name'] = "N"  # The alignments from ROADMAP have this
+                mapped_reads_df['score'] = 1000  # And this... for some reason
+
+                mapped_reads_df.to_csv(f, sep='\t', header=False, index=False,
+                                       columns=['chrom', 'start', 'end', 'name',
+                                                'score', 'strand'])
