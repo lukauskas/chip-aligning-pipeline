@@ -137,7 +137,8 @@ class FilteredReads(Task):
                     _len_after - _len_before))
 
         with timed_segment('Filtering uniquely mappable', logger=logger):
-            mapped_reads_df = self._mappability_task.output().load().filter_uniquely_mappables(
+            mappability_filter = self._mappability_task.output().load()
+            mapped_reads_df = mappability_filter.filter_uniquely_mappables(
                 mapped_reads_df)
 
         with timed_segment('Sorting reads inplace', logger=logger):
@@ -152,5 +153,5 @@ class FilteredReads(Task):
                                        compression='gzip',
                                        columns=['chrom', 'start', 'end', 'name',
                                                 'score', 'strand'])
-                
+
                 shutil.move(tf, self.output().path)

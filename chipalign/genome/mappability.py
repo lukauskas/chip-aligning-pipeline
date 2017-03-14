@@ -44,19 +44,16 @@ class MappabilityTrack(object):
                 sorted(chromosomes_not_in_mappability_track)))
 
         answer = []
-        for chromosome in chromosomes:
-            logger.debug('Processing {}'.format(chromosome))
+        for chromosome, chromosome_df in bedtool_df.groupby('chrom'):
+
             chromosome_lookup = self.__lookup_dict[chromosome]
-
-            chromosome_df = bedtool_df[bedtool_df.chrom == chromosome]
-
-            logger.debug(
-                'Processing {:,} reads'.format(len(chromosome_df)))
+            logger.debug('Mappability filtering {} ({:,} reads)'.format(chromosome,
+                                                                        len(chromosome_df)))
 
             # Now the start coordinate is the one we need to check, irregardless of strand
             # this is how one should interpret the README
             # http://egg2.wustl.edu/roadmap/data/byFileType/mappability/README
-            unique = chromosome_df.start.apply(lambda x: chromosome_lookup[x])
+            unique = chromosome_lookup[chromosome_df.start]
             chromosome_df = chromosome_df[unique]
 
             logger.debug('Done. Extending answer')
