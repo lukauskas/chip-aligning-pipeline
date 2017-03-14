@@ -7,7 +7,7 @@ import unittest
 from numpy.testing import assert_array_equal
 from pandas.util.testing import assert_frame_equal
 
-from chipalign.alignment.filtering import _remove_duplicate_reads, _resize_reads_inplace
+from chipalign.alignment.filtering import _remove_duplicate_reads_inplace, _resize_reads_inplace
 
 import pybedtools
 
@@ -41,7 +41,8 @@ class TestFiltering(unittest.TestCase):
         input_ = input_.to_dataframe()
         expected_output = expected_output.to_dataframe()
 
-        output_ = _remove_duplicate_reads(input_)
+        output_ = input_.copy()
+        _remove_duplicate_reads_inplace(output_)
 
         expected_output_sorted = expected_output.sort_values(by=['chrom', 'start', 'end', 'strand'])
         expected_output_sorted = expected_output_sorted[['chrom', 'start', 'end', 'strand']]

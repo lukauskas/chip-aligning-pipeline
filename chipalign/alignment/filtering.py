@@ -10,21 +10,13 @@ from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedto
     timed_segment
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack
-import pandas as pd
 
-from six.moves import map as imap
-from six.moves import filter as ifilter
 
-def _remove_duplicate_reads(bedtools_df):
-
-    ans = bedtools_df.copy()
-    ans['pos'] = ans.apply(lambda x: x.end if x.strand == '-' else x.start,
-                           axis=1)
-
-    ans = ans.drop_duplicates(subset=['strand', 'chrom', 'pos'], keep=False)
-    del ans['pos']
-
-    return ans
+def _remove_duplicate_reads_inplace(bedtools_df):
+    bedtools_df['pos'] = bedtools_df['end'].where(bedtools_df['strand'] == '-',
+                                                  bedtools_df['start'])
+    bedtools_df.drop_duplicates(subset=['strand', 'chrom', 'pos'], keep=False, inplace=True)
+    del bedtools_df['pos']
 
 
 def _resize_reads_inplace(bedtools_df, new_length,
@@ -135,7 +127,7 @@ class FilteredReads(Task):
 
         with timed_segment('Removing duplicates', logger=logger):
             _len_before = len(mapped_reads_df)
-            mapped_reads_df = _remove_duplicate_reads(mapped_reads_df)
+            _remove_duplicate_reads_inplace(mapped_reads_df)
             _len_after = len(mapped_reads_df)
             logger.debug(
                 'Removed {:,} reads because they were duplicates'.format(
