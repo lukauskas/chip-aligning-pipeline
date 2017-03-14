@@ -22,7 +22,8 @@ class RoadmapMappableBins(MetaTask):
 
     @property
     def max_ext_size(self):
-        return roadmap_settings.max_fraglen(self.cell_type)
+        __, __, cell_type = self.cell_type.rpartition(':')
+        return roadmap_settings.max_fraglen(cell_type)
 
     @property
     def bins_task(self):
