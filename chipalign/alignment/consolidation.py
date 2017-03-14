@@ -84,6 +84,7 @@ class ConsolidatedReads(Task):
 
     def run(self):
         logger = self.logger()
+        self.ensure_output_directory_exists()
 
         if self.use_only_standard_chromosomes:
             chromosomes = self.standard_chromosomes_task.output().load()
@@ -120,7 +121,10 @@ class ConsolidatedReads(Task):
         reads = reads.sort_values(by=['chromosome', 'start', 'end'])
 
         logger.info("Writing to file")
-        with self.output().open('w') as out_:
-            reads.to_csv(out_, sep=str('\t'), header=False, index=False)
+        with temporary_file() as tf:
+            reads.to_csv(tf, sep='\t',
+                         compression='gzip',
+                         header=False, index=False)
+            shutil.move(tf, self.output().path)
 
         logger.info('Done')
