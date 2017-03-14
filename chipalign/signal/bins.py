@@ -223,20 +223,12 @@ def _compute_weighted_mean_signal(bins_abspath, signal_abspath, output_handle,
 
     logger.info('Done. Total rows written: {}'.format(rows_written))
 
+
 def _log10_weighted_mean(data):
-    weighted_sum = 0
-    weights = 0
 
-    for value, weight in data:
-        value = np.power(10.0, -value)
-        weighted_sum += value * weight
-        weights += weight
+    values, weights = zip(*data)
+    weights = np.array(weights)
+    values = np.array(values)
 
-    weighted_sum /= weights
-
-    score = - np.log10(weighted_sum)
-    if score == 0.0:
-        return 0.0
-    else:
-        return score
+    return -np.log10(np.sum((np.power(10.0, -values) * weights)) / np.sum(weights))
 
