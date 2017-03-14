@@ -180,7 +180,7 @@ class Task(luigi.Task):
                                                                                       dependency.__class__.__name__))
                 return False
 
-            mod_dates = itertools.imap(lambda output: output.modification_time, dependency_outputs)
+            mod_dates = map(lambda output: output.modification_time, dependency_outputs)
             dependancy_max_mod_date = max(mod_dates)
 
             if max_dependency_mod_date is None or dependancy_max_mod_date > max_dependency_mod_date:
