@@ -6,13 +6,15 @@ import os
 import unittest
 import tempfile
 import gzip
-from StringIO import StringIO
+from io import StringIO
 
 import pybedtools
 import numpy as np
 from chipalign.core.util import temporary_file
 
 from chipalign.signal.bins import BinnedSignal, _bedtool_is_sorted
+from hypothesis import given
+from hypothesis.strategies import floats, integers, lists, composite
 
 
 class TestIsSorted(unittest.TestCase):
@@ -43,6 +45,8 @@ chr9 500 600
 
 
 class TestBinnedSignal(unittest.TestCase):
+
+
     def test_binned_signal_computes_the_correct_average_p_value(self):
 
         __, sample_windows_filename = tempfile.mkstemp(suffix='.bed.gz')

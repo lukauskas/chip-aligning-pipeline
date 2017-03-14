@@ -3,10 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cStringIO import StringIO
+from six import StringIO
 from contextlib import contextmanager
 import datetime
-from itertools import imap
+from six.moves import map as imap
 import os.path
 import tempfile
 import os

@@ -8,7 +8,7 @@ import luigi.format
 
 from chipalign.core.util import file_modification_time
 
-class File(luigi.File):
+class File(luigi.LocalTarget):
 
     @property
     def modification_time(self):
