@@ -63,7 +63,7 @@ def timed_segment(message, logger=None):
 
     logger.info('Finished {}. Took {:.2f}s'.format(message,
                                                    total_seconds),
-                extra=dict(duration=total_seconds))
+                extra=dict(duration=total_seconds, timed_segment=message))
 
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
