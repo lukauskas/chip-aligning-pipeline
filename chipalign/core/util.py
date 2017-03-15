@@ -47,12 +47,13 @@ def ensure_directory_exists_for_file(filename):
         if not os.path.isdir(dir_):
             raise
 
+
 @contextmanager
-def timed_segment(message, logger=None):
+def timed_segment(message, logger=None, timed_segment_type="code segment"):
     if logger is None:
         logger = logging.getLogger('chipalign.core.util.timed_segment')
 
-    logger.info('Starting {}'.format(message))
+    logger.info('Starting {} "{}"'.format(timed_segment_type, message))
 
     start_time = datetime.datetime.now()
     yield
@@ -61,9 +62,11 @@ def timed_segment(message, logger=None):
 
     total_seconds = diff.total_seconds()
 
-    logger.info('Finished {}. Took {:.2f}s'.format(message,
-                                                   total_seconds),
-                extra=dict(duration=total_seconds, timed_segment=message))
+    logger.info('Finished {} "{}". Took {:.2f}s'.format(timed_segment_type, message,
+                                                        total_seconds),
+                extra=dict(duration=total_seconds,
+                           timed_segment=message,
+                           timed_segment_type=timed_segment_type))
 
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):

@@ -82,6 +82,7 @@ class Task(luigi.Task):
 
         # Time the run for statistics
         with timed_segment(self.__class__.__name__,
+                           timed_segment_type='task',
                            logger=logger):
             self._run()
 
