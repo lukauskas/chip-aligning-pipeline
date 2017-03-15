@@ -237,7 +237,6 @@ class GenomeMappabilityTrack(Task):
                     name = os.path.basename(member.name)
                     chromosome, dtype_str, __ = name.split('.')
 
-                    logger.debug('Chromosome {}'.format(chromosome))
                     with timed_segment('Processing chromosome {}'.format(chromosome), logger):
                         assert chromosome not in processed_tracks  # Sanity checks
 
