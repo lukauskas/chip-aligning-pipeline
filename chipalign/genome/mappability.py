@@ -36,8 +36,6 @@ class MappabilityTrack(object):
         chromosomes = bedtool_df.chrom.unique()
         chromosomes_in_mappability_track = set(self.__lookup_dict.keys())
 
-        logger.info('Chromosomes in bedtool: {}, chromosomes in mappability: {}'.format(chromosomes,
-                                                                                        chromosomes_in_mappability_track))
         chromosomes_not_in_mappability_track = set(chromosomes) - chromosomes_in_mappability_track
         if chromosomes_not_in_mappability_track:
             raise Exception('No mappability track for chromosomes {}.'.format(
@@ -47,8 +45,6 @@ class MappabilityTrack(object):
         for chromosome, chromosome_df in bedtool_df.groupby('chrom'):
 
             chromosome_lookup = self.__lookup_dict[chromosome]
-            logger.debug('Mappability filtering {} ({:,} reads)'.format(chromosome,
-                                                                        len(chromosome_df)))
 
             # Now the start coordinate is the one we need to check, irregardless of strand
             # this is how one should interpret the README
@@ -56,9 +52,7 @@ class MappabilityTrack(object):
             unique = chromosome_lookup[chromosome_df.start]
             chromosome_df = chromosome_df[unique]
 
-            logger.debug('Done. Extending answer')
             answer.append(chromosome_df)
-            logger.debug('Done')
 
         return pd.concat(answer)
 
@@ -83,7 +77,6 @@ class MappabilityTrack(object):
 
         answer = []
         for chromosome in chromosomes:
-            logger.debug('Processing {}'.format(chromosome))
             try:
                 chromosome_lookup = self.__lookup_dict[chromosome]
             except KeyError:
