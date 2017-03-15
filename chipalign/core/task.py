@@ -18,6 +18,7 @@ from chipalign.core.file_formats.file import File, GzippedFile
 
 from luigi.task import flatten
 
+from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time
 
@@ -148,7 +149,7 @@ class Task(luigi.Task):
                  'parameters': '.'.join(map(str, self.parameters)),
                  'output_filename': self._output_filename}
 
-        return logging.LoggerAdapter(logger, extra)
+        return LoggerWithExtras(logger, extra)
 
     def _flattened_outputs(self):
         return flatten(self.output())
