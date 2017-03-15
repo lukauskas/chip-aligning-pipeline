@@ -42,7 +42,7 @@ class DownloadedConsolidatedReads(Task):
     def _extension(self):
         return 'tagAlign.gz'
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
         url = self.url()
 

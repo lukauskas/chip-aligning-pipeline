@@ -143,7 +143,7 @@ class RandomAlignedReads(Task):
     def _extension(self):
         return 'tagAlign.gz'
 
-    def run(self):
+    def _run(self):
         self.ensure_output_directory_exists()
         abspath = os.path.abspath(self.output().path)
         x = pybedtools.BedTool()

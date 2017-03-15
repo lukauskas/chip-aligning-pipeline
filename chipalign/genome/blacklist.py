@@ -24,7 +24,7 @@ class BlacklistedRegions(Task):
     def parameters(self):
         return [self.genome_version]
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         if self.genome_version not in self.DOWNLOADABLE_BLACKLISTS:
@@ -70,7 +70,7 @@ class NonBlacklisted(Task):
     def _extension(self):
         return 'bed.gz'
 
-    def run(self):
+    def _run(self):
 
         with autocleaning_pybedtools() as pybedtools:
             input_ = pybedtools.BedTool(self.input_task.output().path)

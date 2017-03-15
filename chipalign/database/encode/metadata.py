@@ -34,7 +34,7 @@ class EncodeTFMetadata(Task):
     def _extension(self):
         return 'csv.gz'
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         with temporary_file() as temp_filename:

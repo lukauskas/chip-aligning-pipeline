@@ -35,7 +35,7 @@ class FragmentLength(Task):
     def _extension(self):
         return 'yml'
 
-    def run(self):
+    def _run(self):
         from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
         logger = self.logger()
 

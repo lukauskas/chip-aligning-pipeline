@@ -99,7 +99,7 @@ class ChromatinStates(Task):
         else:
             raise NotImplementedError
 
-    def run(self):
+    def _run(self):
 
         input_file = self.input().path
 

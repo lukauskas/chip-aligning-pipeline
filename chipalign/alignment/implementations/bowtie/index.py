@@ -106,7 +106,7 @@ class BowtieIndex(Task):
         if self.genome_version not in self._DOWNLOADABLE_INDICES:
             return self._genome_sequence_task
 
-    def run(self):
+    def _run(self):
         self.ensure_output_directory_exists()
         if self.genome_version in self._DOWNLOADABLE_INDICES:
             url = self._DOWNLOADABLE_INDICES[self.genome_version]

@@ -34,7 +34,7 @@ class RoadmapAlignedReads(Task):
         file_base, __ = os.path.splitext(os.path.basename(self.url))
         return [file_base]
 
-    def run(self):
+    def _run(self):
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 

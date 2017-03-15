@@ -66,7 +66,7 @@ class EncodeAlignedReads(Task):
                 # Otherwise integrity has been verified
                 shutil.move(tf, self.output().path)
 
-    def run(self):
+    def _run(self):
         self.ensure_output_directory_exists()
 
         attempt_number = 0

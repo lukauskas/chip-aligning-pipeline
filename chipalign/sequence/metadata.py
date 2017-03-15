@@ -45,7 +45,7 @@ class FastqMetadata(Task):
     def _output_class(self):
         return YamlFile
 
-    def run(self):
+    def _run(self):
 
         key_columns = ['srr_identifier', 'instrument_identifier', 'lane', 'tile']
 

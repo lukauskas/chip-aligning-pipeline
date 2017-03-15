@@ -86,7 +86,7 @@ class RegulatoryFeatures(Task):
         logger.debug('Generated Ensembl Query query:\n{}'.format(query))
         return query
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         with temporary_directory(logger=logger):

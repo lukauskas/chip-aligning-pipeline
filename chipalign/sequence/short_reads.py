@@ -51,7 +51,7 @@ class ShortReads(Task):
 
             shutil.move(tf_name, abspath)
 
-    def run(self):
+    def _run(self):
         self.ensure_output_directory_exists()
 
         if self.source == 'sra':

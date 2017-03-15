@@ -20,7 +20,7 @@ from luigi.task import flatten
 
 from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
-    file_modification_time
+    file_modification_time, timed_segment
 
 from six.moves import map as imap
 
@@ -75,6 +75,22 @@ class Task(luigi.Task):
 
         # Try generating the filename so exception is raised early, if it is raised
         __ = self._output_filename
+
+    def run(self):
+        self.ensure_output_directory_exists()
+        logger = self.logger()
+
+        # Time the run for statistics
+        with timed_segment(self.__class__.__name__,
+                           logger=logger):
+            self._run()
+
+    def _run(self):
+        """
+        Override this method, rather than .run() (as the former does some heavy lifting)
+        :return:
+        """
+        raise NotImplementedError
 
     @property
     def task_class_friendly_name(self):

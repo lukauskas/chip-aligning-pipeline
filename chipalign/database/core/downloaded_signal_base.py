@@ -61,7 +61,7 @@ class DownloadedSignalBase(Task):
     def _output_class(self):
         return BedGraph
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
         url = self.url()
 

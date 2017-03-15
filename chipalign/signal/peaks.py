@@ -51,7 +51,7 @@ class MACSResults(Task):
 
         return reqs
 
-    def run(self):
+    def _run(self):
         from chipalign.command_line_applications.macs import macs2
         from chipalign.command_line_applications.seven_z import seven_z
 

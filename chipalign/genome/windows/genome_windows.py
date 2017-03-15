@@ -38,7 +38,7 @@ class NonOverlappingBins(Task):
         else:
             return []
 
-    def run(self):
+    def _run(self):
         ensure_directory_exists_for_file(self.output().path)
         with autocleaning_pybedtools() as pybedtools:
             windows = pybedtools.BedTool().window_maker(w=self.window_size,

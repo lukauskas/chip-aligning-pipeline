@@ -219,7 +219,7 @@ class GenomeMappabilityTrack(Task):
         super_output = super(GenomeMappabilityTrack, self).output()
         return MappabilityInfoFile(super_output.path)
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         self.ensure_output_directory_exists()
@@ -302,7 +302,7 @@ class BinMappability(Task):
             read_length=self.read_length,
             extension_length=self.max_ext_size)
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         with autocleaning_pybedtools() as pybedtools:
@@ -357,7 +357,7 @@ class FullyMappableBins(Task):
     def parameters(self):
         return self.bin_mappability_task.parameters
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
         max_score = self.bin_mappability_task.best_total_score()
         logger.debug('Maximum possible score is: {}'.format(max_score))

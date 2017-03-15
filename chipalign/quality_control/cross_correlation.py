@@ -31,7 +31,7 @@ class CrossCorrelationPlot(Task):
     def parameters(self):
         return self.input_task.parameters
 
-    def run(self):
+    def _run(self):
         from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
         logger = self.logger()
 

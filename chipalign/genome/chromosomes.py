@@ -30,7 +30,7 @@ class Chromosomes(Task):
         super_output_path = super(Chromosomes, self).output().path
         return YamlFile(super_output_path)
 
-    def run(self):
+    def _run(self):
 
         with autocleaning_pybedtools() as pybedtools:
             chromsizes = pybedtools.chromsizes(self.genome_version)

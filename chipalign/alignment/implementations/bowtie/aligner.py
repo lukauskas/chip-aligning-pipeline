@@ -39,7 +39,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
     def index_task(self):
         return BowtieIndex(genome_version=self.genome_version)
 
-    def run(self):
+    def _run(self):
 
         logger = self.logger()
 

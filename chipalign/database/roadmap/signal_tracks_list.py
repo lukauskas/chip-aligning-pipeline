@@ -37,7 +37,7 @@ class SignalTracksList(Task):
     def _extension(self):
         return 'yml'
 
-    def run(self):
+    def _run(self):
         url = self.url()
         response = requests.get(url)
         response.raise_for_status()

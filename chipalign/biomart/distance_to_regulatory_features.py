@@ -43,7 +43,7 @@ class DistancesToRegulatoryFeatures(Task):
     def requires(self):
         return self.regulatory_features_task, self.bins_task
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)

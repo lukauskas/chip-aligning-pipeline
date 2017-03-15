@@ -31,7 +31,7 @@ class GenomeSequence(Task):
     def _extension(self):
         return '2bit'
 
-    def run(self):
+    def _run(self):
         try:
             uri = self._DOWNLOAD_URIS[self.genome_version]
         except KeyError:

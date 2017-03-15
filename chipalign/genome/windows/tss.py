@@ -74,7 +74,7 @@ class BinsAroundTSS(Task):
 
         return lines
 
-    def run(self):
+    def _run(self):
 
         lines = self._fetch_biomart_data()
 

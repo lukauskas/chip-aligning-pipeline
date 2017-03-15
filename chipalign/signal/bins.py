@@ -62,7 +62,7 @@ class BinnedSignal(Task):
         else:
             raise ValueError('Unsupported method {!r}'.format(method))
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         bins_task_abspath = os.path.abspath(self.bins_task.output().path)

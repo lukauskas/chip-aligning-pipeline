@@ -27,7 +27,7 @@ class AlignedReadsPash(AlignedReadsBase):
     def index_task(self):
         return GenomeSequence(genome_version=self.genome_version)
 
-    def run(self):
+    def _run(self):
         from chipalign.command_line_applications.ucsc_suite import twoBitToFa
         from chipalign.command_line_applications.pash import pash3
         from chipalign.command_line_applications.samtools import samtools

@@ -247,7 +247,7 @@ class TFSignalDataFrame(Task):
         output_store[output_store_key] = df
 
 
-    def run(self):
+    def _run(self):
         from chipalign.command_line_applications.tables import ptrepack
 
         # Get the logger which we will use to output current progress to terminal

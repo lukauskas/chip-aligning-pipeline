@@ -72,7 +72,7 @@ class RoadmapHistoneSignal(Task):
     def _output_class(self):
         return DataFrameFile
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
 
         chromosomes = sorted(self.chromosomes_task.output().load().keys())

@@ -82,7 +82,7 @@ class ConsolidatedReads(Task):
     def task_class_friendly_name(self):
         return 'CR'
 
-    def run(self):
+    def _run(self):
         logger = self.logger()
         self.ensure_output_directory_exists()
 
