@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+
+import collections
 from builtins import str
 
 import hashlib
@@ -246,7 +248,12 @@ class Task(luigi.Task):
                                    **kwargs)
 
     def ensure_output_directory_exists(self):
-        ensure_directory_exists_for_file(os.path.abspath(self.output().path))
+        output = self.output()
+        if not isinstance(output, collections.Iterable):
+            ensure_directory_exists_for_file(os.path.abspath(output.path))
+        else:
+            for sub_output in output:
+                ensure_directory_exists_for_file(os.path.abspath(sub_output.path))
 
     @classmethod
     def _implementation_file(cls):
