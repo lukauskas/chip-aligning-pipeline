@@ -140,7 +140,7 @@ class Signal(Task):
 
                         # This loops through the input file, and writes it to out_ file chromosome by chromosome as defined
                         # in sorted_chromosomes
-                        with open(pval_signal_output, 'r') as in_:
+                        with open(pval_signal_output, 'rb') as in_:
                             seen_chrom = False
                             for row in in_:
                                 in_chrom, __, __ = row.partition('\t')
