@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import traceback
+
 from six import StringIO
 from contextlib import contextmanager
 import datetime
@@ -53,20 +55,48 @@ def timed_segment(message, logger=None, timed_segment_type="code segment"):
     if logger is None:
         logger = logging.getLogger('chipalign.core.util.timed_segment')
 
-    logger.info('Starting {} "{}"'.format(timed_segment_type, message))
+    kwargs = dict(timed_segment=message,
+                  timed_segment_type=timed_segment_type)
+    logger.info('Starting {} "{}"'.format(timed_segment_type, message),
+                extra=dict(event='start',
+                           **kwargs)
+                )
 
     start_time = datetime.datetime.now()
-    yield
-    end_time = datetime.datetime.now()
-    diff = (end_time-start_time)
+    exception, exc_type, exc_value, exc_traceback = None, None, None, None
+    try:
+        yield
+    except Exception as e:
+        exception = e
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+    finally:
+        end_time = datetime.datetime.now()
+        diff = (end_time-start_time)
+        total_seconds = diff.total_seconds()
 
-    total_seconds = diff.total_seconds()
+        if exception is None:
+            status = 'success'
+            exc_traceback = ''.join(traceback.format_tb(exc_traceback))
+            log_f = logger.error
+        else:
+            status = 'failure'
+            log_f = logger.info
 
-    logger.info('Finished {} "{}". Took {:.2f}s'.format(timed_segment_type, message,
-                                                        total_seconds),
-                extra=dict(duration=total_seconds,
-                           timed_segment=message,
-                           timed_segment_type=timed_segment_type))
+        log_f('Finished {} "{}". Status: {}. Took {:.2f}s'.format(timed_segment_type,
+                                                                  message,
+                                                                  status,
+                                                                  total_seconds),
+              extra=dict(duration=total_seconds,
+                         event=status,
+                         exception=exc_type,
+                         exception_value=exc_value,
+                         exception_traceback=exc_traceback,
+                         **kwargs))
+
+        # Re-raise the exception
+        if exception is not None:
+            raise exception
+
 
 @contextmanager
 def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
