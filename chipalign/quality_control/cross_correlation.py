@@ -32,7 +32,7 @@ class CrossCorrelationPlot(Task):
         return self.input_task.parameters
 
     def _run(self):
-        from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
+        from chipalign.command_line_applications.phantompeakqualtools import run_spp
         logger = self.logger()
 
         input_abspath = os.path.abspath(self.input().path)
@@ -42,9 +42,9 @@ class CrossCorrelationPlot(Task):
         with self.temporary_directory():
             tmp_output = 'output.tmp'
             logger.debug('Running SPP')
-            run_spp_nodups('-c={}'.format(input_abspath),
-                           '-savp={}'.format(tmp_output),
-                           '-odir=.')
+            run_spp('-c={}'.format(input_abspath),
+                    '-savp={}'.format(tmp_output),
+                    '-odir=.')
 
             logger.debug('Relocating output')
             shutil.move(tmp_output, output_abspath)

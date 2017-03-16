@@ -6,6 +6,7 @@ import os
 import luigi
 from chipalign.core.file_formats.yaml_file import YamlFile
 from chipalign.core.task import Task
+from chipalign.core.util import timed_segment
 
 
 class FragmentLength(Task):
@@ -15,7 +16,7 @@ class FragmentLength(Task):
         :param input_task: input task.
         :type input_task: Generally a :class:`~chipalign.alignment.consolidation.ConsolidatedReads` task
 
-        .. _SPP pipeline: https://code.google.com/p/phantompeakqualtools/
+        .. _SPP pipeline: https://github.com/kundajelab/phantompeakqualtools
     """
 
     input_task = luigi.Parameter()
@@ -36,7 +37,7 @@ class FragmentLength(Task):
         return 'yml'
 
     def _run(self):
-        from chipalign.command_line_applications.phantompeakqualtools import run_spp_nodups
+        from chipalign.command_line_applications.phantompeakqualtools import run_spp
         logger = self.logger()
 
         input_abspath = os.path.abspath(self.input().path)
@@ -44,10 +45,10 @@ class FragmentLength(Task):
 
         with self.temporary_directory():
             tmp_output = 'output.tmp'
-            logger.debug('Running SPP')
-            run_spp_nodups('-c={}'.format(input_abspath),
-                           '-out={}'.format(tmp_output),
-                           '-odir=.')
+            with timed_segment('Running SPP'):
+                run_spp('-c={}'.format(input_abspath),
+                        '-out={}'.format(tmp_output),
+                        '-odir=.')
 
             logger.debug('Parsing output')
             with open(tmp_output) as f:
