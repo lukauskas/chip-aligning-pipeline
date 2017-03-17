@@ -24,12 +24,12 @@ def log_sh_exceptions(func):
             exc_traceback = ''.join(traceback.format_tb(exc_traceback))
 
             logger.error('Got error return code {!r} when running sh command'.format(e),
-                         extras=dict(exc_type=exc_type,
-                                     exc_value=exc_value,
-                                     exc_traceback=exc_traceback,
-                                     full_cmd=e.full_cmd,
-                                     stdout=e.stdout,
-                                     stderr=e.stderr))
+                         extra=dict(exc_type=exc_type,
+                                    exc_value=exc_value,
+                                    exc_traceback=exc_traceback,
+                                    full_cmd=e.full_cmd,
+                                    stdout=e.stdout,
+                                    stderr=e.stderr))
 
             raise
 
