@@ -299,7 +299,7 @@ class BinMappability(Task):
         with autocleaning_pybedtools() as pybedtools:
             genomic_windows = pybedtools.BedTool(
                 self.bins_task.output().path)
-            genomic_windows_df = genomic_windows.as_dataframe()
+            genomic_windows_df = genomic_windows.to_dataframe()
 
         mappability = self.mappability_track_task.output().load()
 
