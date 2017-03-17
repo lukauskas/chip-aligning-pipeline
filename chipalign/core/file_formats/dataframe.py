@@ -27,7 +27,7 @@ def compress_dataframe(filename_input, filename_output, complevel=9):
     #          filename_input, filename_output
     #          )
     # use h5repack instead
-    h5repack('-f SHUF', '-f GZIP={}'.format(complevel), filename_input, filename_output)
+    h5repack('-fSHUF', '-fGZIP={}'.format(complevel), filename_input, filename_output)
 
     # Report some stats
     end_time = datetime.datetime.now()
