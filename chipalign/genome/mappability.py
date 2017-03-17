@@ -69,14 +69,13 @@ class MappabilityTrack(object):
         # bin_.width + extension_length + read_length - 1
         return 2 * (bin_width + extension_length + read_length - 1)
 
-    def number_of_uniquely_mappable_within_a_bin(self, bins_bed, read_length,
-                                                 extension_length, pybedtools):
+    def number_of_uniquely_mappable_within_a_bin(self, bins_bed_df, read_length,
+                                                 extension_length):
         logger = logging.getLogger(self.__class__.__name__)
 
-        chromosomes = set(imap(lambda x: x.chrom, bins_bed))
-
         answer = []
-        for chromosome in chromosomes:
+        for chromosome, bins_chromosome in bins_bed_df.groupby('chrom'):
+
             try:
                 chromosome_lookup = self.__lookup_dict[chromosome]
             except KeyError:
@@ -85,47 +84,47 @@ class MappabilityTrack(object):
 
             chromosome_length = len(chromosome_lookup)
 
-            bins_for_chromosome = filter(lambda x: x.chrom == chromosome,
-                                         bins_bed)
+            # see comment below on why we want to prepend zero
+            cum_lookup = np.concatenate([[0], np.cumsum(chromosome_lookup)])
 
-            for bin_ in bins_for_chromosome:
-                # Positive strand
-                min_anchor_location = bin_.start - (
-                extension_length + read_length - 1)  # (inclusive)
-                max_anchor_location = bin_.end  # (not inclusive)
+            bins_chromosome = bins_chromosome.copy()
 
-                min_anchor_location = max(0, min_anchor_location)
-                max_anchor_location = min(chromosome_length,
-                                          max_anchor_location)
+            # Positive strand
 
-                uniquely_mappable_per_bin = np.sum(
-                    chromosome_lookup[min_anchor_location:max_anchor_location])
+            min_anchor_location = bins_chromosome.start - (
+                extension_length + read_length - 1)
+            max_anchor_location = bins_chromosome.end
 
-                # Negative strand
-                min_anchor_location = bin_.start - (
-                read_length - 1)  # (inclusive)
-                max_anchor_location = bin_.end + extension_length  # (not inclusive)
+            min_anchor_location = min_anchor_location.clip(0, chromosome_length)
+            max_anchor_location = max_anchor_location.clip(0, chromosome_length)
 
-                min_anchor_location = max(0, min_anchor_location)
-                max_anchor_location = min(chromosome_length,
-                                          max_anchor_location)
+            # We want to compute np.sum(chromosome_lookup[min_anchor_location:max_anchor_location])
+            # this is faster to do by using cumulative sums as it is equivalent to
+            # cum_lookup[max_anchor_location] - cum_lookup[min_anchor_location]
+            # Note that cum_lookup has zero at the front prepended to it (otherwise the equations
+            # would have -1 in them, and there would be a special case to deal when loc is 0
 
-                uniquely_mappable_per_bin += np.sum(
-                    chromosome_lookup[min_anchor_location:max_anchor_location])
+            uniquely_mappable_per_bin = cum_lookup[max_anchor_location] - cum_lookup[min_anchor_location]
 
-                answer.append('{}\t{}\t{}\t{}'.format(bin_.chrom,
-                                                       bin_.start,
-                                                       bin_.end,
-                                                       uniquely_mappable_per_bin))
+            # Negative strand
+            min_anchor_location = bins_chromosome.start - (read_length - 1)
+            max_anchor_location = bins_chromosome.end + extension_length
 
-        bed_answer = fast_bedtool_from_iterable(answer, pybedtools)
-        bed_answer = bed_answer.sort()
+            min_anchor_location = min_anchor_location.clip(0, chromosome_length)
+            max_anchor_location = max_anchor_location.clip(0, chromosome_length)
 
-        df_answer = bed_answer.to_dataframe()
-        df_answer = df_answer.set_index(['chrom', 'start', 'end'])
-        df_answer = df_answer['name']
-        df_answer.name = 'mappability'
-        return df_answer
+            uniquely_mappable_per_bin += cum_lookup[max_anchor_location] - cum_lookup[
+                min_anchor_location]
+
+            bins_chromosome['mappability'] = uniquely_mappable_per_bin
+
+        answer = pd.concat(answer)
+
+        with timed_segment('Sorting inplace'):
+            answer.sort_values(by=['chrom', 'start', 'end'], inplace=True)
+
+        answer = answer.set_index(['chrom', 'start', 'end'])['mappability']
+        return answer
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
         chromosome_lookup = self.__lookup_dict[chromosome]
@@ -300,17 +299,18 @@ class BinMappability(Task):
         with autocleaning_pybedtools() as pybedtools:
             genomic_windows = pybedtools.BedTool(
                 self.bins_task.output().path)
-            mappability = self.mappability_track_task.output().load()
+            genomic_windows_df = genomic_windows.as_dataframe()
 
-            logger.debug('Computing mappability')
-            number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(
-                genomic_windows,
-                pybedtools=pybedtools,
-                read_length=self.read_length,
-                extension_length=self.max_ext_size)
+        mappability = self.mappability_track_task.output().load()
 
-            logger.debug('Writing output')
-            self.output().dump(number_of_uniquely_mappable_per_bin)
+        logger.debug('Computing mappability')
+        number_of_uniquely_mappable_per_bin = mappability.number_of_uniquely_mappable_within_a_bin(
+            genomic_windows_df,
+            read_length=self.read_length,
+            extension_length=self.max_ext_size)
+
+        logger.debug('Writing output')
+        self.output().dump(number_of_uniquely_mappable_per_bin)
 
 
 class FullyMappableBins(Task):
