@@ -6,20 +6,28 @@ import pandas as pd
 from chipalign.core.util import temporary_file
 
 
-def compress_dataframe(filename_input, filename_output):
-    from chipalign.command_line_applications.tables import ptrepack
+def compress_dataframe(filename_input, filename_output, complevel=9):
+    from chipalign.command_line_applications.tables import h5repack
     logger = logging.getLogger('chipalign.core.file_formats.dataframe.compress_dataframe')
+
+    # If output exists, delete it before running otherwise ptrepack/h5repack gets weird
+    if os.path.exists(filename_output):
+        os.unlink(filename_output)
+
     filesize_original = os.path.getsize(filename_input)
 
     start_time = datetime.datetime.now()
 
     # repack while compressing
-    ptrepack('--chunkshape', 'auto',
-             '--propindexes',
-             '--complevel', 1,
-             '--complib', 'lzo',
-             filename_input, filename_output
-             )
+    # ptrepack compression seems to be a bit broken: https://github.com/PyTables/PyTables/issues/461
+    # ptrepack('--chunkshape', 'auto',
+    #          '--propindexes',
+    #          '--complevel', 1,
+    #          '--complib', 'lzo',
+    #          filename_input, filename_output
+    #          )
+    # use h5repack instead
+    h5repack('-f SHUF', '-f GZIP={}'.format(complevel), filename_input, filename_output)
 
     # Report some stats
     end_time = datetime.datetime.now()

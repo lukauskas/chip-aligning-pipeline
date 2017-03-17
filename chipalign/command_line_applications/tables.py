@@ -11,3 +11,10 @@ try:
 except ImportError:
     ptrepack = None
     raise ImportError('Cannot import ptrepack. Is pytables installed?')
+
+try:
+    from sh import h5repack
+    h5repack = log_sh_exceptions(h5repack)
+except ImportError:
+    h5repack = None
+    raise ImportError('Cannot import h5repack. Is h5 library installed?')
