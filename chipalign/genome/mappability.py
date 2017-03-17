@@ -74,12 +74,13 @@ class MappabilityTrack(object):
         logger = logging.getLogger(self.__class__.__name__)
 
         answer = []
+        skipped_chroms = set()
         for chromosome, bins_chromosome in bins_bed_df.groupby('chrom'):
 
             try:
                 chromosome_lookup = self.__lookup_dict[chromosome]
             except KeyError:
-                logger.warn('No mappability data for {}. Assuming unmappable'.format(chromosome))
+                skipped_chroms.add(chromosome)
                 continue
 
             chromosome_length = len(chromosome_lookup)
@@ -117,13 +118,16 @@ class MappabilityTrack(object):
                 min_anchor_location]
 
             bins_chromosome['mappability'] = uniquely_mappable_per_bin
+            answer.append(bins_chromosome)
 
         answer = pd.concat(answer)
 
-        with timed_segment('Sorting inplace'):
-            answer.sort_values(by=['chrom', 'start', 'end'], inplace=True)
+        logger.warn('No mappability data for chromosomes {!r}. '
+                    'Assuming unmappable.'.format(sorted(skipped_chroms)))
 
+        answer.sort_values(by=['chrom', 'start', 'end'], inplace=True)
         answer = answer.set_index(['chrom', 'start', 'end'])['mappability']
+
         return answer
 
     def is_uniquely_mappable(self, chromosome, start, end, strand):
