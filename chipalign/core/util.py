@@ -76,10 +76,10 @@ def timed_segment(message, logger=None, timed_segment_type="code segment"):
 
         if exception is None:
             status = 'success'
-            exc_traceback = ''.join(traceback.format_tb(exc_traceback))
             log_f = logger.info
         else:
             status = 'failure'
+            exc_traceback = ''.join(traceback.format_tb(exc_traceback))
             log_f = logger.error
 
         log_f('Finished {} "{}". Status: {}. Took {:.2f}s'.format(timed_segment_type,
