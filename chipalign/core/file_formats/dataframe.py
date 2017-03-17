@@ -1,19 +1,45 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 import os
 import datetime
-import numpy as np
-import tempfile
+import logging
 import shutil
 import pandas as pd
 from chipalign.core.util import temporary_file
 
 
+def compress_dataframe(filename_input, filename_output):
+    from chipalign.command_line_applications.tables import ptrepack
+    logger = logging.getLogger('chipalign.core.file_formats.dataframe.compress_dataframe')
+    filesize_original = os.path.getsize(filename_input)
+
+    start_time = datetime.datetime.now()
+
+    # repack while compressing
+    ptrepack('--chunkshape', 'auto',
+             '--propindexes',
+             '--complevel', 1,
+             '--complib', 'lzo',
+             filename_input, filename_output
+             )
+
+    # Report some stats
+    end_time = datetime.datetime.now()
+    duration = (end_time-start_time).total_seconds()
+
+    filesize_compressed = os.path.getsize(filename_output)
+    diff = filesize_original - filesize_compressed
+    rel_diff = diff / filesize_original
+    logger.debug('DataFrame compression took {:.2f}s and saved {}B ({:.2%})'.format(duration,
+                                                                                    diff, rel_diff),
+                 extra=dict(filesize_compressed=filesize_compressed,
+                            filesize_original=filesize_original,
+                            diff=filesize_original - filesize_compressed,
+                            duration=duration,
+                            rel_diff=rel_diff))
+
+
 class DataFrameFile(object):
 
-    __HDF_KEY = 'table'
+    DEFAULT_HDF_KEY = 'table'
 
     def __init__(self, path):
         self._path = path
@@ -26,21 +52,14 @@ class DataFrameFile(object):
         return os.path.exists(self.path)
 
     def __dump_hdf(self, df, hdf_filename):
-        from chipalign.command_line_applications.tables import ptrepack
+        logger = logging.getLogger('DataFrameFile.__d')
 
         with temporary_file() as temporary_filename:
-            df.to_hdf(temporary_filename, self.__HDF_KEY)
-
-            # repack while compressing
-            ptrepack('--chunkshape', 'auto',
-                     '--propindexes',
-                     '--complevel', 1,
-                     '--complib', 'lzo',
-                     temporary_filename, hdf_filename
-                     )
+            df.to_hdf(temporary_filename, self.DEFAULT_HDF_KEY)
+            compress_dataframe(temporary_filename, hdf_filename)
 
     def __load_hdf(self, hdf_filename):
-        return pd.read_hdf(hdf_filename, self.__HDF_KEY)
+        return pd.read_hdf(hdf_filename, self.DEFAULT_HDF_KEY)
 
     def dump(self, df, verify=True):
         self_path = self.path
