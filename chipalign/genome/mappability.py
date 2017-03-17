@@ -13,7 +13,8 @@ import logging
 import luigi
 import numpy as np
 from chipalign.core.file_formats.dataframe import DataFrameFile
-from chipalign.core.util import fast_bedtool_from_iterable, timed_segment, autocleaning_pybedtools
+from chipalign.core.util import fast_bedtool_from_iterable, timed_segment, autocleaning_pybedtools, \
+    temporary_file
 
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
@@ -364,7 +365,9 @@ class FullyMappableBins(Task):
             'Bins total: {:,}, bins fully mappable: {:,} ({:%})'.format(
                 len(mappability_scores), len(fully_mappable),
                 float(len(fully_mappable)) / len(mappability_scores)))
+        fully_mappable = fully_mappable.reset_index()
+        with temporary_file() as tf:
+            fully_mappable.to_csv(tf, sep='\t', compression='gzip',
+                                  columns=['chrom', 'start', 'end'])
 
-        with self.output().open('w') as output_:
-            for chrom, start, end in fully_mappable.index:
-                output_.write('{}\t{}\t{}\n'.format(chrom, start, end))
+            shutil.move(tf, self.output().path)
