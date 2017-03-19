@@ -11,7 +11,7 @@ import luigi
 
 from chipalign.core.file_formats.bedgraph import BedGraph
 from chipalign.core.task import Task
-from chipalign.core.util import autocleaning_pybedtools
+from chipalign.core.util import autocleaning_pybedtools, timed_segment
 from chipalign.signal.peaks import MACSResults
 
 class Signal(Task):
@@ -91,17 +91,17 @@ class Signal(Task):
         output_abspath = os.path.abspath(self.output().path)
         self.ensure_output_directory_exists()
 
-        with autocleaning_pybedtools() as pybedtools:
-            with self.temporary_directory():
+        with self.temporary_directory():
 
-                macs_basename = MACSResults.OUTPUT_BASENAME
-                treat_pileup_filename = '{}_treat_pileup.bdg'.format(macs_basename)
-                control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
+            macs_basename = MACSResults.OUTPUT_BASENAME
+            treat_pileup_filename = '{}_treat_pileup.bdg'.format(macs_basename)
+            control_lambda_filename = '{}_control_lambda.bdg'.format(macs_basename)
 
-                logger.debug('Extracting files')
-                seven_z('x', macs_callpeaks_files_abspath, treat_pileup_filename, control_lambda_filename)
+            with timed_segment('Extracting MACS2 result'):
+                seven_z('x', macs_callpeaks_files_abspath, treat_pileup_filename,
+                        control_lambda_filename)
 
-                logger.debug('Now running bdgcmp')
+            with timed_segment('Running MACS2 bdgcmp'):
                 pval_signal_output_raw = 'pval.unclipped.signal'
                 macs2('bdgcmp',
                       t=treat_pileup_filename,
@@ -110,19 +110,22 @@ class Signal(Task):
                       m='ppois',
                       S=scaling_factor
                       )
-                logger.info('Clipping the output')
 
-                tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
-                    genome=self.treatment_task.genome_version)
-                tmp_bedtool.saveas(pval_signal_output_raw)
+            with autocleaning_pybedtools() as pybedtools:
+                with timed_segment('Clipping result with pybedtools'):
+                    tmp_bedtool = pybedtools.BedTool(pval_signal_output_raw).truncate_to_chrom(
+                        genome=self.treatment_task.genome_version)
+                    tmp_bedtool.saveas(pval_signal_output_raw)
 
                 chromsizes_file = 'chromsizes'
                 pybedtools.chromsizes_to_file(self.treatment_task.genome_version, chromsizes_file)
+
+            with timed_segment('Running bedClip'):
                 pval_signal_output = 'pval.signal'
                 bedClip(pval_signal_output_raw, chromsizes_file, pval_signal_output)
                 os.unlink(pval_signal_output_raw)
 
-                logger.info('Writing the output in a sorted order')
+            with timed_segment('Writing MACS output in sorted order'):
                 # MACS returns sorted signal output, but the chromosomes are in random order
                 # Let's fix that
                 chromosomes = set()
@@ -136,14 +139,12 @@ class Signal(Task):
                 tmp_gzip_file = 'output.gz'
                 with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
                     for chrom in sorted_chromosomes:
-                        logger.info('Processing chromosome: {}'.format(chrom))
-
                         # This loops through the input file, and writes it to out_ file chromosome by chromosome as defined
                         # in sorted_chromosomes
-                        with open(pval_signal_output, 'r') as in_:
+                        with open(pval_signal_output, 'rb') as in_:
                             seen_chrom = False
                             for row in in_:
-                                in_chrom, __, __ = row.partition('\t')
+                                in_chrom, __, __ = row.partition(b'\t')
 
                                 # If chromosomes match, write it
                                 if chrom == in_chrom:
@@ -157,6 +158,4 @@ class Signal(Task):
                                     else:
                                         continue
 
-                logger.info('Moving')
                 shutil.move(tmp_gzip_file, output_abspath)
-                logger.info('Done')
