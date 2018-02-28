@@ -5,12 +5,19 @@ Pipeline for aligning ChIP seq reads from SRA files to reference genome
 
 ## Requirements: development environment
 
-While the pipeline itself needs only Python 3 to run, its dependencies also require Python 2 and R develoipment environment set up.
+While the pipeline itself needs only Python 3 to run, its dependencies also require Python 2 and R development environment set up.
 
 Python can be installed without TCL/TK support:
 
 ```
+brew install python2 --without-tcl-tk
 brew install python3 --without-tcl-tk
+```
+
+R can be installed without xorg
+
+```
+brew install R --without-xorg
 ```
 
 ## Requirements : Command line applications
@@ -25,17 +32,27 @@ Make sure they are all available before you start. The list is provided below wi
 Last tested version for 7z: 
 16.02 from linuxbrew `p7zip`.
 
+```
+brew install p7zip
+```
+
 ### Alignment
 
 `bowtie2`, `bowtie2_build` have to be in path.
 Last version tested: bowtie2: stable 2.3.4.1 (bottled) "bowtie2" package in linuxbrew.
 
+```
+brew install bowtie2
+```
+
 Also cmd `pash3` has to be in path.
 TODO: Remove pash3
 
-### Common system utilities (in most linux systems)
+### Common system utilities
 
 `cat`, `sort` and `cut`
+
+These should come with most unix distributions by default.
 
 ### CrossMap
 
@@ -61,6 +78,10 @@ See https://github.com/kundajelab/phantompeakqualtools
 `samtools`.
 Last tested version 1.7 from linuxbrew.
 
+```
+brew install samtools
+```
+
 ### SRA toolkit
 
 `fastq-dump`
@@ -71,10 +92,17 @@ Last tested version: `sratoolkit` 2.9.0
 brew install sratoolkit
 ```
 
-### Tables
+### HDF5 support among with repacking utilities
+
 `ptrepack` and `h5repack` utilities are necessary.
 
-TODO: how to install
+`h5repack` comes with `hdf5` in linuxbrew (last tested version 1.10.1)
+
+```
+brew install hdf5
+```
+
+`ptrepack` should be installed via tables package in python (will be installed automatically).
 
 ### UCSC Kent tools suite
 
