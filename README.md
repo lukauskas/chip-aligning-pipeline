@@ -29,11 +29,18 @@ Make sure they are all available before you start. The list is provided below wi
 
 `unzip` and `gzip` and `7z` have to be in the path.
 
-Last tested version for 7z: 
-16.02 from linuxbrew `p7zip`.
+`gzip` should come with your linux distribution
+
+Last tested version for 7z is 16.02 from linuxbrew `p7zip`.
 
 ```
 brew install p7zip
+```
+
+Last tested version for unzip is stable 6.0, linuxbrew package `unzip
+
+```
+brew install unzip
 ```
 
 ### Alignment
