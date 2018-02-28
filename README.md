@@ -3,6 +3,79 @@ Pipeline for aligning ChIP seq reads from SRA files to reference genome
 
 # Installation
 
+## Requirements : Command line applications
+
+This pipeline depends on a number of command-line applications.
+Make sure they are all available before you start. The list is provided below.
+
+### Python3
+
+This is not really a command line application, but is an obvious necessity.
+Last tested with `Python 3.6.4` from `python` linuxbrew package.
+
+### Archiving applications
+
+`unzip` and `gzip` and `7z` have to be in the path.
+
+Last tested version for 7z: 
+16.02 from linuxbrew `p7zip`.
+
+### Alignment
+
+`bowtie2`, `bowtie2_build` have to be in path.
+Last version tested: bowtie2: stable 2.3.4.1 (bottled) "bowtie2" package in linuxbrew.
+
+Also cmd `pash3` has to be in path.
+TODO: Remove pash3
+
+### Common system utilities (in most linux systems)
+
+`cat`, `sort` and `cut`
+
+### CrossMap
+
+`CrossMap.py`.
+Can be installed via pip: `pip install CrossMap`
+Last version tested: 0.2.7
+
+### Peak Calling
+
+`macs2`. 
+Can be installed via pip `pip install macs2`.
+Note this needs Python 2.7, not python 3.
+Last version tested: 2.1.1.20160309
+
+### Phantompeakqualtools
+
+`run_spp`
+
+See https://github.com/kundajelab/phantompeakqualtools
+
+### Samtools
+
+`samtools`.
+Last tested version 1.7 from linuxbrew.
+
+### SRA toolkit
+
+`fastq-dump`
+
+Last tested version: TODO - find on linuxbrew
+
+### Tables
+`ptrepack` and `h5repack` utilities are necessary.
+
+TODO: how to install
+
+### UCSC suite
+
+`twoBitToFa`, `bigWigToBedGraph` and `bedClip` utilities are necessary for the pipeline.
+They are available from UCSC suite
+
+TODO: how to install
+
+## Requirements: Python requirements and package installation
+
 Obtain the source code, navigate to its directory and proceed to run:
 ```
 pip install cython
