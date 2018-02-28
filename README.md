@@ -65,19 +65,27 @@ Last tested version 1.7 from linuxbrew.
 
 `fastq-dump`
 
-Last tested version: TODO - find on linuxbrew
+Last tested version: `sratoolkit` 2.9.0
+
+```
+brew install sratoolkit
+```
 
 ### Tables
 `ptrepack` and `h5repack` utilities are necessary.
 
 TODO: how to install
 
-### UCSC suite
+### UCSC Kent tools suite
 
 `twoBitToFa`, `bigWigToBedGraph` and `bedClip` utilities are necessary for the pipeline.
 They are available from UCSC suite
 
-TODO: how to install
+Last tested version stable 358, HEAD (from linuxbrew)
+
+```
+brew install kent-tools
+```
 
 ## Requirements: Python requirements and package installation
 
