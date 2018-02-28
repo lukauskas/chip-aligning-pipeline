@@ -61,18 +61,24 @@ TODO: Remove pash3
 
 These should come with most unix distributions by default.
 
-### CrossMap
+### Python2 utilities
 
-`CrossMap.py`.
-Can be installed via pip: `pip install CrossMap`
-Last version tested: 0.2.7
+There are two python packages that the software makes use of as command line applications: `CrossMap` and `MACS2`.
+These packages are available only in python2, so make sure to install them that way.
 
-### Peak Calling
+`CrossMap.py`: last tested version 0.2.7
+Install via `pip2`:
 
-`macs2`. 
-Can be installed via pip `pip install macs2`.
-Note this needs Python 2.7, not python 3.
-Last version tested: 2.1.1.20160309
+```
+pip2 install CrossMap
+```
+
+`macs2`: last tested version 2.1.1.20160309
+Install via `pip2`:
+
+```
+pip install macs2
+```
 
 ### Phantompeakqualtools
 
