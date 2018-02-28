@@ -3,15 +3,14 @@ Pipeline for aligning ChIP seq reads from SRA files to reference genome
 
 # Installation
 
+## Requirements: development environment
+
+While the pipeline itself needs only Python 3 to run, its dependencies also require Python 2 and R develoipment environment set up.
+
 ## Requirements : Command line applications
 
 This pipeline depends on a number of command-line applications.
-Make sure they are all available before you start. The list is provided below.
-
-### Python3
-
-This is not really a command line application, but is an obvious necessity.
-Last tested with `Python 3.6.4` from `python` linuxbrew package.
+Make sure they are all available before you start. The list is provided below with hints on installation.
 
 ### Archiving applications
 
