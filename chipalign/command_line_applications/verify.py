@@ -7,8 +7,9 @@ from io import StringIO
 import sh
 
 
-def _get_shell_output(command, ignore_error_return=False,
+def _get_shell_output(command,
                       *args, **kwargs):
+    ignore_error_return = kwargs.pop('ignore_error_return', False)
     lines = kwargs.pop('lines', 'all')
 
     with StringIO() as buf:
