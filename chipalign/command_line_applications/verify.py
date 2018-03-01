@@ -4,12 +4,20 @@ Module to quickly verify that all command line dependancies are installed.
 """
 from io import StringIO
 
+import sh
 
-def _get_shell_output(command, *args, **kwargs):
+
+def _get_shell_output(command, ignore_error_return=False,
+                      *args, **kwargs):
     lines = kwargs.pop('lines', 'all')
 
     with StringIO() as buf:
-        command(*args, **kwargs, _out=buf, _err=buf)
+        try:
+            command(*args, **kwargs, _out=buf, _err=buf)
+        except sh.ErrorReturnCode:
+            if not ignore_error_return:
+                raise
+
         ans = buf.getvalue()
 
     if lines == 'all':
@@ -58,7 +66,7 @@ def main():
 
     print('* Phantompeakqualtools')
     from chipalign.command_line_applications.phantompeakqualtools import run_spp
-    print(_get_shell_output(run_spp))
+    print(_get_shell_output(run_spp, ignore_error_return=True))
 
     print('* Samtools')
     from chipalign.command_line_applications.samtools import samtools
