@@ -67,17 +67,26 @@ There are two python packages that the software makes use of as command line app
 These packages are available only in python2, so make sure to install them that way.
 
 `CrossMap.py`: last tested version 0.2.7
-Install via `pip2`:
-
-```
-pip2 install CrossMap
-```
-
 `macs2`: last tested version 2.1.1.20160309
-Install via `pip2`:
+
+To install, first make sure `lzo` library is installed (needed for `bx-python`):
 
 ```
-pip install macs2
+brew install lzo
+```
+
+Then install pre-requisites to py2 environment. Do not forget to use `pip2`, not `pip` (which should default to py3). 
+
+```
+pip2 install numpy
+pip2 install cython
+pip2 install bx-python
+```
+
+Finally install the packages.
+
+```
+pip2 install CrossMap macs2
 ```
 
 ### Phantompeakqualtools
@@ -85,6 +94,54 @@ pip install macs2
 `run_spp`
 
 See https://github.com/kundajelab/phantompeakqualtools
+Copied from their readme here for convenience.
+
+First install `libxml2` as it's needed for `RCurl` - a dependency of `Rsamtools`.
+
+```
+brew install libxml2
+```
+
+Then: 
+
+```
+git clone https://github.com/kundajelab/phantompeakqualtools.git
+cd phantompeakqualtools
+R
+```
+
+Then, inside R:
+
+```
+> install.packages("snow", repos="http://cran.us.r-project.org")
+> install.packages("snowfall", repos="http://cran.us.r-project.org")
+> install.packages("bitops", repos="http://cran.us.r-project.org")
+> install.packages("caTools", repos="http://cran.us.r-project.org")
+> source("http://bioconductor.org/biocLite.R")
+> biocLite("Rsamtools")
+> install.packages("./spp_1.14.tar.gz")
+```
+
+Now quit R and edit the `run_spp.R` file, add
+```
+#!/usr/bin/env Rscript
+```
+To the first line of the script.
+
+Copy this file to some directory in your path, e.g. if you're using linuxbrew:
+```
+cp run_spp.R ~/.linuxbrew/bin/
+```
+
+Make this file executable:
+```
+chmod +x chmod +x ~/.linuxbrew/bin/run_spp.R
+```
+It is now safe to `phantompeakqualtools` directory
+```
+cd ..
+rm -rf phantompeakqualtools
+```
 
 ### Samtools
 
