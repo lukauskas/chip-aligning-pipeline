@@ -53,7 +53,7 @@ class MACSResults(Task):
 
     def _run(self):
         from chipalign.command_line_applications.macs import macs2
-        from chipalign.command_line_applications.seven_z import seven_z
+        from chipalign.command_line_applications.archiving import seven_z
 
         logger = self.logger()
 
