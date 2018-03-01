@@ -10,7 +10,7 @@ from io import StringIO
 
 import pybedtools
 import numpy as np
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, autocleaning_pybedtools
 
 from chipalign.signal.bins import BinnedSignal, _bedtool_is_sorted
 from hypothesis import given
@@ -55,24 +55,26 @@ class TestBinnedSignal(unittest.TestCase):
         try:
             # Prepare files
             with gzip.GzipFile(sample_windows_filename, 'w') as windows_file:
-                windows_file.write('chr1\t4000\t5000\n')
-                windows_file.write('chr5\t4000\t8000\n')
+                windows_file.write(b'chr1\t4000\t5000\n')
+                windows_file.write(b'chr5\t4000\t8000\n')
 
             with gzip.GzipFile(sample_signal_filename, 'w') as sample_signal_file:
                 # Not overlapping
-                sample_signal_file.write('chr1\t2000\t2100\t3\n')
+                sample_signal_file.write(b'chr1\t2000\t2100\t3\n')
 
                 # Overlapping
-                sample_signal_file.write('chr1\t3900\t4100\t0.3\n')
-                sample_signal_file.write('chr1\t4300\t4500\t0.5\n')
-                sample_signal_file.write('chr1\t4800\t5300\t2\n')
+                sample_signal_file.write(b'chr1\t3900\t4100\t0.3\n')
+                sample_signal_file.write(b'chr1\t4300\t4500\t0.5\n')
+                sample_signal_file.write(b'chr1\t4800\t5300\t2\n')
 
                 # Not overlapping
-                sample_signal_file.write('chr1\t5300\t5400\t3\n')
-                sample_signal_file.write('chr2\t4300\t4500\t3\n')
+                sample_signal_file.write(b'chr1\t5300\t5400\t3\n')
+                sample_signal_file.write(b'chr2\t4300\t4500\t3\n')
 
             s = StringIO()
-            BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s)
+            with autocleaning_pybedtools() as pybedtools:
+                BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s,
+                                             pybedtools=pybedtools)
 
             expected_score_for_bin = -1 * np.log10(1 / 1000.0 * (100 * np.power(10.0, -0.3)
                                                                  + 200 * np.power(10.0, -0.5)
@@ -80,8 +82,9 @@ class TestBinnedSignal(unittest.TestCase):
                                                                  + (1000 - 200 - 200 - 100) * 1))
 
             expected_output = 'chr1\t4000\t5000\t{}\nchr5\t4000\t8000\t0.0\n'.format(expected_score_for_bin)
+            actual_output = s.getvalue()
 
-            self.assertEqual(expected_output, s.getvalue())
+            self.assertEqual(expected_output, actual_output)
 
         finally:
             os.unlink(sample_windows_filename)
@@ -94,25 +97,26 @@ class TestBinnedSignal(unittest.TestCase):
 
                 # Prepare files
                 with gzip.GzipFile(sample_windows_filename, 'w') as windows_file:
-                    windows_file.write('chr1\t4000\t5000\n')
-                    windows_file.write('chr5\t4000\t8000\n')
+                    windows_file.write(b'chr1\t4000\t5000\n')
+                    windows_file.write(b'chr5\t4000\t8000\n')
 
                 with gzip.GzipFile(sample_signal_filename, 'w') as sample_signal_file:
                     # Not overlapping
-                    sample_signal_file.write('chr1\t2000\t2100\t3\n')
+                    sample_signal_file.write(b'chr1\t2000\t2100\t3\n')
 
                     # Overlapping
-                    sample_signal_file.write('chr1\t3900\t4100\t0.3\n')
-                    sample_signal_file.write('chr1\t4300\t4500\t0.5\n')
-                    sample_signal_file.write('chr1\t4800\t5300\t2\n')
+                    sample_signal_file.write(b'chr1\t3900\t4100\t0.3\n')
+                    sample_signal_file.write(b'chr1\t4300\t4500\t0.5\n')
+                    sample_signal_file.write(b'chr1\t4800\t5300\t2\n')
 
                     # Not overlapping
-                    sample_signal_file.write('chr1\t5300\t5400\t3\n')
-                    sample_signal_file.write('chr2\t4300\t4500\t3\n')
+                    sample_signal_file.write(b'chr1\t5300\t5400\t3\n')
+                    sample_signal_file.write(b'chr2\t4300\t4500\t3\n')
 
                 s = StringIO()
-                BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s,
-                                             method='max')
+                with autocleaning_pybedtools() as pybedtools:
+                    BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s,
+                                                 method='max', pybedtools=pybedtools)
                 expected_score_for_bin = 2  # max(0.3, 0.5, 2)
 
                 expected_output = 'chr1\t4000\t5000\t{}\nchr5\t4000\t8000\t0.0\n'.format(expected_score_for_bin)

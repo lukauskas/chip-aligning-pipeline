@@ -24,13 +24,13 @@ class BedGraph(File):
 
     def first_line_is_header(self):
         with self.open('r') as f:
-            line = f.readline()
+            line = f.readline().decode('utf-8')
 
         return line.startswith('track')
 
     def header(self):
         with self.open('r') as f:
-            line = f.readline()
+            line = f.readline().decode('utf-8')
 
         if not line.startswith('track'):
             return {}

@@ -20,7 +20,7 @@ def _temporary_bedgraph(contents, gzipped=False):
         open_ = gzip.GzipFile if gzipped else open
 
         with open_(tf, 'w') as f:
-            f.write(contents)
+            f.write(contents.encode('utf-8'))
 
         yield BedGraph(tf)
 
