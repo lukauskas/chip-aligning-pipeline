@@ -44,7 +44,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['graypy=0.2.14',
+    install_requires=['python-logstash=0.4.6',
                       'luigi==2.7.2',
                       'numpy==1.14.1',
                       'pandas==0.22.0',
