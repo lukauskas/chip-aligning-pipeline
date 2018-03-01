@@ -37,7 +37,7 @@ Last tested version for 7z is 16.02 from linuxbrew `p7zip`.
 brew install p7zip
 ```
 
-Last tested version for unzip is stable 6.0, linuxbrew package `unzip
+Last tested version for unzip is stable 6.0, linuxbrew package `unzip`
 
 ```
 brew install unzip
