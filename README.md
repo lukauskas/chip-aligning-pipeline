@@ -347,8 +347,19 @@ For instance, see the [`chipalign.yml` in the examples directory](https://github
 
 Alternatively, one can specify the output directory in `CHIPALIGN_OUTPUT_DIRECTORY` environment variable
 ```
-export CHIPALIGN_OUTPUT_DIRECTORY="$pwd/chipalign-output"
+export CHIPALIGN_OUTPUT_DIRECTORY="$(pwd)/chipalign-output"
 ```
+
+# Running tests
+
+Make sure the `CHIPALIGN_OUTPUT_DIRECTORY` is set.
+Install `nose` and `hypothesis`
+
+```
+pip install nose hypothesis
+```
+
+Run `nosetests`
 
 # Running pipeline on multiple processes
 
