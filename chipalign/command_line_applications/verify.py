@@ -83,9 +83,9 @@ def main():
 
     print('* UCSC Kent Tools')
     from chipalign.command_line_applications.ucsc_suite import twoBitToFa, bigWigToBedGraph, bedClip
-    print(_get_shell_output(twoBitToFa, lines=0))
-    print(_get_shell_output(bigWigToBedGraph, lines=0))
-    print(_get_shell_output(bedClip, lines=0))
+    print(_get_shell_output(twoBitToFa, lines=0, ignore_error_return=True))
+    print(_get_shell_output(bigWigToBedGraph, lines=0, ignore_error_return=True))
+    print(_get_shell_output(bedClip, lines=0, ignore_error_return=True))
 
 
 if __name__ == '__main__':
