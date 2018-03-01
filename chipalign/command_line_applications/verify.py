@@ -67,7 +67,7 @@ def main():
 
     print('* Phantompeakqualtools')
     from chipalign.command_line_applications.phantompeakqualtools import run_spp
-    print(_get_shell_output(run_spp, ignore_error_return=True))
+    print(_get_shell_output(run_spp, ignore_error_return=True, lines=0))
 
     print('* Samtools')
     from chipalign.command_line_applications.samtools import samtools
