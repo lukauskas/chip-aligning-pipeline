@@ -187,10 +187,100 @@ brew install kent-tools
 
 ## Requirements: Python requirements and package installation
 
-Obtain the source code, navigate to its directory and proceed to run:
+Before we start with the package, we need to set up the development environment.
+We will use python 3 for this.
+
+First let's obtain `virtualenv` and `virtualenvwrapper` so we can keep a clean environment for our work.
+
 ```
+pip3 install virtualenv virtualenvwrapper
+```
+
+Configure it to use python3 and add it to `.bash_profile` so the settings persist:
+
+```
+export VIRTUALENVWRAPPER_PYTHON=$HOME/.linuxbrew/bin/python3
+source $HOME/.linuxbrew/bin/virtualenvwrapper.sh
+echo "export VIRTUALENVWRAPPER_PYTHON=$HOME/.linuxbrew/bin/python3" >> ~/.bash_profile
+echo "source $HOME/.linuxbrew/bin/virtualenvwrapper.sh" >> ~/.bash_profile
+```
+
+Make a virtual environment for this package
+```
+mkvirtualenv chipalign
+```
+
+From now on you can always go to this environment via `workon chipalign`.
+To leave it type `deactivate`.
+Note how `pip` and `python` now have been changed to virtualenv-specific ones.
+
+First install some prerequisites needed to build the package:
+```
+pip install numpy
 pip install cython
+```
+
+Obtain the source code by cloning this repository, e.g.
+```
+git clone https://github.com/lukauskas/chip-aligning-pipeline.git
+```
+
+Now change directory inside the pipeline
+```
+cd chip-aligning-pipeline
+```
+
+And install the package as editable
+
+```
 pip install -e .
+```
+
+# Testing command line dependancies post installation
+
+To test whether all command-line dependancies are installed and working run the verify module
+
+```
+python -m chipalign.command_line_applications.verify
+```
+
+The expected output should list the application versions (or at least the name) for each of the apps:
+
+```
+* Archiving
+** unzip
+UnZip 6.00 of 20 April 2009, by Debian. Original by Info-ZIP.
+** gzip
+gzip 1.3.12
+** 7z
+7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 (locale=C,Utf16=off,HugeFiles=on,64 bits,32 CPUs x64)
+* Alignment
+/home/ife/saulius.lukauskas/.linuxbrew/bin/../Cellar/bowtie2/2.3.4.1/bin/bowtie2-align-s version 2.3.4.1
+/home/ife/saulius.lukauskas/.linuxbrew/Cellar/bowtie2/2.3.4.1/bin/bowtie2-build-s version 2.3.4.1
+* Common
+sort (GNU coreutils) 8.12
+cut (GNU coreutils) 8.12
+cat (GNU coreutils) 8.12
+* Py2 based apps
+Program: CrossMap (v0.2.7)
+macs2 2.1.1.20160309
+* Phantompeakqualtools
+Got error return code ErrorReturnCode_1('\n\n  RAN: /home/ife/saulius.lukauskas/.linuxbrew/bin/run_spp.R\n\n  STDOUT:\n\n\n  STDERR:\n',) when running sh command
+Usage: Rscript run_spp.R <options>
+* Samtools
+samtools 1.7
+* SRA toolkit
+/home/ife/saulius.lukauskas/.linuxbrew/bin/fastq-dump : 2.9.0
+* HDF5
+h5repack: Version 1.10.1
+* UCSC Kent Tools
+Got error return code ErrorReturnCode_255('\n\n  RAN: /usr/bin/twoBitToFa\n\n  STDOUT:\n\n\n  STDERR:\n',) when running sh command
+twoBitToFa - Convert all or part of .2bit file to fasta
+Got error return code ErrorReturnCode_255('\n\n  RAN: /home/ife/saulius.lukauskas/.linuxbrew/bin/bigWigToBedGraph\n\n  STDOUT:\n\n\n  STDERR:\n',) when running sh command
+bigWigToBedGraph - Convert from bigWig to bedGraph format.
+Got error return code ErrorReturnCode_255('\n\n  RAN: /home/ife/saulius.lukauskas/.linuxbrew/bin/bedClip\n\n  STDOUT:\n\n\n  STDERR:\n',) when running sh command
+bedClip - Remove lines from bed file that refer to off-chromosome locations.
 ```
 
 # Working with the pipeline
