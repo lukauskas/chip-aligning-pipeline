@@ -55,3 +55,4 @@ target/
 .idea
 data
 .ipynb_checkpoints
+logging.conf
