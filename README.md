@@ -52,9 +52,6 @@ Last version tested: bowtie2: stable 2.3.4.1 (bottled) "bowtie2" package in linu
 brew install bowtie2
 ```
 
-Also cmd `pash3` has to be in path.
-TODO: Remove pash3
-
 ### Common system utilities
 
 `cat`, `sort` and `cut`
