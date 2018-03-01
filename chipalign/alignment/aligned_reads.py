@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import luigi
 
 from chipalign.alignment.implementations.bowtie import AlignedReadsBowtie
-from chipalign.alignment.implementations.pash import AlignedReadsPash
 from chipalign.core.task import MetaTask
 from chipalign.sequence.short_reads import ShortReads
 
@@ -22,8 +21,6 @@ class AlignedReads(MetaTask):
     def requires(self):
         if self.aligner == 'bowtie':
             class_ = AlignedReadsBowtie
-        elif self.aligner == 'pash':
-            class_ = AlignedReadsPash
         else:
             raise Exception('Aligner {} is not supported'.format(self.aligner))
 
