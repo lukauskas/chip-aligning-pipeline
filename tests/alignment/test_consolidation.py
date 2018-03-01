@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import gzip
-from itertools import imap, ifilter
 import os
 from random import Random
 import shutil
@@ -47,8 +46,8 @@ class TestReadConsolidation(TaskTestCase):
 
         with temporary_file() as tf:
             with open(tf, 'w') as f:
-                f.writelines(imap(str, pybedtools.BedTool(reads_a.output().path)))
-                f.writelines(imap(str, pybedtools.BedTool(reads_b.output().path)))
+                f.writelines(map(str, pybedtools.BedTool(reads_a.output().path)))
+                f.writelines(map(str, pybedtools.BedTool(reads_b.output().path)))
 
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
@@ -114,12 +113,12 @@ class TestReadConsolidation(TaskTestCase):
 
         with temporary_file() as tf:
             with open(tf, 'w') as f:
-                f.writelines(imap(str,
-                                  ifilter(standard_chromosomes_filter,
-                                          pybedtools.BedTool(reads_a.output().path))))
-                f.writelines(imap(str,
-                                  ifilter(standard_chromosomes_filter,
-                                          pybedtools.BedTool(reads_b.output().path))))
+                f.writelines(map(str,
+                                 filter(standard_chromosomes_filter,
+                                        pybedtools.BedTool(reads_a.output().path))))
+                f.writelines(map(str,
+                                 filter(standard_chromosomes_filter,
+                                        pybedtools.BedTool(reads_b.output().path))))
 
             joint_input_bedtool = pybedtools.BedTool(tf)
             joint_input_bedtool = joint_input_bedtool.sort()
