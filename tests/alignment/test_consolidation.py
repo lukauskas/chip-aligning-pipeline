@@ -157,7 +157,7 @@ class RandomAlignedReads(Task):
                 for i, line in enumerate(x):
                     if i < self.number_of_nonstandard_reads:
                         line.chrom = random.choice(nonstandard_chromosomes)
-                    f.write('{0.chrom}\t{0.start}\t{0.end}\tN\t1000\t{0.strand}\n'.format(line))
+                    f.write('{0.chrom}\t{0.start}\t{0.end}\tN\t1000\t{0.strand}\n'.format(line).encode('utf-8'))
 
             shutil.move(bed_tf, abspath)
 
