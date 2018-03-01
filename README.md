@@ -345,6 +345,11 @@ The pipeline assumes existence of a configuration file `chipalign.yml` in the wo
 This file should contain one variable, in Yaml format, that points to the directory where the output should be stored.
 For instance, see the [`chipalign.yml` in the examples directory](https://github.com/lukauskas/chip-aligning-pipeline/blob/master/examples/chipalign.yml) that directs the output of the program to `'output/'` directory. It is, however, a good advice to use absolute path of the output directory, instead of a relative one.
 
+Alternatively, one can specify the output directory in `CHIPALIGN_OUTPUT_DIRECTORY` environment variable
+```
+export CHIPALIGN_OUTPUT_DIRECTORY="$pwd/chipalign-output"
+```
+
 # Running pipeline on multiple processes
 
 The package `luigi`, which the pipeline is based on, supports execution of the tasks in a parallel fashion.
