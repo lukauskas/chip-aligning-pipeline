@@ -49,8 +49,8 @@ def main():
 
     print('* Alignment')
     from chipalign.command_line_applications.bowtie import bowtie2, bowtie2_build
-    print(_get_shell_output(bowtie2, '--version', lines=0))
-    print(_get_shell_output(bowtie2_build, '--version', lines=0))
+    print(_get_shell_output(bowtie2, '--version', lines=0, ignore_error_return=True))
+    print(_get_shell_output(bowtie2_build, '--version', lines=0, ignore_error_return=True))
 
     print('* Common')
     from chipalign.command_line_applications.common import sort, cat, cut
