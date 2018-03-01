@@ -67,17 +67,26 @@ There are two python packages that the software makes use of as command line app
 These packages are available only in python2, so make sure to install them that way.
 
 `CrossMap.py`: last tested version 0.2.7
-Install via `pip2`:
-
-```
-pip2 install CrossMap
-```
-
 `macs2`: last tested version 2.1.1.20160309
-Install via `pip2`:
+
+To install, first make sure `lzo` library is installed (needed for `bx-python`):
 
 ```
-pip install macs2
+brew install lzo
+```
+
+Then install pre-requisites to py2 environment. Do not forget to use `pip2`, not `pip` (which should default to py3). 
+
+```
+pip2 install numpy
+pip2 install cython
+pip2 install bx-python
+```
+
+Finally install the packages.
+
+```
+pip2 install CrossMap macs2
 ```
 
 ### Phantompeakqualtools
