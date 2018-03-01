@@ -294,8 +294,36 @@ Follow the instructions here:
 
 https://elk-docker.readthedocs.io/#running-with-docker-compose
 
+### Changes to configuration of docker image
+
+This elk docker image is configured to use beats input.
+Please update it to use TCP input.
+
+`/etc/logstash/conf.d/03-tcp-input.conf`:
+```
+input {
+  tcp {
+    port => 5000
+    codec => json
+  }
+}
+```
+`/etc/logstash/conf.d/30-output.conf`:
+```
+output {
+  elasticsearch {
+    hosts => ["localhost"]
+    manage_template => false
+  }
+}
+```
+
+You will also need to expose the TCP input port (i.e. 5000 in this example).
+
+### Configuration of `chipalign`
+
 Copy `logging.conf.template` to `logging.conf`.
-Update the `args` option in the end to point to your newly setup ELK server.
+Update the `args` option in the end to point to your newly setup ELK server and TCP input port.
 
 ## Screen only approach.
 
