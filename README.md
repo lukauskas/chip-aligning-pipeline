@@ -283,6 +283,8 @@ Got error return code ErrorReturnCode_255('\n\n  RAN: /home/ife/saulius.lukauska
 bedClip - Remove lines from bed file that refer to off-chromosome locations.
 ```
 
+Ignore the "Got error return code ErrorReturnCode_1" lines, these come from logging system since the software sometimes returns an error code for help screen"
+
 # Working with the pipeline
 
 The whole mapping pipeline is described as a set of [`luigi`](https://github.com/spotify/luigi) tasks.
