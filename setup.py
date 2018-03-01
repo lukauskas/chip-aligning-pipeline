@@ -56,7 +56,7 @@ setup(
                       'tables==3.4.2'],
 
     extras_require={
-        'test': ['nose'],
+        'test': ['nose', 'hypothesis'],
     },
 
 
