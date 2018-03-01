@@ -282,6 +282,57 @@ bedClip - Remove lines from bed file that refer to off-chromosome locations.
 
 Ignore the "Got error return code ErrorReturnCode_1" lines, these come from logging system since the software sometimes returns an error code for help screen"
 
+# Logging setup
+
+## ELK approach
+
+This is recommended aproach since the number of logs output by the pipeline is huge.
+
+First setup an Elasticsearch, Logstash, Kibana (ELK) server.
+The best way is through ELK image in docker.
+Follow the instructions here:
+
+https://elk-docker.readthedocs.io/#running-with-docker-compose
+
+### Changes to configuration of docker image
+
+This elk docker image is configured to use beats input.
+Please update it to use TCP input.
+
+`/etc/logstash/conf.d/03-tcp-input.conf`:
+```
+input {
+  tcp {
+    port => 5000
+    codec => json
+  }
+}
+```
+`/etc/logstash/conf.d/30-output.conf`:
+```
+output {
+  elasticsearch {
+    hosts => ["localhost"]
+    manage_template => false
+  }
+}
+```
+
+You will also need to expose the TCP input port (i.e. 5000 in this example).
+
+### Configuration of `chipalign`
+
+Copy `logging.conf.template` to `logging.conf`.
+Update the `args` option in the end to point to your newly setup ELK server and TCP input port.
+
+## Screen only approach.
+
+Copy `logging.screenonly.conf.template` to `logging.conf`.
+
+## Testing logging
+
+TODO
+
 # Working with the pipeline
 
 The whole mapping pipeline is described as a set of [`luigi`](https://github.com/spotify/luigi) tasks.
