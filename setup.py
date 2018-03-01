@@ -49,6 +49,7 @@ setup(
                       'numpy==1.14.1',
                       'pandas==0.22.0',
                       'sh==1.12.4',
+                      'six==1.11.0',
                       'pyyaml==3.12',
                       'pybedtools==0.7.10',
                       'requests==2.18.4',
