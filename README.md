@@ -331,7 +331,8 @@ Copy `logging.screenonly.conf.template` to `logging.conf`.
 
 ## Testing logging
 
-TODO
+A sample `test_logging.py` script is given for your convenience.
+Use it to check that log messages appear in kibana.
 
 # Working with the pipeline
 
