@@ -1,8 +1,8 @@
 [loggers]
-keys=root,sh,luigi,requests
+keys=root,sh,luigi
 
 [logger_root]
-handlers=screen,graylog
+handlers=screen,logstash
 level=DEBUG
 
 [logger_sh]
@@ -12,14 +12,8 @@ propagate=1
 handlers=
 
 [logger_luigi]
-level=INFO
+level=WARNING
 qualname=luigi-interface
-propagate=1
-handlers=
-
-[logger_requests]
-level=INFO
-qualname=requests
 propagate=1
 handlers=
 
@@ -31,7 +25,7 @@ format=%(asctime)s %(levelname)8s %(name)s: %(message)s
 datefmt=%H:%M:%S
 
 [handlers]
-keys=screen,graylog
+keys=screen,logstash
 
 [handler_screen]
 level=WARNING
@@ -39,7 +33,7 @@ class=StreamHandler
 formatter=standard
 args=(sys.stdout,)
 
-[handler_graylog]
+[handler_logstash]
 level=DEBUG
-class=graypy.GELFHandler
-args=('127.0.0.1', 12201,)
+class=logstash.TCPLogstashHandler
+args=('127.0.0.1', 5000, 'logstash', None, False, 1)
