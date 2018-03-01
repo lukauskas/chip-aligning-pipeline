@@ -94,6 +94,54 @@ pip2 install CrossMap macs2
 `run_spp`
 
 See https://github.com/kundajelab/phantompeakqualtools
+Copied from their readme here for convenience.
+
+First install `libxml2` as it's needed for `RCurl` - a dependency of `Rsamtools`.
+
+```
+brew install libxml2
+```
+
+Then: 
+
+```
+git clone https://github.com/kundajelab/phantompeakqualtools.git
+cd phantompeakqualtools
+R
+```
+
+Then, inside R:
+
+```
+> install.packages("snow", repos="http://cran.us.r-project.org")
+> install.packages("snowfall", repos="http://cran.us.r-project.org")
+> install.packages("bitops", repos="http://cran.us.r-project.org")
+> install.packages("caTools", repos="http://cran.us.r-project.org")
+> source("http://bioconductor.org/biocLite.R")
+> biocLite("Rsamtools")
+> install.packages("./spp_1.14.tar.gz")
+```
+
+Now quit R and edit the `run_spp.R` file, add
+```
+#!/usr/bin/env Rscript
+```
+To the first line of the script.
+
+Copy this file to some directory in your path, e.g. if you're using linuxbrew:
+```
+cp run_spp.R ~/.linuxbrew/bin/
+```
+
+Make this file executable:
+```
+chmod +x chmod +x ~/.linuxbrew/bin/run_spp.R
+```
+It is now safe to `phantompeakqualtools` directory
+```
+cd ..
+rm -rf phantompeakqualtools
+```
 
 ### Samtools
 
