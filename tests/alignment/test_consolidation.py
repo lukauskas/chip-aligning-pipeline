@@ -36,11 +36,11 @@ class TestReadConsolidation(TaskTestCase):
         self.build_task(consolidated_reads_task)
 
         output_filename = consolidated_reads_task.output().path
-        try:
-            with gzip.open(output_filename, 'r') as gf:
-                gf.next()  # This raises exception if it is gzipped
-        except IOError:
-            self.fail('Output file is not gzipped')
+        with gzip.open(output_filename, 'r') as gf:
+            try:
+                next(gf)  # This tries to read and raises exception if file is not gzipped
+            except IOError:
+                self.fail('Output file is not gzipped')
 
         answer_bedtool = pybedtools.BedTool(output_filename)
 
@@ -150,7 +150,7 @@ class RandomAlignedReads(Task):
                      seed=self.seed, genome=self.genome_version)
 
         random = Random(self.seed)
-        nonstandard_chromosomes = filter(lambda chrom: '_' in chrom, pybedtools.chromsizes(self.genome_version).keys())
+        nonstandard_chromosomes = list(filter(lambda chrom: '_' in chrom, pybedtools.chromsizes(self.genome_version).keys()))
 
         with temporary_file(suffix='.bed.gz') as bed_tf:
             with gzip.GzipFile(bed_tf, 'w') as f:

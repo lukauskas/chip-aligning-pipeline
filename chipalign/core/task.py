@@ -223,7 +223,7 @@ class Task(luigi.Task):
         outputs = self._flattened_outputs()
         source_modification_time = self._last_modification_for_source()
         for output in outputs:
-            if output.modification_time < source_modification_time:
+            if not output.modification_time or output.modification_time < source_modification_time:
                 self.logger().info('Output {} is invalidated as source has been modified since'.format(output))
                 return False
         return True
@@ -237,9 +237,11 @@ class Task(luigi.Task):
         if len(outputs) == 0:
             return False
 
-        return self._all_outputs_exist() \
-               and self._source_code_for_task_has_not_been_modified_since_output_was_generated() \
-               and self._dependancies_complete_and_have_lower_modification_dates_than_outputs()
+        completion = self._all_outputs_exist()
+        completion &= self._source_code_for_task_has_not_been_modified_since_output_was_generated()
+        completion &= self._dependancies_complete_and_have_lower_modification_dates_than_outputs()
+
+        return completion
 
     def temporary_directory(self, **kwargs):
         prefix = kwargs.pop('prefix', 'tmp-{}'.format(self.__class__.__name__))

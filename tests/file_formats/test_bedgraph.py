@@ -17,10 +17,16 @@ def _temporary_bedgraph(contents, gzipped=False):
     suffix = '.gz' if gzipped else ''
     with temporary_file(suffix=suffix) as tf:
 
-        open_ = gzip.GzipFile if gzipped else open
+        if gzipped:
+            open_ = gzip.open
+            mode = 'wt'
+        else:
+            open_ = open
+            mode = 'w'
 
-        with open_(tf, 'w') as f:
-            f.write(contents.encode('utf-8'))
+        with open_(tf, mode) as f:
+
+            f.write(contents)
 
         yield BedGraph(tf)
 
@@ -51,7 +57,7 @@ class TestBedGraphReading(unittest.TestCase):
                                 check_names=True)
             self.assertEqual(expected_series.name, bedgraph_as_series.name)
 
-    def test_sample_bedgraph_ame_can_be_overriden(self):
+    def test_sample_bedgraph_name_can_be_overriden(self):
 
         contents = u"chr1\t0\t9959\t0.22042\n" \
                    u"chr1\t9959\t10359\t0.19921\n" \

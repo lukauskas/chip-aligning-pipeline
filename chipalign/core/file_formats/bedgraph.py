@@ -24,13 +24,21 @@ class BedGraph(File):
 
     def first_line_is_header(self):
         with self.open('r') as f:
-            line = f.readline().decode('utf-8')
+            line = f.readline()
+
+            # For gzipped files we need to decode them (for some reason)
+            if self._is_gzipped:
+                line = line.decode('utf-8')
 
         return line.startswith('track')
 
     def header(self):
         with self.open('r') as f:
-            line = f.readline().decode('utf-8')
+            line = f.readline()
+
+        # For gzipped files we need to decode them (for some reason)
+        if self._is_gzipped:
+            line = line.decode('utf-8')
 
         if not line.startswith('track'):
             return {}

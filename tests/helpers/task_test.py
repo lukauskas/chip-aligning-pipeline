@@ -33,7 +33,9 @@ class TaskTestCase(TestCase):
         task.class_logger().setLevel(logging.DEBUG)
         logging.basicConfig()
         luigi.build([task], local_scheduler=True)
+
         self.assertTrue(task.complete())
+
 
     @classmethod
     def task_cache_directory(cls, make_if_not_exists=True):
