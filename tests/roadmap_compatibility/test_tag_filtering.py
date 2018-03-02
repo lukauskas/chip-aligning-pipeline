@@ -5,13 +5,10 @@ from __future__ import unicode_literals
 
 import gzip
 import os
-from itertools import izip
-
-import pybedtools
 
 from chipalign.alignment.filtering import FilteredReads
-from chipalign.core.util import temporary_file, clean_bedtool_history
-from chipalign.database.roadmap_data.downloaded_reads import RoadmapAlignedReads
+from chipalign.core.util import temporary_file, autocleaning_pybedtools
+from chipalign.database.roadmap.downloaded_reads import RoadmapAlignedReads
 from tests.helpers.external_resource import DownloadableExternalResource
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
@@ -35,12 +32,12 @@ class FilteredReadsResource(DownloadableExternalResource):
                     with open(tmp_answer_file, 'w') as _out:
                         _out.writelines(_in)
 
-                with temporary_file(cleanup_on_exception=True) as answer_file:
-                    answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
-                                                                              genome=self.genome_version).sort()
-                    answer_bedtool.saveas(answer_file)
-                    clean_bedtool_history(answer_bedtool)
-                    self._relocate_to_output(answer_file)
+                with autocleaning_pybedtools() as pybedtools:
+                    with temporary_file(cleanup_on_exception=True) as answer_file:
+                        answer_bedtool = pybedtools.BedTool(tmp_answer_file).slop(r=0, l=0,
+                                                                                  genome=self.genome_version).sort()
+                        answer_bedtool.saveas(answer_file)
+                        self._relocate_to_output(answer_file)
 
 class CachedRoadmapAlignedReads(RoadmapAlignedReads):
     def _output_directory(self):
@@ -75,51 +72,53 @@ class TestTagFiltering(TaskTestCase):
 
         self.build_task(filtered_reads_task)
 
-        expected = pybedtools.BedTool(self.answer_file)
-        actual = pybedtools.BedTool(filtered_reads_task.output().path)
+        with autocleaning_pybedtools() as pybedtools:
 
-        expected_head = '\n'.join(map(str, expected[:min(10, len(expected))]))
-        actual_head = '\n'.join(map(str, actual[:min(10, len(actual))]))
+            expected = pybedtools.BedTool(self.answer_file)
+            actual = pybedtools.BedTool(filtered_reads_task.output().path)
 
-        debug_msg = 'Expected:\n{}\nActual:\n{}\n'.format(expected_head, actual_head)
-        self.assertEqual(len(expected), len(actual), 'Length of produced bed files differ: {} != {}.\n'
-                                                     '{}'.format(len(expected), len(actual), debug_msg))
+            expected_head = '\n'.join(map(str, expected[:min(10, len(expected))]))
+            actual_head = '\n'.join(map(str, actual[:min(10, len(actual))]))
 
-        key_func = lambda r: (r.chrom, r.start, r.end)
+            debug_msg = 'Expected:\n{}\nActual:\n{}\n'.format(expected_head, actual_head)
+            self.assertEqual(len(expected), len(actual), 'Length of produced bed files differ: {} != {}.\n'
+                                                         '{}'.format(len(expected), len(actual), debug_msg))
 
-        prev_key = None
-        expected_strand_counts = None
-        actual_strand_counts = None
+            key_func = lambda r: (r.chrom, r.start, r.end)
 
-        for expected_row, actual_row in izip(expected, actual):
-            # Get the key
-            expected_key = key_func(expected_row)
-            actual_key = key_func(actual_row)
+            prev_key = None
+            expected_strand_counts = None
+            actual_strand_counts = None
 
-            # And compare it
-            self.assertTupleEqual(expected_key, actual_key)
+            for expected_row, actual_row in zip(expected, actual):
+                # Get the key
+                expected_key = key_func(expected_row)
+                actual_key = key_func(actual_row)
 
-            # Strand order in datasets is a bit undefined as .sort() by default does not care about them
-            # therefore compare them in a sort-invariant way
-            if expected_key != prev_key:
-                if prev_key is not None:
-                    # Check the strand counts match
-                    self.assertDictEqual(expected_strand_counts, actual_strand_counts,
-                                         'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
-                                                                                          expected_strand_counts,
-                                                                                          actual_strand_counts))
-                # Reset counts for new key
-                expected_strand_counts = {'+': 0, '-': 0}
-                actual_strand_counts = {'+': 0, '-': 0}
-                prev_key = expected_key
+                # And compare it
+                self.assertTupleEqual(expected_key, actual_key)
 
-            # Add the counts
-            expected_strand_counts[expected_row.strand] += 1
-            actual_strand_counts[actual_row.strand] += 1
+                # Strand order in datasets is a bit undefined as .sort() by default does not care about them
+                # therefore compare them in a sort-invariant way
+                if expected_key != prev_key:
+                    if prev_key is not None:
+                        # Check the strand counts match
+                        self.assertDictEqual(expected_strand_counts, actual_strand_counts,
+                                             'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
+                                                                                              expected_strand_counts,
+                                                                                              actual_strand_counts))
+                    # Reset counts for new key
+                    expected_strand_counts = {'+': 0, '-': 0}
+                    actual_strand_counts = {'+': 0, '-': 0}
+                    prev_key = expected_key
 
-        # check the last one
-        if prev_key is not None:
-            self.assertDictEqual(expected_strand_counts, actual_strand_counts,
-                                 'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
-                                                                                  expected_strand_counts,
-                                                                                  actual_strand_counts))
+                # Add the counts
+                expected_strand_counts[expected_row.strand] += 1
+                actual_strand_counts[actual_row.strand] += 1
+
+            # check the last one
+            if prev_key is not None:
+                self.assertDictEqual(expected_strand_counts, actual_strand_counts,
+                                     'Counts not equal for {!r}: {!r} != {!r}'.format(prev_key,
+                                                                                      expected_strand_counts,
+                                                                                      actual_strand_counts))

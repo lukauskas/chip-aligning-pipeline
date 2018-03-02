@@ -5,14 +5,13 @@ from __future__ import unicode_literals
 
 import os
 import tempfile
-from itertools import izip
 
 import luigi
-from chipalign.roadmap_data.downloaded_signal import DownloadedSignal
+from chipalign.database.roadmap.downloaded_signal import RoadmapDownloadedSignal
 
 from chipalign.core.downloader import fetch
 from chipalign.core.util import temporary_file
-from chipalign.database.roadmap_data.downloaded_consolidated_reads import DownloadedConsolidatedReads
+from chipalign.database.roadmap.downloaded_consolidated_reads import DownloadedConsolidatedReads
 from chipalign.signal.signal import Signal
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
@@ -58,9 +57,9 @@ class TestMacsPileup(TaskTestCase):
 
     def test_downloaded_signal_task_downloads_correctly(self):
 
-        ds = DownloadedSignal(cell_type=self._CELL_TYPE,
-                              track=self._TRACK,
-                              genome_version=self._GENOME_VERSION)
+        ds = RoadmapDownloadedSignal(cell_type=self._CELL_TYPE,
+                                     track=self._TRACK,
+                                     genome_version=self._GENOME_VERSION)
 
         luigi.build([ds], local_scheduler=True)
 
@@ -69,7 +68,7 @@ class TestMacsPileup(TaskTestCase):
         with ds.output().open('r') as actual:
             with open(self.answer_file) as expected:
 
-                for expected_row, actual_row in izip(expected, actual):
+                for expected_row, actual_row in zip(expected, actual):
                     self.assertEquals(expected_row, actual_row)
 
                 # Check that files were read completely (`izip` stops when one of them stops)
@@ -90,7 +89,7 @@ class TestMacsPileup(TaskTestCase):
 
         with st.output().open('r') as actual:
             with open(self.answer_file) as expected:
-                for expected_row, actual_row in izip(expected, actual):
+                for expected_row, actual_row in zip(expected, actual):
 
                     expected_chromosome, expected_start, expected_end, expected_score = expected_row.strip('\n').split('\t')
                     actual_chromosome, actual_start, actual_end, actual_score = actual_row.strip('\n').split('\t')
