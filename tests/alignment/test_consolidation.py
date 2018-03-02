@@ -128,6 +128,7 @@ class TestReadConsolidation(TaskTestCase):
             self.assertListEqual(list(joint_input_bedtool), list(answer_bedtool))
 
 class RandomAlignedReads(Task):
+
     seed = luigi.Parameter()
     length_of_reads = luigi.Parameter()
     number_of_reads = luigi.Parameter()

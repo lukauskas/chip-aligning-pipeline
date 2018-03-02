@@ -30,12 +30,22 @@ class TaskTestCase(TestCase):
     #             raise
 
     def build_task(self, task):
+
         task.class_logger().setLevel(logging.DEBUG)
         logging.basicConfig()
+
+        logging.debug("Building task {!r}".format(task))
+
         luigi.build([task], local_scheduler=True)
 
-        self.assertTrue(task.complete())
-
+        logging.debug("Checking if task {!r} is complete".format(task))
+        try:
+            self.assertTrue(task.complete())
+        except AssertionError:
+            logging.debug('Outputs exist: {!r}'.format(task._all_outputs_exist()))
+            logging.debug('Source code not changed: {!r}'.format(task._source_code_for_task_has_not_been_modified_since_output_was_generated()))
+            logging.debug('Dependencies OK: {!r}'.format(task._dependancies_complete_and_have_lower_modification_dates_than_outputs()))
+            raise
 
     @classmethod
     def task_cache_directory(cls, make_if_not_exists=True):
