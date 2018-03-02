@@ -107,7 +107,7 @@ class TestReadConsolidation(TaskTestCase):
         output_filename = consolidated_reads_task.output().path
         try:
             with gzip.open(output_filename, 'r') as gf:
-                gf.next()  # This raises exception if it is gzipped
+                next(gf)  # This raises exception if it is gzipped
         except IOError:
             self.fail('Output file is not gzipped')
 
