@@ -24,9 +24,6 @@ from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time, timed_segment
 
-from six.moves import map as imap
-
-
 def _file_safe_string(value):
     value = str(value)
     value = re.sub('[^a-zA-Z0-9]', '_', value)
@@ -179,7 +176,7 @@ class Task(luigi.Task):
         :return:
         """
         outputs = self._flattened_outputs()
-        return all(imap(lambda output: output.exists(), outputs))
+        return all(map(lambda output: output.exists(), outputs))
 
     def _dependancies_complete_and_have_lower_modification_dates_than_outputs(self):
         """
@@ -207,6 +204,7 @@ class Task(luigi.Task):
                 max_dependency_mod_date = dependancy_max_mod_date
 
         outputs = self._flattened_outputs()
+
         try:
             min_output_mod_date_date = min(map(lambda output: output.modification_time, outputs))
         except AttributeError as e:
@@ -214,7 +212,13 @@ class Task(luigi.Task):
                 'Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
 
         # Ensure all dependencies were built before the parent.
-        return max_dependency_mod_date < min_output_mod_date_date
+        try:
+            return max_dependency_mod_date < min_output_mod_date_date
+        except TypeError:
+            if max_dependency_mod_date is None:
+                return False
+            else:
+                raise
 
     def _source_code_for_task_has_not_been_modified_since_output_was_generated(self):
         """
@@ -233,13 +237,19 @@ class Task(luigi.Task):
             If the task has outputs, check that they all are complete,
             and check that their modification times are all higher than inputs
         """
+        logger = self.logger()
+
         outputs = flatten(self.output())
         if len(outputs) == 0:
             return False
 
-        completion = self._all_outputs_exist()
-        completion &= self._source_code_for_task_has_not_been_modified_since_output_was_generated()
-        completion &= self._dependancies_complete_and_have_lower_modification_dates_than_outputs()
+        try:
+            completion = self._all_outputs_exist() \
+                         and self._source_code_for_task_has_not_been_modified_since_output_was_generated() \
+                         and self._dependancies_complete_and_have_lower_modification_dates_than_outputs()
+        except Exception:
+            logger.error('Exception when checking for completeness of {}'.format(self.__class__.__name__))
+            raise
 
         return completion
 
