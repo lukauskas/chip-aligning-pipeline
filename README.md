@@ -176,10 +176,10 @@ brew install hdf5
 `twoBitToFa`, `bigWigToBedGraph` and `bedClip` utilities are necessary for the pipeline.
 They are available from UCSC suite
 
-Last tested version stable 358, HEAD (from linuxbrew)
+Via homebrew you can install them via
 
 ```
-brew install kent-tools
+brew install kent-tools blat
 ```
 
 ## Requirements: Python requirements and package installation
