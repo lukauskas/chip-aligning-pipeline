@@ -206,14 +206,14 @@ class Task(luigi.Task):
         outputs = self._flattened_outputs()
 
         try:
-            min_output_mod_date_date = min(map(lambda output: output.modification_time, outputs))
+            min_output_mod_date = min(map(lambda output: output.modification_time, outputs))
         except AttributeError as e:
             raise AttributeError(
                 'Incompatible output format for {}. Got {!r}'.format(self.__class__.__name__, e))
 
         # Ensure all dependencies were built before the parent.
         try:
-            return max_dependency_mod_date < min_output_mod_date_date
+            return max_dependency_mod_date <= min_output_mod_date
         except TypeError:
             if max_dependency_mod_date is None:
                 return False

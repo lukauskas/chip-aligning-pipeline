@@ -28,7 +28,7 @@ class FilteredReadsResource(DownloadableExternalResource):
             assert os.path.isfile(gzip_tmp)
 
             with temporary_file(cleanup_on_exception=True) as tmp_answer_file:
-                with gzip.GzipFile(gzip_tmp, 'rt') as _in:
+                with gzip.open(gzip_tmp, 'rt') as _in:
                     with open(tmp_answer_file, 'wt') as _out:
                         _out.writelines(_in)
 
