@@ -176,10 +176,10 @@ brew install hdf5
 `twoBitToFa`, `bigWigToBedGraph` and `bedClip` utilities are necessary for the pipeline.
 They are available from UCSC suite
 
-Last tested version stable 358, HEAD (from linuxbrew)
+Via homebrew you can install them via
 
 ```
-brew install kent-tools
+brew install kent-tools blat
 ```
 
 ## Requirements: Python requirements and package installation
@@ -344,6 +344,22 @@ Working with the pipeline follows the standard `luigi` working practices and the
 The pipeline assumes existence of a configuration file `chipalign.yml` in the working directory of the script that is being run.
 This file should contain one variable, in Yaml format, that points to the directory where the output should be stored.
 For instance, see the [`chipalign.yml` in the examples directory](https://github.com/lukauskas/chip-aligning-pipeline/blob/master/examples/chipalign.yml) that directs the output of the program to `'output/'` directory. It is, however, a good advice to use absolute path of the output directory, instead of a relative one.
+
+Alternatively, one can specify the output directory in `CHIPALIGN_OUTPUT_DIRECTORY` environment variable
+```
+export CHIPALIGN_OUTPUT_DIRECTORY="$(pwd)/chipalign-output"
+```
+
+# Running tests
+
+Make sure the `CHIPALIGN_OUTPUT_DIRECTORY` is set.
+Install `nose` and `hypothesis`
+
+```
+pip install nose hypothesis
+```
+
+Run `nosetests`
 
 # Running pipeline on multiple processes
 
