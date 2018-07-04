@@ -43,7 +43,8 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
         logger = self.logger()
 
-        from chipalign.command_line_applications.archiving import unzip
+        from chipalign.command_line_applications.archiving import unzip, untar
+
         from chipalign.command_line_applications.bowtie import bowtie2
         from chipalign.command_line_applications.samtools import samtools
 
@@ -53,8 +54,14 @@ class AlignedReadsBowtie(AlignedReadsBase):
         fastq_sequence_abspath = os.path.abspath(self.fastq_task.output().path)
 
         with self.temporary_directory():
-            logger.info('Unzipping index')
-            unzip(index_output_abspath)
+
+            logger.info('Unpacking index')
+            if index_output_abspath.endswith('.zip'):
+                unzip(index_output_abspath)
+            elif index_output_abspath.endswith('.tar.gz'):
+                untar(index_output_abspath)
+            else:
+                raise NotImplementedError('Unknown index extension')
 
             sam_output_filename = 'alignments.sam'
             bam_output_filename = 'alignments.bam'
@@ -62,7 +69,7 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
             with timed_segment('Running bowtie', logger=logger):
                 bowtie2('-U', fastq_sequence_abspath,
-                        '-x', self.genome_version,
+                        '-x', self.index_task.index_basename(),
                         '-p', self.number_of_processes,
                         '--seed', self.seed,
                         '-S', sam_output_filename,

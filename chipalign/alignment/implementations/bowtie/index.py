@@ -88,7 +88,13 @@ class BowtieIndex(Task):
     genome_version = luigi.Parameter()
 
     _DOWNLOADABLE_INDICES = {'hg18': 'ftp://ftp.ccb.jhu.edu/pub/data/bowtie2_indexes/hg18.zip',
-                             'hg19': 'ftp://ftp.ccb.jhu.edu/pub/data/bowtie2_indexes/hg19.zip'}
+                             'hg19': 'ftp://ftp.ccb.jhu.edu/pub/data/bowtie2_indexes/hg19.zip',
+                             'hg38': 'ftp://igenome:G3nom3s4u@ussd-ftp.illumina.com/Homo_sapiens/UCSC/hg38/Homo_sapiens_UCSC_hg38.tar.gz'
+                             }
+
+    _INDEX_BASENAMES = {
+        'hg38': 'GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.bowtie_index'
+    }
 
     @property
     def parameters(self):
@@ -96,7 +102,16 @@ class BowtieIndex(Task):
 
     @property
     def _extension(self):
-        return 'zip'
+        url = self._url()
+        if url.endswith('.zip'):
+            return 'zip'
+        elif url.endswith('.tar.gz'):
+            return 'tar.gz'
+        else:
+            raise NotImplementedError('Unknown extension for index')
+
+    def index_basename(self):
+        return self._INDEX_BASENAMES.get(self.genome_version, self.genome_version)
 
     @property
     def _genome_sequence_task(self):
@@ -106,10 +121,13 @@ class BowtieIndex(Task):
         if self.genome_version not in self._DOWNLOADABLE_INDICES:
             return self._genome_sequence_task
 
+    def _url(self):
+        return self._DOWNLOADABLE_INDICES[self.genome_version]
+
     def _run(self):
         self.ensure_output_directory_exists()
         if self.genome_version in self._DOWNLOADABLE_INDICES:
-            url = self._DOWNLOADABLE_INDICES[self.genome_version]
+            url = self._url()
             with temporary_file() as tf:
                 with open(tf, 'wb') as handle:
                     fetch(url, handle)

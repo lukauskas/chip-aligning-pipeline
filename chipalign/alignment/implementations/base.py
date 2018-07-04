@@ -18,15 +18,18 @@ class AlignedReadsBase(Task):
 
     :param genome_version: Version of genome to use
     :param srr_identifier: the SRR ID of the sequence to align
+    :param limit: limit of reads to fetch from SRA
 
     """
     genome_version = luigi.Parameter()
     source = ShortReads.source
     accession = ShortReads.accession
+    limit = ShortReads.limit
 
     @property
     def fastq_task(self):
-        return ShortReads(source=self.source, accession=self.accession)
+        return ShortReads(source=self.source, accession=self.accession,
+                          limit=self.limit)
 
     @property
     def index_task(self):
