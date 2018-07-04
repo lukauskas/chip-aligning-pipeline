@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
 import pybedtools
 
 from chipalign.database.roadmap.downloaded_consolidated_reads import DownloadedConsolidatedReads
@@ -15,7 +14,7 @@ from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 @roadmap_test
 class TestDownloadedConsolidatedReadsAreReadable(TaskTestCase):
 
-    @slow()
+    @slow
     def test_downloaded_E008_input_files_are_readable_by_pybedtools(self):
 
         task = DownloadedConsolidatedReads(cell_type='E008', track='Input', genome_version='hg19')
