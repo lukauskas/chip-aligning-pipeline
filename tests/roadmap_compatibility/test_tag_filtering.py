@@ -9,6 +9,7 @@ import os
 from chipalign.alignment.filtering import FilteredReads
 from chipalign.core.util import temporary_file, autocleaning_pybedtools
 from chipalign.database.roadmap.downloaded_reads import RoadmapAlignedReads
+from tests.helpers.decorators import slow
 from tests.helpers.external_resource import DownloadableExternalResource
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
@@ -42,7 +43,7 @@ class FilteredReadsResource(DownloadableExternalResource):
 class CachedRoadmapAlignedReads(RoadmapAlignedReads):
     def _output_directory(self):
         return TestTagFiltering.task_cache_directory()
-
+@slow
 @roadmap_test
 class TestTagFiltering(TaskTestCase):
 
@@ -50,6 +51,7 @@ class TestTagFiltering(TaskTestCase):
     _TAG_LENGTH = 36
 
     def setUp(self):
+        print('Setting up TestTagFiltering')
         super(TestTagFiltering, self).setUp()
 
         filtered_reads_resource = FilteredReadsResource(self.__class__,

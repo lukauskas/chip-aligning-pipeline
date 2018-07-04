@@ -53,13 +53,15 @@ class FastqMetadata(Task):
         counter = Counter()
         with self.fastq_sequence.output().open('r') as f:
             for line in f:
+                line = line.decode('utf-8')
+
                 if not line.startswith('@'):
                     continue
 
                 counter[to_key(_parse_fastq_read_header(line))] += 1
 
         answer = []
-        for key, count in counter.iteritems():
+        for key, count in counter.items():
             d = dict(zip(key_columns, key))
             d['count'] = count
             answer.append(d)

@@ -16,10 +16,12 @@ class ShortReads(Task):
     Takes three parameters:
 
     :param source: Source for the sequence. 'sra', or 'encode'
-    :param accession: the SRR identifier of the sequence
+    :param accession: the SRR/encode identifier of the sequence
+    :param limit: Optional, only available for SRA, limit on number of reads to fetch (used for tests)
     """
     source = luigi.Parameter()
     accession = luigi.Parameter()
+    limit = luigi.Parameter(default=None)
 
     @property
     def _extension(self):
@@ -35,6 +37,9 @@ class ShortReads(Task):
 
             args = [self.accession, '--gzip']
 
+            if self.limit is not None:
+                args.extend(['-X', self.limit])
+
             fastq_file = '{}.fastq.gz'.format(self.accession)
 
             fastq_dump(*args)
@@ -43,7 +48,8 @@ class ShortReads(Task):
             shutil.move(fastq_file, abspath)
 
     def _from_encode(self):
-
+        if self.limit is not None:
+            raise ValueError('Limit not available for source=encode')
         abspath = os.path.abspath(self.output().path)
         with temporary_file() as tf_name:
             with open(tf_name, 'wb') as handle:

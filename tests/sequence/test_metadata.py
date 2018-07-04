@@ -32,7 +32,9 @@ class TestTestSequenceMetadataTask(TaskTestCase):
         srr_identifier = 'SRR001392'
         spot_limit = 5
 
-        fastq_sequence_task = ShortReads(srr_identifier=srr_identifier, spot_limit=spot_limit)
+        fastq_sequence_task = ShortReads(source='sra',
+                                         accession=srr_identifier,
+                                         limit=spot_limit)
         sequence_metadata_task = FastqMetadata(fastq_sequence=fastq_sequence_task)
 
         self.build_task(sequence_metadata_task)

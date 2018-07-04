@@ -13,10 +13,11 @@ from chipalign.core.downloader import fetch
 from chipalign.core.util import temporary_file
 from chipalign.database.roadmap.downloaded_consolidated_reads import DownloadedConsolidatedReads
 from chipalign.signal.signal import Signal
+from tests.helpers.decorators import slow
 from tests.helpers.task_test import TaskTestCase
 from tests.roadmap_compatibility.roadmap_tag import roadmap_test
 
-
+@slow
 @roadmap_test
 class TestMacsPileup(TaskTestCase):
 
@@ -26,6 +27,8 @@ class TestMacsPileup(TaskTestCase):
 
     @classmethod
     def setUpClass(cls):
+        print('Instantiating macs pileup?')
+
         from chipalign.command_line_applications.ucsc_suite import bigWigToBedGraph
         from chipalign.command_line_applications.common import sort
 

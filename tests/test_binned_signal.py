@@ -76,15 +76,22 @@ class TestBinnedSignal(unittest.TestCase):
                 BinnedSignal.compute_profile(sample_windows_filename, sample_signal_filename, s,
                                              pybedtools=pybedtools)
 
+            actual_output = s.getvalue()
+            line_1, line_2, __ = actual_output.split('\n')
+
+            self.assertEqual('chr5\t4000\t8000\t0.0', line_2)
+            self.assertTrue(line_1.startswith('chr1\t4000\t5000\t'))
+
+            __, __, actual_score = line_1.rpartition('\t')
+            actual_score = np.float(actual_score)
+
             expected_score_for_bin = -1 * np.log10(1 / 1000.0 * (100 * np.power(10.0, -0.3)
                                                                  + 200 * np.power(10.0, -0.5)
                                                                  + 200 * np.power(10.0, -2)
                                                                  + (1000 - 200 - 200 - 100) * 1))
 
-            expected_output = 'chr1\t4000\t5000\t{}\nchr5\t4000\t8000\t0.0\n'.format(expected_score_for_bin)
-            actual_output = s.getvalue()
+            self.assertAlmostEqual(expected_score_for_bin, actual_score)
 
-            self.assertEqual(expected_output, actual_output)
 
         finally:
             os.unlink(sample_windows_filename)

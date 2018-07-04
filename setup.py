@@ -45,15 +45,15 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['python-logstash==0.4.6',
-                      'luigi==2.7.2',
-                      'numpy==1.14.1',
-                      'pandas==0.22.0',
-                      'sh==1.12.4',
-                      'six==1.11.0',
-                      'pyyaml==3.12',
-                      'pybedtools==0.7.10',
-                      'requests==2.18.4',
-                      'tables==3.4.2'],
+                      'luigi>=2.7.5',
+                      'numpy>=1.14.5',
+                      'pandas>=0.23.1',
+                      'sh>=1.12.14',
+                      'six>=1.11.0',
+                      'pyyaml>=3.12',
+                      'pybedtools>=0.7.10',
+                      'requests>=2.19.1',
+                      'tables>=3.4.4'],
 
     extras_require={
         'test': ['nose', 'hypothesis'],
