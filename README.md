@@ -359,7 +359,9 @@ Install `nose` and `hypothesis`
 pip install nose hypothesis
 ```
 
-Run `nosetests`
+```
+CHIPALIGN_OUTPUT_DIRECTORY="$(pwd)/chipalign-test-output" nosetests
+```
 
 # Running pipeline on multiple processes
 
