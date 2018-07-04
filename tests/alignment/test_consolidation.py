@@ -17,7 +17,7 @@ from tests.helpers.task_test import TaskTestCase
 
 
 class TestReadConsolidation(TaskTestCase):
-    _GENOME = 'hg19'
+    _GENOME = 'hg38'
 
     def test_random_reads_no_subsampling_consolidated_correctly_over_limit(self):
         length_of_reads = 100
