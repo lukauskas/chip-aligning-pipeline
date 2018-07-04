@@ -16,7 +16,8 @@ class BlacklistedRegions(Task):
         Downloads a list of blacklisted regions for a particular genome version
     """
     DOWNLOADABLE_BLACKLISTS = {'hg19': 'http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/'
-                                       'wgEncodeMapability/wgEncodeDacMapabilityConsensusExcludable.bed.gz'}
+                                       'wgEncodeMapability/wgEncodeDacMapabilityConsensusExcludable.bed.gz',
+                               'hg38': 'http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz'}
 
     genome_version = luigi.Parameter()
 
