@@ -249,6 +249,8 @@ def autocleaning_pybedtools():
     memory leaks
     """
     import pybedtools
+    pybedtools.set_tempdir(temp_dir())
+
     if '_SKIP_PYBEDTOOLS_AUTOCLEANING' in os.environ:
         yield pybedtools
         return
