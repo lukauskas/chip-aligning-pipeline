@@ -152,45 +152,45 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
         if not os.path.isdir(dir_):
             raise
 
-    temp_dir = tempfile.mkdtemp(dir=dir_, **kwargs)
+    temp_dir_ = tempfile.mkdtemp(dir=dir_, **kwargs)
 
     if logger is None:
         logger = logging.getLogger('chipalign.core.util.temporary_directory')
 
     try:
-        logger.debug('Working on: {}'.format(temp_dir))
-        os.chdir(temp_dir)
-        yield temp_dir
+        logger.debug('Working on: {}'.format(temp_dir_))
+        os.chdir(temp_dir_)
+        yield temp_dir_
     except BaseException as main_exception:
         os.chdir(current_working_directory)
         if cleanup_on_exception:
             # If exception, and cleanup_on_exception is set -- remove directory
-            logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_dir))
+            logger.debug('Removing {} as cleanup_on_exception is set'.format(temp_dir_))
 
             try:
-                shutil.rmtree(temp_dir)
+                shutil.rmtree(temp_dir_)
             except OSError as e:
-                if os.path.isdir(temp_dir):
-                    logger.error('Error while removing {}: got {!r}'.format(temp_dir, e))
+                if os.path.isdir(temp_dir_):
+                    logger.error('Error while removing {}: got {!r}'.format(temp_dir_, e))
                     # do not re-raise as not to hide main exception
                 else:
                     logger.warning(
-                        'Tried to remove {}, but it was already deleted'.format(temp_dir))
+                        'Tried to remove {}, but it was already deleted'.format(temp_dir_))
         else:
-            logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_dir))
+            logger.debug('Not removing {} as cleanup_on_exception is false'.format(temp_dir_))
         raise main_exception
     else:
         os.chdir(current_working_directory)
         # No exception case - remove always
-        logger.debug('Removing {}'.format(temp_dir))
+        logger.debug('Removing {}'.format(temp_dir_))
         try:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_dir_)
         except OSError as e:
-            if os.path.isdir(temp_dir):
-                logger.error('Error while removing {}: got {!r}'.format(temp_dir, e))
+            if os.path.isdir(temp_dir_):
+                logger.error('Error while removing {}: got {!r}'.format(temp_dir_, e))
                 raise
             else:
-                logger.warning('Tried to remove {}, but it was already deleted'.format(temp_dir))
+                logger.warning('Tried to remove {}, but it was already deleted'.format(temp_dir_))
 
 @contextmanager
 def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):

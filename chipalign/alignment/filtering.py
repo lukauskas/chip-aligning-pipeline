@@ -12,7 +12,8 @@ from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedto
     timed_segment
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack, drop_unmappable
-
+import pandas as pd
+from pandas.errors import EmptyDataError
 
 def _remove_duplicate_reads_inplace(bedtools_df):
     bedtools_df['pos'] = bedtools_df['end'].where(bedtools_df['strand'] == '-',
@@ -51,6 +52,7 @@ class FilteredReads(Task):
     :param genome_version: self-explanatory; try `hg19`.
     :param resized_length: The length to resize reads to. (default: 36, as set by ROADMAP consortium)
     :param ignore_non_standard_chromosomes: if set to true, non-standard chromosomes will be ignored
+    :param filter_mappability: if set to true, truncated reads will be filtered for mappability
     """
 
     # Task that will be aligned
@@ -60,6 +62,7 @@ class FilteredReads(Task):
     resized_length = luigi.IntParameter(default=36)  # Roadmap epigenome uses 36
 
     ignore_non_standard_chromosomes = luigi.BoolParameter(default=True)
+    filter_mappability = luigi.BoolParameter(default=True)
 
     @property
     def _mappability_task(self):
@@ -72,7 +75,11 @@ class FilteredReads(Task):
             return None
 
     def requires(self):
-        reqs = [self.alignment_task, self._mappability_task]
+        reqs = [self.alignment_task]
+
+        if self.filter_mappability:
+            reqs.append(self._mappability_task)
+
         if self.ignore_non_standard_chromosomes:
             reqs.append(self.standard_chromosomes_task)
         return reqs
@@ -94,7 +101,8 @@ class FilteredReads(Task):
         logger = self.logger()
         self.ensure_output_directory_exists()
 
-        bam_output = self.alignment_task.bam_output().path
+        bam_output, __ = self.alignment_task.output()
+        bam_output = bam_output.path
 
         with autocleaning_pybedtools() as pybedtools:
             logger.info('Loading {}'.format(bam_output))
@@ -103,6 +111,7 @@ class FilteredReads(Task):
             mapped_reads = mapped_reads.bam_to_bed()
 
             mapped_reads_df = mapped_reads.to_dataframe()
+
             del mapped_reads  # so we don't accidentally use it
 
             # Get chromsizes
@@ -139,19 +148,20 @@ class FilteredReads(Task):
                 'Removed {:,} ({:.2%}) reads because they were duplicates'.format(
                     _diff, _diff / _len_before))
 
-        with timed_segment('Filtering uniquely mappable', logger=logger):
+        if self.filter_mappability:
+            with timed_segment('Filtering uniquely mappable', logger=logger):
 
-            _len_before = len(mapped_reads_df)
-            with autocleaning_pybedtools() as pybedtools:
-                btool = pybedtools.BedTool.from_dataframe(mapped_reads_df)
-                mappability = pybedtools.BedTool(self._mappability_task.output().path)
-                mapped_reads_df = drop_unmappable(btool, mappability).to_dataframe()
-            _len_after = len(mapped_reads_df)
-            _diff = _len_before - _len_after
+                _len_before = len(mapped_reads_df)
+                with autocleaning_pybedtools() as pybedtools:
+                    btool = pybedtools.BedTool.from_dataframe(mapped_reads_df)
+                    mappability = pybedtools.BedTool(self._mappability_task.output().path)
+                    mapped_reads_df = drop_unmappable(btool, mappability).to_dataframe()
+                _len_after = len(mapped_reads_df)
+                _diff = _len_before - _len_after
 
-            logger.debug(
-                'Removed {:,} ({:.2%}) reads because they were unmappable'.format(
-                    _diff, _diff / _len_before))
+                logger.debug(
+                    'Removed {:,} ({:.2%}) reads because they were unmappable'.format(
+                        _diff, _diff / _len_before))
 
         with timed_segment('Sorting reads inplace', logger=logger):
             mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)

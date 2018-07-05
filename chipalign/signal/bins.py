@@ -34,7 +34,7 @@ class BinnedSignal(Task):
     bins_task = luigi.Parameter()
     signal_task = luigi.Parameter()
 
-    binning_method = luigi.Parameter(default='weighted_mean')
+    binning_method = luigi.Parameter(default='max')
 
     def requires(self):
         return [self.bins_task, self.signal_task]

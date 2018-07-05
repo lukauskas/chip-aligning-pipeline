@@ -36,21 +36,25 @@ class Chromosomes(Task):
             chromsizes = pybedtools.chromsizes(self.genome_version)
             chromsizes = dict(chromsizes)
 
-            if not self.genome_version.startswith('hg'):
-                raise Exception('Not sure how to parse collections for genome {}'.format(self.genome_version))
+            if self.collection == 'all':
+                return chromsizes
 
-            female_chromosomes = {'chr{}'.format(x) for x in (list(range(1, 23)) + ['X', 'M'])}
-            male_chromosomes = female_chromosomes | {'chrY'}
+            if self.genome_version.startswith('hg'):
 
-            if self.collection == 'male':
-                chromsizes = {k: chromsizes[k] for k in male_chromosomes}
-            elif self.collection == 'female':
-                chromsizes = {k: chromsizes[k] for k in female_chromosomes}
-            elif self.collection == 'all':
-                pass
-            elif self.collection in chromsizes:
-                chromsizes = {self.collection: chromsizes[self.collection]}
+                female_chromosomes = {'chr{}'.format(x) for x in (list(range(1, 23)) + ['X', 'M'])}
+                male_chromosomes = female_chromosomes | {'chrY'}
+
+                if self.collection == 'male':
+                    chromsizes = {k: chromsizes[k] for k in male_chromosomes}
+                elif self.collection == 'female':
+                    chromsizes = {k: chromsizes[k] for k in female_chromosomes}
+                elif self.collection == 'all':
+                    pass
+                elif self.collection in chromsizes:
+                    chromsizes = {self.collection: chromsizes[self.collection]}
+                else:
+                    raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
+
+                self.output().dump(chromsizes)
             else:
-                raise ValueError('Unknown value for collection: {!r}'.format(self.collection))
-
-            self.output().dump(chromsizes)
+                raise Exception('Do not know how to parse chromsizes')
