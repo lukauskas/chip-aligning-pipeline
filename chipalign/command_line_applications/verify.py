@@ -53,6 +53,9 @@ def main():
     print(_get_shell_output(bowtie2, '--version', lines=0, ignore_error_return=True))
     print(_get_shell_output(bowtie2_build, '--version', lines=0, ignore_error_return=True))
 
+    from chipalign.command_line_applications.bwa import bwa
+    print(_get_shell_output(bwa, lines=2, ignore_error_return=True))
+
     print('* Common')
     from chipalign.command_line_applications.common import sort, cat, cut
     print(_get_shell_output(sort, '--version', lines=0))
