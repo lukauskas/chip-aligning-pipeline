@@ -55,27 +55,26 @@ class Signal(Task):
         return BedGraph
 
     def scaling_factor_value(self):
-        import pybedtools
+        with autocleaning_pybedtools() as pybedtools:
+            logger = self.logger()
+            logger.debug('Input task: {!r} (output: {!r})'.format(self.input_task, self.input_task.output()))
+            logger.debug('Treatment task: {!r} (output {!r})'.format(self.treatment_task, self.treatment_task.output()))
+            if self.scaling_factor == 'auto':
+                number_of_treatment_reads = pybedtools.BedTool(self.treatment_task.output().path).count()
+                number_of_input_reads = pybedtools.BedTool(self.input_task.output().path).count()
 
-        logger = self.logger()
-        logger.debug('Input task: {!r} (output: {!r})'.format(self.input_task, self.input_task.output()))
-        logger.debug('Treatment task: {!r} (output {!r})'.format(self.treatment_task, self.treatment_task.output()))
-        if self.scaling_factor == 'auto':
-            number_of_treatment_reads = pybedtools.BedTool(self.treatment_task.output().path).count()
-            number_of_input_reads = pybedtools.BedTool(self.input_task.output().path).count()
+                logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
+                                                                                number_of_input_reads))
+                assert number_of_input_reads > 0 and number_of_input_reads > 0
 
-            logger.debug('Number of reads. Treatment: {}, input: {}'.format(number_of_treatment_reads,
-                                                                            number_of_input_reads))
-            assert number_of_input_reads > 0 and number_of_input_reads > 0
+                scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
+                logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
 
-            scaling_factor = min(number_of_treatment_reads, number_of_input_reads) / 1000000.0
-            logger.debug('Estimated scaling factor: {}'.format(scaling_factor))
+            else:
+                scaling_factor = float(self.scaling_factor)
+                logger.debug('Using user-defined scaling factor: {}'.format(scaling_factor))
 
-        else:
-            scaling_factor = float(self.scaling_factor)
-            logger.debug('Using user-defined scaling factor: {}'.format(scaling_factor))
-
-        return scaling_factor
+            return scaling_factor
 
     def _run(self):
         from chipalign.command_line_applications.macs import macs2

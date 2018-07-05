@@ -249,18 +249,8 @@ def autocleaning_pybedtools():
     memory leaks
     """
     import pybedtools
-    pybedtools.set_tempdir(temp_dir())
 
-    if '_SKIP_PYBEDTOOLS_AUTOCLEANING' in os.environ:
-        yield pybedtools
-        return
-
-    if len(pybedtools.BedTool.TEMPFILES) != 0:
-        raise Exception('pybedtools.BedTool.TEMPFILES not empty on context entry. '
-                        'Maybe you\'re nesting `autocleaning_pybedtools` contexts?')
-
-    logger = logging.getLogger('chipalign.core.util.autocleaning_pybedtools')
-    dir_ = os.path.abspath(os.path.join(output_dir(), '.tmp/.pybedtools/'))
+    dir_ = os.path.abspath(os.path.join(temp_dir(), '.pybedtools/'))
     if not os.path.isdir(dir_):
         try:
             os.makedirs(dir_)
@@ -271,11 +261,28 @@ def autocleaning_pybedtools():
                 raise
     pybedtools.set_tempdir(dir_)
 
+    if '_SKIP_PYBEDTOOLS_AUTOCLEANING' in os.environ:
+        yield pybedtools
+        return
+    logger = logging.getLogger('chipalign.core.util.autocleaning_pybedtools')
+
+    if len(pybedtools.filenames.TEMPFILES) != 0:
+        logger.debug('pybedtools.BedTool.TEMPFILES: {!r}'.format(pybedtools.BedTool.TEMPFILES))
+        raise Exception('pybedtools.BedTool.TEMPFILES not empty on context entry. '
+                        'Maybe you\'re nesting `autocleaning_pybedtools` contexts?')
+
     try:
         yield pybedtools
     finally:
         logger.debug('Cleaning up {:,} pybedtools files'.format(len(pybedtools.BedTool.TEMPFILES)))
         pybedtools.cleanup()
+
+        if pybedtools.BedTool.TEMPFILES:
+            # pybedtools does not delete tempfiles any more..
+            for file_ in pybedtools.filenames.TEMPFILES:
+                if os.path.isfile(file_):
+                    raise Exception(f"pybedtools cleanup failed. {file_} still exists")
+            pybedtools.filenames.TEMPFILES = []
 
 
 @contextmanager

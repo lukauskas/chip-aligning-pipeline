@@ -5,8 +5,7 @@ from __future__ import unicode_literals
 
 import unittest
 
-import pybedtools
-
+from chipalign.core.util import autocleaning_pybedtools
 from chipalign.signal.bins import weighted_means_from_intersection
 
 
@@ -49,7 +48,9 @@ class TestGenomeWindows(unittest.TestCase):
     def test_weighted_means_from_intersection_general_case(self):
         null_value = 0
         expected_output = self.expected_output_factory(null_value)
-        actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value)
+
+        with autocleaning_pybedtools() as pybedtools:
+            actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value)
         actual_output = list(actual_output)
 
         self.assertListEqual(expected_output, actual_output)
@@ -57,7 +58,8 @@ class TestGenomeWindows(unittest.TestCase):
     def test_weighted_means_from_intersection_nonzero_null(self):
         null_value = 10000
         expected_output = self.expected_output_factory(null_value)
-        actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value)
+        with autocleaning_pybedtools() as pybedtools:
+            actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value)
         actual_output = list(actual_output)
 
         self.assertListEqual(expected_output, actual_output)
@@ -70,8 +72,10 @@ class TestGenomeWindows(unittest.TestCase):
 
         null_value = 0
         expected_output = self.expected_output_factory(null_value)
-        actual_output = weighted_means_from_intersection(pybedtools.BedTool(column_shifted_sample_data), 5,
-                                                         null_value=null_value)
+
+        with autocleaning_pybedtools() as pybedtools:
+            actual_output = weighted_means_from_intersection(pybedtools.BedTool(column_shifted_sample_data), 5,
+                                                             null_value=null_value)
         actual_output = list(actual_output)
 
         self.assertListEqual(expected_output, actual_output)
@@ -81,8 +85,9 @@ class TestGenomeWindows(unittest.TestCase):
         expected_output = self.expected_output_factory(null_value)
         expected_output = [(x[0], x[1], x[2], -5) for x in expected_output]
 
-        actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value,
-                                                         mean_function=lambda __: -5)
+        with autocleaning_pybedtools() as pybedtools:
+            actual_output = weighted_means_from_intersection(pybedtools.BedTool(self.sample_data), 4, null_value=null_value,
+                                                             mean_function=lambda __: -5)
         actual_output = list(actual_output)
 
         self.assertListEqual(expected_output, actual_output)

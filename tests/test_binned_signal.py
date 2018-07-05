@@ -8,7 +8,6 @@ import tempfile
 import gzip
 from io import StringIO
 
-import pybedtools
 import numpy as np
 from chipalign.core.util import temporary_file, autocleaning_pybedtools
 
@@ -19,29 +18,32 @@ from hypothesis.strategies import floats, integers, lists, composite
 
 class TestIsSorted(unittest.TestCase):
     def test_unsorted_bedtool_is_not_sorted(self):
-        # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
-        x = pybedtools.BedTool('''
-chr9 300 400
-chr1 100 200
-chr1 1 50
-chr12 1 100
-chr9 500 600
-''', from_string=True)
 
-        self.assertFalse(_bedtool_is_sorted(x))
+        with autocleaning_pybedtools() as pybedtools:
+            # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
+            x = pybedtools.BedTool('''
+    chr9 300 400
+    chr1 100 200
+    chr1 1 50
+    chr12 1 100
+    chr9 500 600
+    ''', from_string=True)
+
+            self.assertFalse(_bedtool_is_sorted(x))
 
     def test_sorted_bedtool_is_sorted(self):
-        # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
-        x = pybedtools.BedTool('''
-chr9 300 400
-chr1 100 200
-chr1 1 50
-chr12 1 100
-chr9 500 600
-''', from_string=True)
-        x = x.sort()  # We sort it here
+        with autocleaning_pybedtools() as pybedtools:
+            # The same example as in https://pythonhosted.org/pybedtools/autodocs/pybedtools.BedTool.sort.html
+            x = pybedtools.BedTool('''
+    chr9 300 400
+    chr1 100 200
+    chr1 1 50
+    chr12 1 100
+    chr9 500 600
+    ''', from_string=True)
+            x = x.sort()  # We sort it here
 
-        self.assertTrue(_bedtool_is_sorted(x))
+            self.assertTrue(_bedtool_is_sorted(x))
 
 
 class TestBinnedSignal(unittest.TestCase):
