@@ -2,24 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from six.moves import map as imap
 
 import os
-import tarfile
 import shutil
-import tempfile
-import logging
 
 import luigi
-import numpy as np
-from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.util import fast_bedtool_from_iterable, timed_segment, autocleaning_pybedtools, \
     temporary_file
 
 from chipalign.core.task import Task
 from chipalign.core.downloader import fetch
-from chipalign.core.file_formats.file import File
-import pandas as pd
 
 def drop_unmappable(reads_bedtool, mappability_bedtool):
     return reads_bedtool.intersect(mappability_bedtool, f=1)

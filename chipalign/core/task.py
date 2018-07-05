@@ -23,7 +23,7 @@ import os
 import subprocess
 
 import luigi.format
-from chipalign.core import sge_runner
+from chipalign.core.sge import sge_runner
 
 from chipalign.core.file_formats.file import File, GzippedFile
 
