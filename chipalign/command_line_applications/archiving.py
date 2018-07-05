@@ -18,10 +18,12 @@ except ImportError:
     raise ImportError('Cannot import unzip command from your system, make sure zip archiver is installed')
 
 try:
-    from sh import gzip
+    from sh import gzip, gunzip
     gzip = log_sh_exceptions(gzip)
+    gunzip = log_sh_exceptions(gunzip)
 except ImportError:
     gzip = None
+    gunzip = None
     raise ImportError('Cannot import gzip from system.')
 
 seven_z = sh.Command('7z')

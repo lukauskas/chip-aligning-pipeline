@@ -11,7 +11,7 @@ from chipalign.core.task import Task
 from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools, temporary_file, \
     timed_segment
 from chipalign.genome.chromosomes import Chromosomes
-from chipalign.genome.mappability import GenomeMappabilityTrack
+from chipalign.genome.mappability import GenomeMappabilityTrack, drop_unmappable
 
 
 def _remove_duplicate_reads_inplace(bedtools_df):
@@ -132,14 +132,26 @@ class FilteredReads(Task):
             _len_before = len(mapped_reads_df)
             _remove_duplicate_reads_inplace(mapped_reads_df)
             _len_after = len(mapped_reads_df)
+
+            _diff = _len_before - _len_after
+
             logger.debug(
-                'Removed {:,} reads because they were duplicates'.format(
-                    _len_after - _len_before))
+                'Removed {:,} ({:.2%}) reads because they were duplicates'.format(
+                    _diff, _diff / _len_before))
 
         with timed_segment('Filtering uniquely mappable', logger=logger):
-            mappability_filter = self._mappability_task.output().load()
-            mapped_reads_df = mappability_filter.filter_uniquely_mappables(
-                mapped_reads_df)
+
+            _len_before = len(mapped_reads_df)
+            with autocleaning_pybedtools() as pybedtools:
+                btool = pybedtools.BedTool.from_dataframe(mapped_reads_df)
+                mappability = pybedtools.BedTool(self._mappability_task.output().path)
+                mapped_reads_df = drop_unmappable(btool, mappability).to_dataframe()
+            _len_after = len(mapped_reads_df)
+            _diff = _len_before - _len_after
+
+            logger.debug(
+                'Removed {:,} ({:.2%}) reads because they were unmappable'.format(
+                    _diff, _diff / _len_before))
 
         with timed_segment('Sorting reads inplace', logger=logger):
             mapped_reads_df.sort_values(by=['chrom', 'start', 'end'], inplace=True)
