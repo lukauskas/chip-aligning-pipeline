@@ -6,6 +6,14 @@ from __future__ import unicode_literals
 import collections
 from builtins import str
 
+import sys
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+
 import hashlib
 import inspect
 import logging
@@ -86,6 +94,24 @@ class Task(SGEJobTask):
 
         # Try generating the filename so exception is raised early, if it is raised
         __ = self._output_filename
+
+    # Fix bug with serialisation in py3
+    def _dump(self, out_dir=''):
+        """Dump instance to file."""
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+
+                with open(self.job_file, 'wb') as f:
+                    f.write(d)
+            else:
+
+                with open(self.job_file, 'wb') as f:
+                    pickle.dump(self, f)
+
 
     def work(self):
         self.ensure_output_directory_exists()
