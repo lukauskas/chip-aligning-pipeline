@@ -27,8 +27,10 @@ class AlignedReadsBowtie(AlignedReadsBase):
     .. _Bowtie 2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
     """
 
-    number_of_processes = luigi.IntParameter(default=1, significant=False)
+    number_of_processes = luigi.IntParameter(default=8, significant=False)
     seed = luigi.IntParameter(default=0)
+
+    n_cpu = number_of_processes
 
     @property
     def aligner_parameters(self):

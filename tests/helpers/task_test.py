@@ -36,7 +36,7 @@ class TaskTestCase(TestCase):
 
         logging.debug("Building task {!r}".format(task))
 
-        luigi.build([task], local_scheduler=True)
+        luigi.build([task], local_scheduler=True, workers=2)
 
         logging.debug("Checking if task {!r} is complete".format(task))
         try:

@@ -35,6 +35,16 @@ def config_from_file():
 def get_config():
     return config_from_file()
 
+def sge_parallel_env():
+    return get_config().get('parallel_env', 'orte')
+
+def use_sge():
+    return get_config().get('use_sge', False)
+
+
+def sge_no_tarball():
+    return get_config().get('no_tarball', False)
+
 def output_dir():
 
     try:

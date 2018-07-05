@@ -6,11 +6,13 @@ from chipalign.alignment.filtering import FilteredReads
 from chipalign.genome.windows.genome_windows import NonOverlappingBins
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.signal import Signal
+from tests.helpers.decorators import slow
 from tests.helpers.task_test import TaskTestCase
 
 class TestPipeline(TaskTestCase):
     _multiprocess_can_split_ = False
 
+    @slow
     def test_whole_pipeline(self):
         # Use drosophila datasets as they're smaller
         # Unfortunately, cannot test mappability for drosophila

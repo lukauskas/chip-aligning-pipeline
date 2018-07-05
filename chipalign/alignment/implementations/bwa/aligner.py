@@ -28,7 +28,8 @@ class AlignedReadsBwa(AlignedReadsBase):
     .. _BWA: http://bio-bwa.sourceforge.net/bwa.shtml
     """
 
-    number_of_processes = luigi.IntParameter(default=1, significant=False)
+    number_of_processes = luigi.IntParameter(default=8, significant=False)
+    n_cpu = number_of_processes
 
     @property
     def aligner_parameters(self):

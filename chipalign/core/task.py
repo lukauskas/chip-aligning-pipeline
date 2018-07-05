@@ -11,9 +11,7 @@ import inspect
 import logging
 import re
 import os
-import itertools
 
-import luigi
 import luigi.format
 
 from chipalign.core.file_formats.file import File, GzippedFile
@@ -22,7 +20,9 @@ from luigi.task import flatten
 
 from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
-    file_modification_time, timed_segment
+    file_modification_time, timed_segment, temp_dir, use_sge, sge_no_tarball, sge_parallel_env
+
+from luigi.contrib.sge import SGEJobTask
 
 def _file_safe_string(value):
     value = str(value)
@@ -65,9 +65,21 @@ def _collapse_parameters(luigi_params, param_kwargs, hash_params=None):
     return ans
 
 
-class Task(luigi.Task):
+class Task(SGEJobTask):
     _MAX_LENGTH_FOR_FILENAME = 255 - len('-luigi-tmp-10000000000')
     _parameter_names_to_hash = None
+
+    n_cpu = luigi.IntParameter(default=1, significant=False)
+    shared_tmp_dir = luigi.Parameter(default=temp_dir(), significant=False)
+    parallel_env = luigi.Parameter(default=sge_parallel_env(), significant=False)
+    run_locally = luigi.BoolParameter(
+        default=not use_sge(),
+        significant=False,
+        description="run locally instead of on the cluster")
+    no_tarball = luigi.BoolParameter(
+        default=sge_no_tarball(),
+        significant=False,
+        description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
         super(Task, self).__init__(*args, **kwargs)
@@ -75,7 +87,7 @@ class Task(luigi.Task):
         # Try generating the filename so exception is raised early, if it is raised
         __ = self._output_filename
 
-    def run(self):
+    def work(self):
         self.ensure_output_directory_exists()
         logger = self.logger()
 
