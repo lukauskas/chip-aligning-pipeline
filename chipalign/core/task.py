@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import collections
+import shutil
 from builtins import str
 
 import sys
@@ -21,6 +22,7 @@ import re
 import os
 
 import luigi.format
+from luigi.contrib import sge_runner
 
 from chipalign.core.file_formats.file import File, GzippedFile
 
@@ -30,7 +32,8 @@ from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time, timed_segment, temp_dir, use_sge, sge_no_tarball, sge_parallel_env
 
-from luigi.contrib.sge import SGEJobTask
+from luigi.contrib.sge import SGEJobTask, _build_qsub_command, _parse_qsub_job_id
+
 
 def _file_safe_string(value):
     value = str(value)
@@ -95,7 +98,7 @@ class Task(SGEJobTask):
         # Try generating the filename so exception is raised early, if it is raised
         __ = self._output_filename
 
-    # Fix bug with serialisation in py3
+    # This is a copy-paste of the parent class, but with some py3 things fixed
     def _dump(self, out_dir=''):
         """Dump instance to file."""
         with self.no_unpicklable_properties():
@@ -112,6 +115,37 @@ class Task(SGEJobTask):
                 with open(self.job_file, 'wb') as f:
                     pickle.dump(self, f)
 
+    # More py3 fixes
+    def _run_job(self):
+        logger = self.logger()
+        # Build a qsub argument that will run sge_runner.py on the directory we've specified
+        runner_path = sge_runner.__file__
+        if runner_path.endswith("pyc"):
+            runner_path = runner_path[:-3] + "py"
+        job_str = 'python {0} "{1}" "{2}"'.format(
+            runner_path, self.tmp_dir,
+            os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
+        if self.no_tarball:
+            job_str += ' "--no-tarball"'
+
+        # Build qsub submit command
+        self.outfile = os.path.join(self.tmp_dir, 'job.out')
+        self.errfile = os.path.join(self.tmp_dir, 'job.err')
+        submit_cmd = _build_qsub_command(job_str, self.task_family, self.outfile,
+                                         self.errfile, self.parallel_env, self.n_cpu)
+        logger.debug(f'qsub command: \n{}'.format(submit_cmd))
+
+        # Submit the job and grab job ID
+        output = os.subprocess.check_output(submit_cmd, shell=True)
+        self.job_id = _parse_qsub_job_id(output)
+        logger.debug(f"Submitted job to qsub with response:\n{output}")
+
+        self._track_job()
+
+        # Now delete the temporaries, if they're there.
+        if self.tmp_dir and os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir:
+            logger.info('Removing temporary directory {}'.format(self.tmp_dir))
+            shutil.rmtree(self.tmp_dir)
 
     def work(self):
         self.ensure_output_directory_exists()
