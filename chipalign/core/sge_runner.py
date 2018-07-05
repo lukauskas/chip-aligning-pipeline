@@ -38,7 +38,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import logging
 import tarfile
 
 
@@ -82,8 +81,6 @@ def main(args=sys.argv):
     """
     try:
         tarball = "--no-tarball" not in args
-        # Set up logging.
-        logging.basicConfig(level=logging.WARN)
         work_dir = args[1]
         assert os.path.exists(work_dir), "First argument to sge_runner.py must be a directory that exists"
         project_dir = args[2]
