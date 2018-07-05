@@ -44,8 +44,14 @@ brew install unzip
 ```
 
 ### Alignment
+`BWA` executable has to be in path
+Last version tested: 0.7.17-r1188
 
-`bowtie2`, `bowtie2_build` have to be in path.
+```
+brew install bwa
+```
+
+Also, `bowtie2`, `bowtie2_build` have to be in path.
 Last version tested: bowtie2: stable 2.3.4.1 (bottled) "bowtie2" package in linuxbrew.
 
 ```
