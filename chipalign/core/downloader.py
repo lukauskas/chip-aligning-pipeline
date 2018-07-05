@@ -14,10 +14,10 @@ from six.moves.urllib.parse import urlparse
 
 def _fetch_from_ftp(url, output):
     parsed_url = urlparse(url)
-    ftp = ftplib.FTP(parsed_url.netloc)
+    ftp = ftplib.FTP(parsed_url.hostname)
 
     try:
-        ftp.login()
+        ftp.login(user=parsed_url.username, passwd=parsed_url.password)
         ftp.cwd(os.path.dirname(parsed_url.path))
         ftp.retrbinary('RETR {0}'.format(os.path.basename(parsed_url.path)), output.write)
     finally:

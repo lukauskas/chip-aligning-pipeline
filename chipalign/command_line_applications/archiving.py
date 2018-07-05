@@ -9,9 +9,12 @@ from chipalign.command_line_applications.exceptions import log_sh_exceptions
 
 try:
     from sh import unzip
+    from sh import zip as zip_
     unzip = log_sh_exceptions(unzip)
+    zip_ = log_sh_exceptions(zip_)
 except ImportError:
     unzip = None
+    zip_ = None
     raise ImportError('Cannot import unzip command from your system, make sure zip archiver is installed')
 
 try:
@@ -24,6 +27,10 @@ except ImportError:
 seven_z = sh.Command('7z')
 seven_z = log_sh_exceptions(seven_z)
 
-
-untar = sh.tar.bake('xf')
+try:
+    from sh import tar
+    tar = log_sh_exceptions(tar)
+except ImportError:
+    tar = None
+    raise ImportError('Cannot find tar in your system')
 
