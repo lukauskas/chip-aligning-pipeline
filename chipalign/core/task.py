@@ -23,7 +23,7 @@ import os
 import subprocess
 
 import luigi.format
-from luigi.contrib import sge_runner
+from chipalign.core import sge_runner
 
 from chipalign.core.file_formats.file import File, GzippedFile
 
@@ -115,7 +115,7 @@ class Task(SGEJobTask):
             else:
 
                 with open(self.job_file, 'wb') as f:
-                    pickle.dump(self, f)
+                    pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     # More py3 fixes
     def _run_job(self):
