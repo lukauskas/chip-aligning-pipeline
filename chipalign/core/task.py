@@ -8,7 +8,7 @@ import shutil
 from builtins import str
 
 import sys
-
+import time
 try:
     import cPickle as pickle
 except ImportError:
@@ -33,7 +33,8 @@ from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time, timed_segment, temp_dir, use_sge, sge_no_tarball, sge_parallel_env
 
-from luigi.contrib.sge import SGEJobTask, _build_qsub_command, _parse_qsub_job_id
+from luigi.contrib.sge import SGEJobTask, _build_qsub_command, _parse_qsub_job_id, \
+    _parse_qstat_state
 
 
 def _file_safe_string(value):
@@ -147,6 +148,42 @@ class Task(SGEJobTask):
         if self.tmp_dir and os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir:
             logger.info('Removing temporary directory {}'.format(self.tmp_dir))
             shutil.rmtree(self.tmp_dir)
+
+    # I swear I am rewriting everything here.
+    def _track_job(self):
+        logger = self.logger()
+        while True:
+            # Sleep for a little bit
+
+            time.sleep(self.poll_time)
+
+            # See what the job's up to
+            # ASSUMPTION
+            qstat_out = subprocess.check_output(['qstat'])
+            sge_status = _parse_qstat_state(qstat_out.decode('utf-8'), self.job_id)
+            if sge_status == 'r':
+                # running
+                # logger.info('Job is running...')
+                continue
+            elif sge_status == 'qw':
+                # logger.info('Job is pending...')
+                continue
+            elif 'E' in sge_status:
+                logger.error('Job has FAILED:\n{}.'.format('\n'.join(self._fetch_task_failures())))
+                break
+            elif sge_status == 't' or sge_status == 'u':
+                # Then the job could either be failed or done.
+                errors = self._fetch_task_failures()
+                if not errors:
+                    logger.info('Job is done')
+                else:
+                    logger.error('Job has FAILED:\n' + '\n'.join(errors))
+                break
+            else:
+                logger.info('Job status is UNKNOWN!')
+                logger.info('Status is : %s' % sge_status)
+                raise Exception(
+                    "job status isn't one of ['r', 'qw', 'E*', 't', 'u']: %s" % sge_status)
 
     def work(self):
         self.ensure_output_directory_exists()
