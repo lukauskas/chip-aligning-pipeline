@@ -17,13 +17,20 @@ import logging
 import sys
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
+_CHIPALIGN_TMP_DIRECTORY_ENV_VAR = 'CHIPALIGN_TEMP_DIRECTORY'
+
 _CLEANUP_ON_EXCEPTION_DEFAULT = 'CHIPALIGN_NO_CLEANUP' not in os.environ
+_CONFIG_FILE = 'chipalign.yml'
 
 def config_from_file():
     import yaml
-    with open('chipalign.yml') as f:
-        config = yaml.safe_load(f)
-        return config
+
+    try:
+        with open(_CONFIG_FILE) as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        return {}
 
 def get_config():
     return config_from_file()
@@ -33,8 +40,30 @@ def output_dir():
     try:
         return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
     except KeyError:
-        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = os.path.abspath(get_config()['output_directory'])
+        config = get_config()
+
+        if 'output_directory' not in config:
+            raise Exception(f'Please set output directory either in {_CONFIG_FILE} or env {_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR}')
+
+        dir_ = config['output_directory']
+
+        os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR] = os.path.abspath(dir_)
         return os.environ[_CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR]
+
+def temp_dir():
+    """
+    Try getting temp directory from the environment.
+    If unsuccessful default ot output_directory/.demp
+    :return:
+    """
+
+    try:
+        return os.environ[_CHIPALIGN_TMP_DIRECTORY_ENV_VAR]
+    except KeyError:
+        os.environ[_CHIPALIGN_TMP_DIRECTORY_ENV_VAR] = os.path.abspath(
+            get_config().get('temp_directory', os.path.join(output_dir(), '.tmp')))
+        return os.environ[_CHIPALIGN_TMP_DIRECTORY_ENV_VAR]
+
 
 def ensure_directory_exists_for_file(filename):
     """
@@ -114,7 +143,8 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
     current_working_directory = os.getcwd()
 
     # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
-    dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
+    dir_ = kwargs.pop('dir', temp_dir())
+
     # Ensure this directory exists
     try:
         os.makedirs(dir_)
@@ -165,8 +195,7 @@ def temporary_directory(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_
 @contextmanager
 def temporary_file(logger=None, cleanup_on_exception=_CLEANUP_ON_EXCEPTION_DEFAULT, **kwargs):
     prefix = kwargs.pop('prefix', 'tmp.chipalign')
-    # Default to storing the tmp files in _OUTPUT_DIR/.tmp/ directory
-    dir_ = kwargs.pop('dir', os.path.join(output_dir(), '.tmp'))
+    dir_ = kwargs.pop('dir', temp_dir())
 
     if not os.path.isdir(dir_):
         os.makedirs(dir_)
