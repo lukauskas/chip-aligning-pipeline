@@ -20,6 +20,7 @@ import inspect
 import logging
 import re
 import os
+import subprocess
 
 import luigi.format
 from luigi.contrib import sge_runner
@@ -133,10 +134,10 @@ class Task(SGEJobTask):
         self.errfile = os.path.join(self.tmp_dir, 'job.err')
         submit_cmd = _build_qsub_command(job_str, self.task_family, self.outfile,
                                          self.errfile, self.parallel_env, self.n_cpu)
-        logger.debug(f'qsub command: \n{}'.format(submit_cmd))
+        logger.debug('qsub command: \n{}'.format(submit_cmd))
 
         # Submit the job and grab job ID
-        output = os.subprocess.check_output(submit_cmd, shell=True)
+        output = subprocess.check_output(submit_cmd, shell=True)
         self.job_id = _parse_qsub_job_id(output)
         logger.debug(f"Submitted job to qsub with response:\n{output}")
 
