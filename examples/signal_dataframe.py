@@ -33,17 +33,21 @@ MIN_READ_LENGTH = 36
 
 INTERESTING_CELL_TYPES = ['IMR-90', 'H1-hESC', 'H9']
 INTERESTING_TRACKS = [
-    ['ASH2L', 'ATF2', 'ATF3', 'BACH1', 'BCL11A', 'BHLHE40', 'BRCA1', 'CBX5', 'CBX8', 'CEBPB',
-     'CHD1', 'CHD2', 'CHD7', 'CREB1', 'CTBP2', 'CTCF', 'E2F6', 'EGR1', 'ELK1', 'EP300',
-     'EZH2', 'FOS', 'FOSL1', 'GABPA', 'GTF2F1', 'H2AFZ', 'H2AK5ac', 'H2AK9ac', 'H2BK120ac',
+     #'ASH2L', 'ATF2', 'ATF3', 'BACH1', 'BCL11A', 'BHLHE40', 'BRCA1', 'CBX5', 'CBX8', 'CEBPB',
+     'CHD1',
+     #'CHD2', 'CHD7', 'CREB1', 'CTBP2', 'CTCF', 'E2F6', 'EGR1', 'ELK1', 'EP300',
+     #'EZH2', 'FOS', 'FOSL1', 'GABPA', 'GTF2F1', 'H2AFZ', 'H2AK5ac', 'H2AK9ac', 'H2BK120ac',
      'H2BK12ac', 'H2BK15ac', 'H2BK20ac', 'H2BK5ac', 'H3K14ac', 'H3K18ac', 'H3K23ac', 'H3K23me2',
      'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K4ac', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K56ac',
      'H3K79me1', 'H3K79me2', 'H3K9ac', 'H3K9me1', 'H3K9me3', 'H3T11ph', 'H4K20me1', 'H4K5ac',
-     'H4K8ac', 'H4K91ac', 'HDAC2', 'HDAC6', 'JUN', 'JUND', 'KDM1A', 'KDM4A', 'KDM5A', 'MAFK', 'MAX',
-     'MAZ', 'MXI1', 'MYC', 'NANOG', 'NFE2L2', 'NRF1', 'PHF8', 'POLR2A', 'POLR2AphosphoS5', 'POU5F1',
-     'RAD21', 'RBBP5', 'RCOR1', 'REST', 'RFX5', 'RNF2', 'RXRA', 'SAP30', 'SIN3A', 'SIRT6', 'SIX5',
-     'SMC3', 'SP1', 'SP2', 'SP4', 'SRF', 'SUZ12', 'TAF1', 'TAF7', 'TBP', 'TCF12', 'TEAD4', 'USF1',
-     'USF2', 'YY1', 'ZNF143', 'ZNF274']
+     'H4K8ac', 'H4K91ac',
+     #'HDAC2', 'HDAC6', 'JUN', 'JUND', 'KDM1A', 'KDM4A', 'KDM5A', 'MAFK', 'MAX',
+     #'MAZ', 'MXI1', 'MYC', 'NANOG', 'NFE2L2', 'NRF1', 'PHF8', 'POLR2A', 'POLR2AphosphoS5', 'POU5F1',
+     #'RAD21', 'RBBP5', 'RCOR1', 'REST', 'RFX5', 'RNF2', 'RXRA', 'SAP30', 'SIN3A', 'SIRT6', 'SIX5',
+     #'SMC3', 'SP1', 'SP2', 'SP4', 'SRF', 'SUZ12', 'TAF1', 'TAF7', 'TBP', 'TCF12', 'TEAD4', 'USF1',
+     #'USF2',
+     'YY1',
+     #'ZNF143', 'ZNF274'
 ]
 
 ADDITIONAL_TARGETS = {
