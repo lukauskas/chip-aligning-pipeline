@@ -20,7 +20,7 @@ class MACSResults(Task):
 
     @property
     def fragment_length_task(self):
-        return FragmentLength(self.treatment_task)
+        return FragmentLength(input_task=self.treatment_task)
 
     @property
     def _extension(self):

@@ -193,7 +193,21 @@ class Task(SGEJobTask):
         with timed_segment(self.__class__.__name__,
                            timed_segment_type='task',
                            logger=logger):
-            self._run()
+            return self._run()
+
+    def run(self):
+        if self.run_locally:
+            return self.work()
+        else:
+            self._init_local()
+            self._run_job()
+            # The procedure:
+            # - Pickle the class
+            # - Tarball the dependencies
+            # - Construct a qsub argument that runs a generic runner function with the path to the pickled class
+            # - Runner function loads the class from pickle
+            # - Runner class untars the dependencies
+            # - Runner function hits the button on the class's work() method
 
     def _run(self):
         """
