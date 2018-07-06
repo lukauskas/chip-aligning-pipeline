@@ -47,13 +47,14 @@ setup(
     install_requires=['python-logstash==0.4.6',
                       'luigi>=2.7.5',
                       'numpy>=1.14.5',
-                      'pandas>=0.23.1',
+                      'pandas>=0.23.12',
                       'sh>=1.12.14',
                       'six>=1.11.0',
-                      'pyyaml>=3.12',
+                      'pyyaml>=3.13',
                       'pybedtools>=0.7.10',
                       'requests>=2.19.1',
-                      'tables>=3.4.4'],
+                      'tables>=3.4.4',
+                      'klepto>=0.1.5.2'],
 
     extras_require={
         'test': ['nose', 'hypothesis'],
