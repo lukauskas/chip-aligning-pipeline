@@ -15,34 +15,28 @@ the output will be stored in directory configured in chipalign.yml, which in thi
 """
 import shutil
 
-from chipalign.alignment.aligned_reads import AlignedReads
+import luigi
+import pandas as pd
+
+from chipalign.alignment import AlignedReadsBwa
 from chipalign.alignment.consolidation import ConsolidatedReads
 from chipalign.alignment.filtering import FilteredReads
-from chipalign.core.file_formats.dataframe import DataFrameFile
 from chipalign.core.task import Task, MetaTask
 from chipalign.core.util import temporary_file
-from chipalign.database.encode.download import EncodeDownloadedSignal, EncodeAlignedReads
 from chipalign.database.encode.metadata import EncodeTFMetadata
-import pandas as pd
-import luigi
-
-from chipalign.database.roadmap.downloaded_filtered_reads import RoadmapDownloadedFilteredReads
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
-from chipalign.database.roadmap.metadata import roadmap_targets_for_cell_line, \
-    roadmap_consolidated_read_download_uris
+from chipalign.database.roadmap.metadata import roadmap_consolidated_read_download_uris
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.signal import Signal
 
-INTERESTING_TFS = ['CHD1', 'CHD2', 'CBX1',
-                   'CTCF',
-                   'CBX2', 'CBX3', 'CBX4', 'CBX5', 'CBX6', 'CBX7', 'CBX8']
+MIN_READ_LENGTH = 36
 
-# INTERESTING_TFS = ['CBX1']
-# INTERESTING_CELL_TYPES = []
-INTERESTING_CELL_TYPES = ['E003', 'E017', 'E008']
-# There's something wrong with fragment length calculation for these, TODO: debug.
-ROADMAP_BLACKLIST = [('E116', 'h3k36me3'),
-                     ('E117', 'h3k36me3')]
+INTERESTING_CELL_TYPES = ['IMR-90']
+INTERESTING_TRACKS = [
+    'H3K14ac',
+    'CHD1'
+]
+
 
 class _FilteredReads(MetaTask):
 
@@ -50,37 +44,19 @@ class _FilteredReads(MetaTask):
     accession = luigi.Parameter()
     source = luigi.Parameter()
 
-    def _encode_task(self):
-        aligned_reads = EncodeAlignedReads(accession=self.accession)
-        filtered_reads = FilteredReads(genome_version=self.genome_version,
-                                       alignment_task=aligned_reads)
-        return filtered_reads
+    def _aligned_task(self):
 
-    def _roadmap_task(self):
-        return RoadmapDownloadedFilteredReads(uri=self.accession,
-                                              genome_version=self.genome_version)
-
-    def _sra_task(self):
-        aligned_reads = AlignedReads(genome_version=self.genome_version,
-                                     accession=self.accession,
-                                     source=self.source,
-                                     aligner='bowtie'
-                                     )
+        aligned_reads = AlignedReadsBwa(genome_version=self.genome_version,
+                                        accession=self.accession,
+                                        source=self.source)
 
         filtered_reads = FilteredReads(genome_version=self.genome_version,
                                        alignment_task=aligned_reads)
-
         return filtered_reads
 
     def requires(self):
-        if self.source == 'encode':
-            return self._encode_task()
-        elif self.source == 'roadmap':
-            return self._roadmap_task()
-        elif self.source == 'sra':
-            return self._sra_task()
-        else:
-            raise ValueError('Unsupported source: {!r}'.format(self.source))
+        return self._aligned_task()
+
 
 class _ConsolidatedReads(MetaTask):
     _parameter_names_to_hash = ('accessions_str',)
@@ -152,9 +128,11 @@ class _BinnedSignal(MetaTask):
         return self.binned_signal()
 
 class TFSignalDataFrame(Task):
+    # Since this task has dynamic dependancies we cannot run it on OGS
 
+    run_locally = True
     # We take two parameters: genome version, and binning method
-    genome_version = luigi.Parameter(default='hg19')
+    genome_version = luigi.Parameter(default='hg38')
     binning_method = BinnedSignal.binning_method
 
     # One could put the interesting TFs here as well, but I am keeping it as a constant in code for
@@ -200,31 +178,32 @@ class TFSignalDataFrame(Task):
 
     def _load_metadata(self):
         metadata = pd.read_csv(self.metadata_task.output().path)
-        # Remove cell lines for which we have no roadmap data for
-        metadata = metadata.dropna(subset=['roadmap_cell_type'])
-        # Only keep aligned reads
-        metadata = metadata[metadata['Output type'] == 'alignments']
-        # Remove all targets that are not interesting
-        # the replace command gets rid of the eGFP- and FLAG- bits
-        # which indicate tags used to pull down
-        tf_metadata = metadata[metadata['target'].str.replace('^eGFP-|FLAG-', '').isin(INTERESTING_TFS)]
+        # Remove rows for which we have no data
+        metadata = metadata.dropna(subset=['Biosample term name', 'target', 'File accession'])
+        metadata = metadata[(metadata[['Biosample term name', 'target', 'File accession']] != '').all(axis=1)]
+
+        # Only keep raw reads
+        metadata = metadata[metadata['Output type'] == 'reads']
+        # Only keep reads with length >= min length
+        metadata = metadata[metadata['Read length'] >= MIN_READ_LENGTH]
+
+        # Only keep single-ended reads (we do not support paired ends yet)
+        metadata = metadata[metadata['Run type'] == 'single-ended']
+
+        # Ensure file status is released
+        metadata = metadata[metadata['File Status'] == 'released']
+
+        # Now leave only interesting cell lines
+        metadata = metadata[metadata['Biosample term name'].isin(INTERESTING_CELL_TYPES)]
+
+        treatment_metadata = metadata[metadata['target'].isin(INTERESTING_TRACKS)]
+        input_metadata = metadata[metadata['is_input']]
 
         logger = self.logger()
-        biosamples = tf_metadata['Biosample term id'].unique()
-        logger.debug('Biosample ids found: {!r}'.format(biosamples))
+        logger.info('len(treatment_metadata): {:,}, len(input_metadata): {:,}'.format(len(treatment_metadata),
+                                                                                      len(input_metadata)))
 
-        input_metadata = metadata[metadata['Biosample term id'].isin(biosamples) & metadata['is_input']]
-
-        return tf_metadata, input_metadata
-
-    def _roadmap_histone_target_list(self, cell_type):
-        """
-        :param cell_type:
-        :return:
-        """
-        tracks = roadmap_targets_for_cell_line(cell_type)
-        tracks = [track for track in tracks if (cell_type, track.lower()) not in ROADMAP_BLACKLIST]
-        return tracks
+        return treatment_metadata, input_metadata
 
 
     def _compile_and_write_df(self, binned_signal_tasks, output_store, output_store_key):
@@ -253,93 +232,67 @@ class TFSignalDataFrame(Task):
         # Get the logger which we will use to output current progress to terminal
         logger = self.logger()
         logger.info('Starting signal dataframe')
-        logger.debug('Interesting TFs are: {!r}'.format(INTERESTING_TFS))
+        logger.debug('Interesting tracks are: {!r}'.format(INTERESTING_TRACKS))
 
         logger.info('Loading metadata')
-        metadata, input_metadata = self._load_metadata()
+        target_metadata, input_metadata = self._load_metadata()
 
         assert len(input_metadata) > 0
 
-        cell_types, input_accessions = self._parse_metadata(metadata, input_metadata)
-
-        for cell_type in cell_types:
-            try:
-                input_accessions[cell_type].append(('roadmap', 'Input'))
-            except KeyError:
-                input_accessions[cell_type] = [('roadmap', 'Input')]
+        cell_types, input_accessions = self._parse_metadata(target_metadata, input_metadata)
 
         for cell_type, cell_additional_inputs in self.additional_inputs().items():
             input_accessions[cell_type].extend(cell_additional_inputs)
 
-        histone_accessions = self._get_roadmap_histone_accessions(cell_types)
-        for cell_type, cell_additional_histones in self.additional_histones().items():
-            if cell_type not in histone_accessions:
-                histone_accessions[cell_type] = {}
-
-            for target, additional_accessions in cell_additional_histones.items():
-                try:
-                    histone_accessions[cell_type][target].extend(additional_accessions)
-                except KeyError:
-                    histone_accessions[cell_type][target] = additional_accessions
-
-        # We have the histone tasks, now we only need to create the TF tasks
-        tf_accessions = {}
+        # We now need to create the track tasks
+        track_accessions = {}
         for cell_type in cell_types:
             cell_tf_accessions = {}
-            cell_metadata = metadata.query('roadmap_cell_type == @cell_type')
+            cell_metadata = target_metadata[target_metadata['Biosample term name'] == cell_type]
             unique_targets_for_cell = cell_metadata['target'].unique()
             for target in unique_targets_for_cell:
                 accessions = [('encode', x) for x in cell_metadata.query('target == @target')['File accession'].unique()]
 
                 cell_tf_accessions[target] = accessions
 
-            tf_accessions[cell_type] = cell_tf_accessions
+            track_accessions[cell_type] = cell_tf_accessions
 
         for cell_type, cell_additional_tfs in self.additional_tfs().items():
-            if cell_type not in tf_accessions:
-                tf_accessions[cell_type] = {}
+            if cell_type not in track_accessions:
+                track_accessions[cell_type] = {}
 
             for target, additional_accessions in cell_additional_tfs.items():
                 try:
-                    tf_accessions[cell_type][target].extend(additional_accessions)
+                    track_accessions[cell_type][target].extend(additional_accessions)
                 except KeyError:
-                    tf_accessions[cell_type][target] = additional_accessions
+                    track_accessions[cell_type][target] = additional_accessions
 
-        logger.debug('Got {:,} TF tasks'.format(sum(map(len, tf_accessions.values()))))
+        logger.debug('Got {:,} TF tasks'.format(sum(map(len, track_accessions.values()))))
 
-        histone_tasks = {}
-        tf_tasks = {}
+        track_tasks = {}
         for cell_type in cell_types:
-            ct_histone_tasks = {}
             input_accessions_str = ';'.join(['{}:{}'.format(*x) for x in input_accessions[cell_type]])
-            for target, accessions in histone_accessions[cell_type].items():
+
+            ct_track_tasks = {}
+
+            for target, accessions in track_accessions[cell_type].items():
                 accessions_str = ';'.join(['{}:{}'.format(*x) for x in accessions])
+                logger.debug(f'Cell type: {cell_type!r}, input_accessions: {input_accessions_str!r}, target_accessions: {accessions_str!r}')
 
-                ct_histone_tasks[target] = _BinnedSignal(genome_version=self.genome_version,
-                                                         cell_type=cell_type,
-                                                         binning_method=self.binning_method,
-                                                         treatment_accessions_str=accessions_str,
-                                                         input_accessions_str=input_accessions_str)
-            histone_tasks[cell_type] = ct_histone_tasks
+                ct_track_tasks[target] = _BinnedSignal(genome_version=self.genome_version,
+                                                       cell_type=cell_type,
+                                                       binning_method=self.binning_method,
+                                                       treatment_accessions_str=accessions_str,
+                                                       input_accessions_str=input_accessions_str)
 
-            ct_tf_tasks = {}
-
-            for target, accessions in tf_accessions[cell_type].items():
-                accessions_str = ';'.join(['{}:{}'.format(*x) for x in accessions])
-
-                ct_tf_tasks[target] = _BinnedSignal(genome_version=self.genome_version,
-                                                    cell_type=cell_type,
-                                                    binning_method=self.binning_method,
-                                                    treatment_accessions_str=accessions_str,
-                                                    input_accessions_str=input_accessions_str)
-
-            tf_tasks[cell_type] = ct_tf_tasks
+            track_tasks[cell_type] = ct_track_tasks
 
         # Make sure to yield the tasks at the same time:
         joint = []
         for cell_type in cell_types:
-            joint.extend(histone_tasks[cell_type].values())
-            joint.extend(tf_tasks[cell_type].values())
+            joint.extend(track_tasks[cell_type].values())
+
+        logger.info('Yielding {:,} new tasks'.format(len(joint)))
 
         # Note that luigi does not play well when you yield tasks that take other tasks as input
         # it is one of the reasons why we use _*BinnedSignal metatasks above
@@ -353,12 +306,13 @@ class TFSignalDataFrame(Task):
         with temporary_file() as temp_filename:
             with pd.HDFStore(temp_filename, 'w') as store:
                 for cell_type in cell_types:
-                    hs = histone_tasks[cell_type]
-                    ts = tf_tasks[cell_type]
+                    ts = track_tasks[cell_type]
 
                     logger.info('Compiling dataframe for {}'.format(cell_type))
-                    self._compile_and_write_df(hs, store, 'histones/{}'.format(cell_type))
-                    self._compile_and_write_df(ts, store, 'tfs/{}'.format(cell_type))
+                    self._compile_and_write_df(ts, store, 'tracks/{}'.format(cell_type))
+
+                store['/target_metadata'] = target_metadata
+                store['/input_metadata'] = input_metadata
 
             # Nearly done
             logger.info('Compressing output')
@@ -377,36 +331,22 @@ class TFSignalDataFrame(Task):
     def _parse_metadata(self, metadata, input_metadata):
         logger = self.logger()
 
-        cell_types = list(metadata['roadmap_cell_type'].unique())
+        cell_types = list(metadata['Biosample term name'].unique())
         cell_types = cell_types + INTERESTING_CELL_TYPES
         input_accessions = {}
         for cell_type in cell_types:
             input_accessions[cell_type] = [('encode', x)
-                                           for x in input_metadata.query('roadmap_cell_type == @cell_type')['File accession'].unique()]
+                                           for x in input_metadata.loc[input_metadata['Biosample term name'] == cell_type, 'File accession'].unique()]
 
             logger.debug('Input accessions for {}: {!r}'.format(cell_type,
                                                                 input_accessions[cell_type]))
         logger.info(
-            'Found {:,} cell types that contain the interesting TFs'.format(len(cell_types)))
+            'Found {:,} cell types that contain the interesting tracks'.format(len(cell_types)))
         logger.debug('Cell types found: {!r}'.format(sorted(list(cell_types))))
         found_tfs = metadata['target'].value_counts()
         logger.debug('TFs found: {}'.format(found_tfs))
         logger.debug('Number of datasets found: {:,}'.format(len(metadata)))
         return cell_types, input_accessions
-
-    def _get_roadmap_histone_accessions(self, cell_types):
-        logger = self.logger()
-        logger.info('Fetching available signals from roadmap')
-        # Once we know the cell lines we can fetch the track list from roadmap
-        roadmap_histone_targets = {cell_type: self._roadmap_histone_target_list(cell_type)
-                                   for cell_type in cell_types}
-
-        histone_accessions = {}
-        for cell_type, targets in roadmap_histone_targets.items():
-            histone_accessions[cell_type] = {target: [('roadmap', target)] for target in targets}
-
-        logger.debug('Got {:,} histone tasks'.format(sum(map(len, histone_accessions.values()))))
-        return histone_accessions
 
 
 if __name__ == '__main__':
