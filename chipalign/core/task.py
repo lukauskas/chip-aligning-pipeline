@@ -38,7 +38,7 @@ from luigi.contrib.sge import SGEJobTask, _parse_qsub_job_id, \
 
 def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
     """Submit shell command to SGE queue via `qsub`"""
-    qsub_template = """echo {cmd} | qsub -cwd -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
+    qsub_template = """echo {cmd} | qsub -cwd -o ":{outfile}" -e ":{errfile}" -S /bin/bash -V -r y -pe {pe} {n_cpu} -N {job_name}"""
     return qsub_template.format(
         cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile,
         pe=pe, n_cpu=n_cpu)
