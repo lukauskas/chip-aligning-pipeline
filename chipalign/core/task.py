@@ -33,8 +33,15 @@ from chipalign.core.logging import LoggerWithExtras
 from chipalign.core.util import temporary_directory, ensure_directory_exists_for_file, output_dir, \
     file_modification_time, timed_segment, temp_dir, use_sge, sge_no_tarball, sge_parallel_env
 
-from luigi.contrib.sge import SGEJobTask, _build_qsub_command, _parse_qsub_job_id, \
+from luigi.contrib.sge import SGEJobTask, _parse_qsub_job_id, \
     _parse_qstat_state
+
+def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
+    """Submit shell command to SGE queue via `qsub`"""
+    qsub_template = """echo {cmd} | qsub -cwd -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
+    return qsub_template.format(
+        cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile,
+        pe=pe, n_cpu=n_cpu)
 
 
 def _file_safe_string(value):

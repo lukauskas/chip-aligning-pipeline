@@ -31,7 +31,7 @@ On completion, SGETask on the master node will detect that
 the job has left the queue, delete the temporary folder, and
 return from SGETask.run()
 """
-
+import logging
 import os
 import sys
 try:
@@ -39,7 +39,7 @@ try:
 except ImportError:
     import pickle
 import tarfile
-
+import sys
 
 def _do_work_on_compute_node(work_dir, tarball=True):
 
@@ -79,6 +79,10 @@ def _extract_packages_archive(work_dir):
 def main(args=sys.argv):
     """Run the work() method from the class instance in the file "job-instance.pickle".
     """
+    logger = logging.getLogger('chipalign.core.sge.sge_runner')
+    logger.debug('Running sge_runner from python: {}'.format(sys.version))
+    logger.debug('Paths: {}'.format(sys.path))
+
     try:
         tarball = "--no-tarball" not in args
         work_dir = args[1]
