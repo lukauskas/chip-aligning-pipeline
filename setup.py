@@ -47,7 +47,7 @@ setup(
     install_requires=['python-logstash==0.4.6',
                       'luigi>=2.7.5',
                       'numpy>=1.14.5',
-                      'pandas>=0.23.12',
+                      'pandas>=0.23.2',
                       'sh>=1.12.14',
                       'six>=1.11.0',
                       'pyyaml>=3.13',
