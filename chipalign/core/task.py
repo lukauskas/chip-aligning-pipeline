@@ -204,6 +204,7 @@ class Task(SGEJobTask):
             elif sge_status == 't' or sge_status == 'u':
                 logger.info(f'qsub job status: status={sge_status} (could indicate either success of failure)')
                 self._reraise_task_failures()
+                break
             else:
                 logger.error('qsub job status unknown: {}'.format(sge_status))
                 raise Exception(
