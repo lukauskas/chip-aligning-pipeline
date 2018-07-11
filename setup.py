@@ -50,6 +50,7 @@ setup(
                       'pandas>=0.23.2',
                       'sh>=1.12.14',
                       'six>=1.11.0',
+                      'tblib>=1.3.2',
                       'pyyaml>=3.13',
                       'pybedtools>=0.7.10',
                       'requests>=2.19.1',

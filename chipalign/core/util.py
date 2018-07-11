@@ -15,6 +15,9 @@ import os
 import shutil
 import logging
 import sys
+from tblib import pickling_support
+pickling_support.install()
+
 
 _CHIPALIGN_OUTPUT_DIRECTORY_ENV_VAR = 'CHIPALIGN_OUTPUT_DIRECTORY'
 _CHIPALIGN_TMP_DIRECTORY_ENV_VAR = 'CHIPALIGN_TEMP_DIRECTORY'

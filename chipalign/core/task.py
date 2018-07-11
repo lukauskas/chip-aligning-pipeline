@@ -9,6 +9,9 @@ from builtins import str
 
 import sys
 import time
+
+from six import reraise
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -156,6 +159,25 @@ class Task(SGEJobTask):
             logger.info('Removing temporary directory {}'.format(self.tmp_dir))
             shutil.rmtree(self.tmp_dir)
 
+    def _reraise_task_failures(self):
+        logger = self.logger()
+        if not os.path.exists(self.errfile):
+            logger.error('Error fetching task error output')
+            raise Exception('Task failed, additionally fetching error output failed too')
+
+        with open(self.errfile, "r") as f:
+            error_txt = f.read()
+
+        if '__sge_runner__success__':
+            logger.debug('No failures to re-raise, job executed successfully')
+        else:
+            match = re.match('__exception_info__start__\n(?P<exc_info>.*)\n__exception_info__end__', error_txt)
+            if match is None:
+                raise Exception('Task failed, but no exception could be parsed. Raw error output\n{}'.format(error_txt))
+            else:
+                reraise(*pickle.loads(*match.group('exc_info')))
+
+
     # I swear I am rewriting everything here.
     def _track_job(self):
         logger = self.logger()
@@ -176,16 +198,12 @@ class Task(SGEJobTask):
                 # logger.info('Job is pending...')
                 continue
             elif 'E' in sge_status:
-                logger.error('qsub job failed:\n{}.'.format('\n'.join(self._fetch_task_failures())))
+                logger.error(f'qsub job failed: status={sge_status}')
+                self._reraise_task_failures()
                 break
             elif sge_status == 't' or sge_status == 'u':
-                # Then the job could either be failed or done.
-                errors = self._fetch_task_failures()
-                if not errors:
-                    logger.debug('qsub job done')
-                else:
-                    logger.error('qsub job failed:\n' + '\n'.join(errors))
-                break
+                logger.info(f'qsub job status: status={sge_status} (could indicate either success of failure)')
+                self._reraise_task_failures()
             else:
                 logger.error('qsub job status unknown: {}'.format(sge_status))
                 raise Exception(

@@ -34,8 +34,12 @@ return from SGETask.run()
 import logging
 import logging.config
 import os
+import sys
 
 import luigi
+
+from tblib import pickling_support
+pickling_support.install()
 
 try:
     import cPickle as pickle
@@ -107,12 +111,17 @@ def main(args=sys.argv):
         project_dir = args[2]
         sys.path.append(project_dir)
         _do_work_on_compute_node(work_dir, tarball)
-    except Exception as e:
-        logging.error('Exception during task execution: {!r}'.format(e))
-
-        # Dump encoded data that we will try to fetch using mechanize
-        print(e)
+    except:
+        exc_info = sys.exc_info()
+        logging.error("Exception during task execution", exc_info=exc_info)
+        # Dump pickled exception
+        pickled_ = pickle.dumps(exc_info, protocol=pickle.HIGHEST_PROTOCOL)
+        print('__exception_info__start__')
+        print(pickled_)
+        print('__exception_info__end__')
         raise
+    else:
+        print('__sge_runner__success__')
 
 
 if __name__ == '__main__':
