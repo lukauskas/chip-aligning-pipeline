@@ -32,8 +32,11 @@ the job has left the queue, delete the temporary folder, and
 return from SGETask.run()
 """
 import logging
+import logging.config
 import os
-import sys
+
+import luigi
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -79,9 +82,22 @@ def _extract_packages_archive(work_dir):
 def main(args=sys.argv):
     """Run the work() method from the class instance in the file "job-instance.pickle".
     """
+
+    # Set up logging, this is based on
+    # https://github.com/spotify/luigi/blob/68fa7bc467ae9cb142206e202a105252bddb6517/luigi/cmdline.py#L44
+    config = luigi.configuration.get_config()
+    logging_conf = None
+    if not config.getboolean('core', 'no_configure_logging', False):
+        logging_conf = config.get('core', 'logging_conf_file', None)
+        if logging_conf is not None and not os.path.exists(logging_conf):
+            raise Exception("Error: Unable to locate specified logging configuration file!")
+    if logging_conf is not None:
+        logging.config.fileConfig(logging_conf)
+    else:
+        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
+
     logger = logging.getLogger('chipalign.core.sge.sge_runner')
-    logger.debug('Running sge_runner from python: {}'.format(sys.version))
-    logger.debug('Paths: {}'.format(sys.path))
+    logger.debug('Running sge_runner from python v{}'.format(sys.version))
 
     try:
         tarball = "--no-tarball" not in args
@@ -91,6 +107,8 @@ def main(args=sys.argv):
         sys.path.append(project_dir)
         _do_work_on_compute_node(work_dir, tarball)
     except Exception as e:
+        logging.error('Exception while running task {!r}'.format(e))
+
         # Dump encoded data that we will try to fetch using mechanize
         print(e)
         raise
