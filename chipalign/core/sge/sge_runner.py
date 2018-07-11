@@ -102,12 +102,13 @@ def main(args=sys.argv):
     try:
         tarball = "--no-tarball" not in args
         work_dir = args[1]
-        assert os.path.exists(work_dir), "First argument to sge_runner.py must be a directory that exists"
+        logger.debug(f'sge_runner work dir {work_dir}')
+        assert os.path.isdir(work_dir), f"Work dir {work_dir!r} does not exist"
         project_dir = args[2]
         sys.path.append(project_dir)
         _do_work_on_compute_node(work_dir, tarball)
     except Exception as e:
-        logging.error('Exception while running task {!r}'.format(e))
+        logging.error('Exception during task execution: {!r}'.format(e))
 
         # Dump encoded data that we will try to fetch using mechanize
         print(e)
