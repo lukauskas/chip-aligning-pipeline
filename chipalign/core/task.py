@@ -176,21 +176,20 @@ class Task(SGEJobTask):
                 # logger.info('Job is pending...')
                 continue
             elif 'E' in sge_status:
-                logger.error('Job has FAILED:\n{}.'.format('\n'.join(self._fetch_task_failures())))
+                logger.error('qsub job failed:\n{}.'.format('\n'.join(self._fetch_task_failures())))
                 break
             elif sge_status == 't' or sge_status == 'u':
                 # Then the job could either be failed or done.
                 errors = self._fetch_task_failures()
                 if not errors:
-                    logger.info('Job is done')
+                    logger.debug('qsub job done')
                 else:
-                    logger.error('Job has FAILED:\n' + '\n'.join(errors))
+                    logger.error('qsub job failed:\n' + '\n'.join(errors))
                 break
             else:
-                logger.info('Job status is UNKNOWN!')
-                logger.info('Status is : %s' % sge_status)
+                logger.error('qsub job status unknown: {}'.format(sge_status))
                 raise Exception(
-                    "job status isn't one of ['r', 'qw', 'E*', 't', 'u']: %s" % sge_status)
+                    f"job status isn't one of ['r', 'qw', 'E*', 't', 'u']: {sge_status}")
 
     def work(self):
         self.ensure_output_directory_exists()

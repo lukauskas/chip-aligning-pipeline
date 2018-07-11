@@ -29,23 +29,28 @@ class TaskTestCase(TestCase):
     #         if os.path.isdir(self.__temporary_output_directory):
     #             raise
 
-    def build_task(self, task):
+    def build_task(self, task, expect_failure=False):
 
         task.class_logger().setLevel(logging.DEBUG)
         logging.basicConfig()
 
         logging.debug("Building task {!r}".format(task))
 
-        luigi.build([task], local_scheduler=True, workers=2)
-
+        success = luigi.build([task], local_scheduler=True, workers=2)
         logging.debug("Checking if task {!r} is complete".format(task))
-        try:
-            self.assertTrue(task.complete())
-        except AssertionError:
-            logging.debug('Outputs exist: {!r}'.format(task._all_outputs_exist()))
-            logging.debug('Source code not changed: {!r}'.format(task._source_code_for_task_has_not_been_modified_since_output_was_generated()))
-            logging.debug('Dependencies OK: {!r}'.format(task._dependancies_complete_and_have_lower_modification_dates_than_outputs()))
-            raise
+
+        if not expect_failure:
+            self.assertTrue(success)
+            try:
+                self.assertTrue(task.complete())
+            except AssertionError:
+                logging.debug('Outputs exist: {!r}'.format(task._all_outputs_exist()))
+                logging.debug('Source code not changed: {!r}'.format(task._source_code_for_task_has_not_been_modified_since_output_was_generated()))
+                logging.debug('Dependencies OK: {!r}'.format(task._dependancies_complete_and_have_lower_modification_dates_than_outputs()))
+                raise
+        else:
+            self.assertFalse(success)
+            self.assertFalse(task.complete())
 
     @classmethod
     def task_cache_directory(cls, make_if_not_exists=True):

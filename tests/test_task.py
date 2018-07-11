@@ -7,6 +7,7 @@ import unittest
 from chipalign.core.task import Task, MetaTask
 
 
+
 class A(Task):
 
     x = luigi.Parameter()
@@ -29,6 +30,7 @@ class B(Task):
     def _extension(self):
         return 'derp'
 
+    _
 class Meta(MetaTask):
 
     derp = luigi.Parameter()
@@ -108,6 +110,3 @@ class TestTaskFilenameIsCorrect(unittest.TestCase):
 
         # One should not be able to create this class
         self.assertRaises(ValueError, A, x='x' * (characters_left_for_x+1), y='y', z='not important')
-
-
-

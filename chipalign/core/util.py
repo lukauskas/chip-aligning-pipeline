@@ -96,8 +96,8 @@ def timed_segment(message, logger=None, timed_segment_type="code segment"):
 
     kwargs = dict(timed_segment=message,
                   timed_segment_type=timed_segment_type)
-    logger.info('Starting {} "{}"'.format(timed_segment_type, message),
-                extra=dict(event='start',
+    logger.debug('Starting {} "{}"'.format(timed_segment_type, message),
+                 extra=dict(event='start',
                            **kwargs)
                 )
 
