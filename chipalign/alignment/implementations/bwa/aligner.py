@@ -82,7 +82,8 @@ class AlignedReadsBwa(AlignedReadsBase):
 
             samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
             # Encode sorts their BAMs. Let's do that too.
-            samtools('sort', bam_output_filename, '-o', sorted_bam_output_filename)
+            samtools('sort', bam_output_filename, '-o', sorted_bam_output_filename,
+                     '--threads', self.n_cpu)
 
             logger.info('Moving files to correct locations')
             shutil.move(stdout_filename, stdout_output_abspath)
