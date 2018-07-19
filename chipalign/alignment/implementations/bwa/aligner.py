@@ -13,13 +13,6 @@ from chipalign.alignment.implementations.bwa.index import BwaIndex
 from chipalign.core.util import timed_segment
 
 
-class BwaAlnOutput(AlignedReadsBase):
-    """
-    Performs the alignment using BWA aligner.
-    """
-
-
-
 class AlignedReadsBwa(AlignedReadsBase):
     """
     Returns a set of aligned reads using `BWA`_ aligner.
@@ -54,6 +47,7 @@ class AlignedReadsBwa(AlignedReadsBase):
 
         from chipalign.command_line_applications.bwa import bwa
         from chipalign.command_line_applications.samtools import samtools
+        from chipalign.command_line_applications.sh_proxy import sh_proxy
 
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
@@ -83,16 +77,18 @@ class AlignedReadsBwa(AlignedReadsBase):
                     _out=sai_output_filename,
                     _err=stdout_filename)
 
-            logger.info('Converting SAM to BAM')
-            bwa('samse', index_prefix, sai_output_filename, fastq_sequence_abspath,
-                _out=sam_output_filename)
+            with timed_segment('bwa samse', logger=logger):
+                bwa('samse', index_prefix, sai_output_filename, fastq_sequence_abspath,
+                    '>', sam_output_filename)
 
-            samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
-            # Encode sorts their BAMs. Let's do that too.
-            samtools('sort', bam_output_filename, '-o', sorted_bam_output_filename,
-                     '--threads', self.n_cpu)
+            with timed_segment('samtools SAM->BAM', logger=logger):
+                sh_proxy.samtools('view', '-b', sam_output_filename, '>', bam_output_filename)
 
-            logger.info('Moving files to correct locations')
+            with timed_segment('samtools sort'):
+                # Encode sorts their BAMs. Let's do that too.
+                samtools('sort', bam_output_filename, '-o', sorted_bam_output_filename,
+                         '--threads', self.n_cpu)
+
             shutil.move(stdout_filename, stdout_output_abspath)
             shutil.move(sorted_bam_output_filename, bam_output_abspath)
             logger.info('Done')
