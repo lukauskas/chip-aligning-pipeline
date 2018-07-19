@@ -74,7 +74,7 @@ class AlignedReadsBwa(AlignedReadsBase):
                     '-t', self.number_of_processes,
                     index_prefix,
                     fastq_sequence_abspath,
-                    _out=sai_output_filename,
+                    '>', sai_output_filename,
                     _err=stdout_filename)
 
             with timed_segment('bwa samse', logger=logger):
