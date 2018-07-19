@@ -13,6 +13,13 @@ from chipalign.alignment.implementations.bwa.index import BwaIndex
 from chipalign.core.util import timed_segment
 
 
+class BwaAlnOutput(AlignedReadsBase):
+    """
+    Performs the alignment using BWA aligner.
+    """
+
+
+
 class AlignedReadsBwa(AlignedReadsBase):
     """
     Returns a set of aligned reads using `BWA`_ aligner.
