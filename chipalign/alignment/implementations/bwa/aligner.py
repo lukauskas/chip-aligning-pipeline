@@ -44,8 +44,7 @@ class AlignedReadsBwa(AlignedReadsBase):
 
         from chipalign.command_line_applications.archiving import unzip
 
-        from chipalign.command_line_applications.bwa import bwa
-        from chipalign.command_line_applications.samtools import samtools
+        from chipalign.command_line_applications.bwa import bwa_piped
 
         bam_output_abspath, stdout_output_abspath = self._output_abspaths()
 
@@ -65,16 +64,7 @@ class AlignedReadsBwa(AlignedReadsBase):
             with timed_segment('Running BWA (aln + samse) and samtools SAM->BAM', logger=logger):
                 # BWA parameters come from encode pipeline
                 # https://github.com/ENCODE-DCC/chip-seq-pipeline2/blob/master/src/encode_bwa.py#L73
-                samtools(samtools(bwa(bwa('aln', '-q', 5, '-l', 32, '-k', 2,
-                                          '-t', self.number_of_processes,
-                                          index_prefix,
-                                          fastq_sequence_abspath,
-                                          _piped=True),
-                                      'samse', index_prefix, '-', fastq_sequence_abspath,
-                                      _piped=True),
-                                  'view', '-b', '-', _piped=True),
-                         'sort', '-', '-o', sorted_bam_output_filename,
-                         '--threads', self.number_of_processes)
+                bwa_piped(index_prefix, fastq_sequence_abspath, sorted_bam_output_filename, self.number_of_processes)
 
             shutil.move(stdout_filename, stdout_output_abspath)
             shutil.move(sorted_bam_output_filename, bam_output_abspath)

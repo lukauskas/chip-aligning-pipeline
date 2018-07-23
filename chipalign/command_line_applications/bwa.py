@@ -1,7 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+import os
+import sh
 
 from chipalign.command_line_applications.exceptions import log_sh_exceptions
 
@@ -17,3 +15,7 @@ except ImportError:
 from chipalign.command_line_applications.sh_proxy import sh_proxy
 bwa_proxied = log_sh_exceptions(sh_proxy.bwa)
 
+
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_shell_file = os.path.join(_this_dir, 'bwa.sh')
+bwa_piped = sh.Command(_shell_file)
