@@ -6,7 +6,8 @@ from __future__ import unicode_literals
 from chipalign.command_line_applications.exceptions import log_sh_exceptions
 
 try:
-    from sh import bwa as bwa_
+    from sh import bwa as bwa
+    bwa = log_sh_exceptions(bwa)
 except ImportError:
     bwa = None
     raise ImportError('Cannot find BWA executable in the user\'s system. '
@@ -14,5 +15,5 @@ except ImportError:
 
 
 from chipalign.command_line_applications.sh_proxy import sh_proxy
-bwa = log_sh_exceptions(sh_proxy.bwa)
+bwa_proxied = log_sh_exceptions(sh_proxy.bwa)
 
