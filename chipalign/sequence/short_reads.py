@@ -35,7 +35,7 @@ class ShortReads(Task):
         else:
 
             # Check that short reads have non-zero size ...
-            
+
             outputs = flatten(self.output())
 
             for output in outputs:

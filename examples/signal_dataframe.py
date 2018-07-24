@@ -18,7 +18,7 @@ import shutil
 import luigi
 import pandas as pd
 
-from chipalign.alignment import AlignedReadsBwa
+from chipalign.alignment import AlignedReadsBwa, AlignedReadsBowtie
 from chipalign.alignment.consolidation import ConsolidatedReads
 from chipalign.alignment.filtering import FilteredReads
 from chipalign.core.task import Task, MetaTask
@@ -132,9 +132,9 @@ class _FilteredReads(MetaTask):
 
     def _aligned_task(self):
 
-        aligned_reads = AlignedReadsBwa(genome_version=self.genome_version,
-                                        accession=self.accession,
-                                        source=self.source)
+        aligned_reads = AlignedReadsBowtie(genome_version=self.genome_version,
+                                           accession=self.accession,
+                                           source=self.source)
 
         filtered_reads = FilteredReads(genome_version=self.genome_version,
                                        alignment_task=aligned_reads)

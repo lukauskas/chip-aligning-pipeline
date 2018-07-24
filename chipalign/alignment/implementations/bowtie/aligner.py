@@ -62,6 +62,8 @@ class AlignedReadsBowtie(AlignedReadsBase):
 
             sam_output_filename = 'alignments.sam'
             bam_output_filename = 'alignments.bam'
+            sorted_bam_output_filename = 'alignments.sorted.bam'
+
             stdout_filename = 'stats.txt'
 
             with timed_segment('Running bowtie', logger=logger):
@@ -69,16 +71,18 @@ class AlignedReadsBowtie(AlignedReadsBase):
                         '-x', 'genome',
                         '-p', self.number_of_processes,
                         '--seed', self.seed,
+                        '--very-sensitive-local',
                         '-S', sam_output_filename,
                         '--mm',
                         _err=stdout_filename
                         )
 
-            logger.info('Converting SAM to BAM')
+            with timed_segment('Converting SAM to BAM'):
+                samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
 
-            samtools('view', '-b', sam_output_filename, _out=bam_output_filename)
+            with timed_segment('Sorting BAM'):
+                samtools('sort', bam_output_filename, '-o', sorted_bam_output_filename,
+                         '--threads', self.number_of_processes)
 
-            logger.info('Moving files to correct locations')
             shutil.move(stdout_filename, stdout_output_abspath)
-            shutil.move(bam_output_filename, bam_output_abspath)
-            logger.info('Done')
+            shutil.move(sorted_bam_output_filename, bam_output_abspath)
