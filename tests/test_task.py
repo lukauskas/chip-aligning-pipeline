@@ -30,7 +30,6 @@ class B(Task):
     def _extension(self):
         return 'derp'
 
-    _
 class Meta(MetaTask):
 
     derp = luigi.Parameter()
