@@ -1,4 +1,7 @@
+import re
+
 import sh
+from io import StringIO
 
 from chipalign.alignment.implementations.bwa import AlignedReadsBwa, BwaIndex
 from tests.helpers.task_test import TaskTestCase
@@ -49,7 +52,18 @@ class TestBwaAlignment(TaskTestCase):
         except sh.ErrorReturnCode:
             self.fail('BWA produced an invalid BAM file')
 
+        buf = StringIO()
+        samtools('flagstat', bam_output_path, _out=buf)
 
+        output = buf.getvalue()
+
+        match = re.match('(?P<n_mapped>\d+)\s+\+\s+\d+\s+mapped', output.split('\n')[4])
+        if match is None:
+            self.fail('Could not parse samtools flagstat output:\n{!r}'.format(output))
+
+        n_mapped = int(match.group('n_mapped'))
+
+        self.assertGreater(n_mapped, 0, 'BWA alignment produced 0 reads:\n{!r}'.format(output))
 
 
 

@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 import os
 import shutil
 import luigi
+from luigi.task import flatten
+
 from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
 from chipalign.database.encode.download import fetch_from_encode
@@ -26,6 +28,21 @@ class ShortReads(Task):
     @property
     def _extension(self):
         return 'fastq.gz'
+
+    def complete(self):
+        if not super().complete():
+            return False
+        else:
+
+            # Check that short reads have non-zero size ...
+            
+            outputs = flatten(self.output())
+
+            for output in outputs:
+                if not os.path.isfile(output.path) or os.path.getsize(output.path) == 0:
+                    return False
+
+            return True
 
     def _from_sra(self):
         from chipalign.command_line_applications.sratoolkit import fastq_dump
