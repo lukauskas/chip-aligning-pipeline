@@ -1,16 +1,9 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-import os
 import luigi
 import shutil
-from chipalign.core.task import Task
-from chipalign.core.util import temporary_file, autocleaning_pybedtools
-from chipalign.genome.chromosomes import Chromosomes
 
-from six.moves import map as imap
-from six.moves import filter as ifilter
+from chipalign.core.task import Task
+from chipalign.core.util import temporary_file
+from chipalign.genome.chromosomes import Chromosomes
 
 import pandas as pd
 

@@ -1,19 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import shutil
-
 import luigi
+
 from chipalign.alignment.aligned_reads import AlignedReads
 from chipalign.core.task import Task
-from chipalign.core.util import fast_bedtool_from_iterable, autocleaning_pybedtools, temporary_file, \
+from chipalign.core.util import autocleaning_pybedtools, temporary_file, \
     timed_segment
 from chipalign.genome.chromosomes import Chromosomes
 from chipalign.genome.mappability import GenomeMappabilityTrack, drop_unmappable
-import pandas as pd
-from pandas.errors import EmptyDataError
+
 
 def _remove_duplicate_reads_inplace(bedtools_df):
     bedtools_df['pos'] = bedtools_df['end'].where(bedtools_df['strand'] == '-',

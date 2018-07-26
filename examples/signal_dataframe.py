@@ -18,16 +18,11 @@ import shutil
 import luigi
 import pandas as pd
 
-from chipalign.alignment import AlignedReadsBowtie
-from chipalign.alignment.consolidation import ConsolidatedReads
-from chipalign.alignment.filtering import FilteredReads
 from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
 from chipalign.database.encode.metadata import EncodeTFMetadata
-from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
-from chipalign.database.roadmap.metadata import roadmap_consolidated_read_download_uris
 from chipalign.signal.bins import BinnedSignal
-from chipalign.signal.signal import Signal
+from chipalign.signal.bins_roadmap_bowtie import BinnedSignalRoadmapBowtie
 
 MIN_READ_LENGTH = 36
 
@@ -139,59 +134,6 @@ ADDITIONAL_INPUTS = {
         ('sra', 'SRR1537734')
     ]
 }
-
-
-def filtered_reads_factory(genome_version, accession, source):
-    aligned_reads = AlignedReadsBowtie(genome_version=genome_version,
-                                       accession=accession,
-                                       source=source)
-
-    filtered_reads = FilteredReads(genome_version=genome_version,
-                                   alignment_task=aligned_reads)
-    return filtered_reads
-
-
-def consolidated_reads_factory(genome_version, accessions_str, cell_type):
-    accessions = accessions_str.split(';')
-    filtered = []
-
-    for source_accession in accessions:
-        source, __, accession = source_accession.partition(':')
-
-        if source == 'roadmap':
-            uris = roadmap_consolidated_read_download_uris(cell_type,
-                                                           accession)
-            for uri in uris:
-                filtered.append(filtered_reads_factory(source='roadmap',
-                                                       accession=uri,
-                                                       genome_version=genome_version))
-        else:
-            filtered.append(filtered_reads_factory(source=source, accession=accession,
-                                                   genome_version=genome_version))
-
-    return ConsolidatedReads(input_alignments=filtered)
-
-def binned_signal_factory(genome_version, cell_type, binning_method,
-                          treatment_accessions_str, input_accessions_str):
-
-    bins = RoadmapMappableBins(genome_version=genome_version,
-                               cell_type=cell_type)
-
-    input_task = consolidated_reads_factory(cell_type=cell_type,
-                                            genome_version=genome_version,
-                                            accessions_str=input_accessions_str)
-
-    treatment_task = consolidated_reads_factory(accessions_str=treatment_accessions_str,
-                                                genome_version=genome_version,
-                                                cell_type=cell_type)
-    signal = Signal(input_task=input_task,
-                    treatment_task=treatment_task)
-
-    binned_signal = BinnedSignal(bins_task=bins,
-                                 signal_task=signal,
-                                 binning_method=binning_method
-                                 )
-    return binned_signal
 
 
 class TFSignalDataFrame(Task):
@@ -339,11 +281,11 @@ class TFSignalDataFrame(Task):
                 accessions_str = ';'.join(['{}:{}'.format(*x) for x in accessions])
                 logger.debug(f'Cell type: {cell_type!r}, input_accessions: {input_accessions_str!r}, target_accessions: {accessions_str!r}')
 
-                ct_track_tasks[target] = binned_signal_factory(genome_version=self.genome_version,
-                                                               cell_type=cell_type,
-                                                               binning_method=self.binning_method,
-                                                               treatment_accessions_str=accessions_str,
-                                                               input_accessions_str=input_accessions_str)
+                ct_track_tasks[target] = BinnedSignalRoadmapBowtie(genome_version=self.genome_version,
+                                                                   cell_type=cell_type,
+                                                                   binning_method=self.binning_method,
+                                                                   treatment_accessions_str=accessions_str,
+                                                                   input_accessions_str=input_accessions_str)
 
             track_tasks[cell_type] = ct_track_tasks
 

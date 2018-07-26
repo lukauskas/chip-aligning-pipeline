@@ -13,6 +13,7 @@ from chipalign.core.task import Task
 from chipalign.core.util import timed_segment, temporary_file, autocleaning_pybedtools
 import pandas as pd
 
+
 class BinnedSignal(Task):
     """
         Takes the signal and creates a bedgraph of it distributed across the bins
@@ -241,3 +242,5 @@ def _log10_weighted_mean(data):
     ans += -np.log10(np.sum(weights * np.power(10.0, adjusted_values)))
 
     return ans
+
+
