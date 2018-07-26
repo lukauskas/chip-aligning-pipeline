@@ -18,10 +18,10 @@ import shutil
 import luigi
 import pandas as pd
 
-from chipalign.alignment import AlignedReadsBwa, AlignedReadsBowtie
+from chipalign.alignment import AlignedReadsBowtie
 from chipalign.alignment.consolidation import ConsolidatedReads
 from chipalign.alignment.filtering import FilteredReads
-from chipalign.core.task import Task, MetaTask
+from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
 from chipalign.database.encode.metadata import EncodeTFMetadata
 from chipalign.database.roadmap.mappable_bins import RoadmapMappableBins
@@ -31,22 +31,38 @@ from chipalign.signal.signal import Signal
 
 MIN_READ_LENGTH = 36
 
-INTERESTING_CELL_TYPES = ['IMR-90', 'H1-hESC', 'H9']
+INTERESTING_CELL_TYPES = ['IMR-90', 'H1-hESC', 'H9', 'HepG2', 'K562']
 INTERESTING_TRACKS = [
-     #'ASH2L', 'ATF2', 'ATF3', 'BACH1', 'BCL11A', 'BHLHE40', 'BRCA1', 'CBX5', 'CBX8', 'CEBPB',
+     #'ASH2L', 'ATF2', 'ATF3', 'BACH1', 'BCL11A', 'BHLHE40',
+     'BRCA1', 'CBX5', 'CBX8', 'CEBPB',
      'CHD1',
-     #'CHD2', 'CHD7', 'CREB1', 'CTBP2', 'CTCF', 'E2F6', 'EGR1', 'ELK1', 'EP300',
-     #'EZH2', 'FOS', 'FOSL1', 'GABPA', 'GTF2F1', 'H2AFZ', 'H2AK5ac', 'H2AK9ac', 'H2BK120ac',
+     'CHD2', 'CHD7',
+     # 'CREB1', 'CTBP2',
+     'CTCF', 'E2F6', 'EGR1', 'ELK1', 'EP300',
+     #'EZH2',
+     'FOS', 'FOSL1',
+     #'GABPA', 'GTF2F1',
+     'H2AFZ',
+     'H2AK5ac',
+     'H2AK9ac', 'H2BK120ac',
      'H2BK12ac', 'H2BK15ac', 'H2BK20ac', 'H2BK5ac', 'H3K14ac', 'H3K18ac', 'H3K23ac', 'H3K23me2',
      'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K4ac', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K56ac',
      'H3K79me1', 'H3K79me2', 'H3K9ac', 'H3K9me1', 'H3K9me3', 'H3T11ph', 'H4K20me1', 'H4K5ac',
      'H4K8ac', 'H4K91ac',
-     #'HDAC2', 'HDAC6', 'JUN', 'JUND', 'KDM1A', 'KDM4A', 'KDM5A', 'MAFK', 'MAX',
-     #'MAZ', 'MXI1', 'MYC', 'NANOG', 'NFE2L2', 'NRF1', 'PHF8', 'POLR2A', 'POLR2AphosphoS5', 'POU5F1',
-     #'RAD21', 'RBBP5', 'RCOR1', 'REST', 'RFX5', 'RNF2', 'RXRA', 'SAP30', 'SIN3A', 'SIRT6', 'SIX5',
+     'HDAC2', 'HDAC6',
+     'JUN', 'JUND', 'KDM1A', 'KDM4A', 'KDM5A',
+     'KMT2B',
+     # 'MAFK', 'MAX',
+     #'MAZ', 'MXI1', 'MYC', 'NANOG', 'NFE2L2', 'NRF1', 'PHF8',
+     'POLR2A', 'POLR2AphosphoS5',
+     #'POU5F1',
+     #'RAD21', 'RBBP5', 'RCOR1', 'REST', 'RFX5', 'RNF2', 'RXRA', 'SAP30',
+     'SIN3A',
+     #'SIRT6', 'SIX5',
      #'SMC3', 'SP1', 'SP2', 'SP4', 'SRF', 'SUZ12', 'TAF1', 'TAF7', 'TBP', 'TCF12', 'TEAD4', 'USF1',
      #'USF2',
      'YY1',
+     'ZFX',
      #'ZNF143', 'ZNF274'
 ]
 
@@ -124,94 +140,59 @@ ADDITIONAL_INPUTS = {
     ]
 }
 
-class _FilteredReads(MetaTask):
 
-    genome_version = RoadmapMappableBins.genome_version
-    accession = luigi.Parameter()
-    source = luigi.Parameter()
+def filtered_reads_factory(genome_version, accession, source):
+    aligned_reads = AlignedReadsBowtie(genome_version=genome_version,
+                                       accession=accession,
+                                       source=source)
 
-    def _aligned_task(self):
-
-        aligned_reads = AlignedReadsBowtie(genome_version=self.genome_version,
-                                           accession=self.accession,
-                                           source=self.source)
-
-        filtered_reads = FilteredReads(genome_version=self.genome_version,
-                                       alignment_task=aligned_reads)
-        return filtered_reads
-
-    def requires(self):
-        return self._aligned_task()
+    filtered_reads = FilteredReads(genome_version=genome_version,
+                                   alignment_task=aligned_reads)
+    return filtered_reads
 
 
-class _ConsolidatedReads(MetaTask):
-    _parameter_names_to_hash = ('accessions_str',)
+def consolidated_reads_factory(genome_version, accessions_str, cell_type):
+    accessions = accessions_str.split(';')
+    filtered = []
 
-    genome_version = RoadmapMappableBins.genome_version
-    accessions_str = luigi.Parameter()
-    cell_type = luigi.Parameter()
+    for source_accession in accessions:
+        source, __, accession = source_accession.partition(':')
 
-    def requires(self):
-        accessions = self.accessions_str.split(';')
-        filtered = []
+        if source == 'roadmap':
+            uris = roadmap_consolidated_read_download_uris(cell_type,
+                                                           accession)
+            for uri in uris:
+                filtered.append(filtered_reads_factory(source='roadmap',
+                                                       accession=uri,
+                                                       genome_version=genome_version))
+        else:
+            filtered.append(filtered_reads_factory(source=source, accession=accession,
+                                                   genome_version=genome_version))
 
-        for source_accession in accessions:
-            source, __, accession = source_accession.partition(':')
+    return ConsolidatedReads(input_alignments=filtered)
 
-            if source == 'roadmap':
-                uris = roadmap_consolidated_read_download_uris(self.cell_type,
-                                                               accession)
-                for uri in uris:
-                    filtered.append(_FilteredReads(source='roadmap',
-                                                   accession=uri,
-                                                   genome_version=self.genome_version))
-            else:
-                filtered.append(_FilteredReads(source=source, accession=accession,
-                                               genome_version=self.genome_version))
+def binned_signal_factory(genome_version, cell_type, binning_method,
+                          treatment_accessions_str, input_accessions_str):
 
-        return ConsolidatedReads(input_alignments=filtered)
+    bins = RoadmapMappableBins(genome_version=genome_version,
+                               cell_type=cell_type)
 
-class _BinnedSignal(MetaTask):
-    """
-    A metaclass that creates appropriate binned signal task given the signal task function
-    """
-    genome_version = RoadmapMappableBins.genome_version
-    cell_type = RoadmapMappableBins.cell_type
-    binning_method = BinnedSignal.binning_method
+    input_task = consolidated_reads_factory(cell_type=cell_type,
+                                            genome_version=genome_version,
+                                            accessions_str=input_accessions_str)
 
-    treatment_accessions_str = luigi.Parameter()
-    input_accessions_str = luigi.Parameter()
+    treatment_task = consolidated_reads_factory(accessions_str=treatment_accessions_str,
+                                                genome_version=genome_version,
+                                                cell_type=cell_type)
+    signal = Signal(input_task=input_task,
+                    treatment_task=treatment_task)
 
-    def input_task(self):
-        return _ConsolidatedReads(cell_type=self.cell_type,
-                                  genome_version=self.genome_version,
-                                  accessions_str=self.input_accessions_str)
+    binned_signal = BinnedSignal(bins_task=bins,
+                                 signal_task=signal,
+                                 binning_method=binning_method
+                                 )
+    return binned_signal
 
-    def treatment_task(self):
-        return _ConsolidatedReads(accessions_str=self.treatment_accessions_str,
-                                  genome_version=self.genome_version,
-                                  cell_type=self.cell_type)
-
-    def signal_task(self):
-        return Signal(input_task=self.input_task(),
-                      treatment_task=self.treatment_task())
-
-    def bins_task(self):
-        return RoadmapMappableBins(genome_version=self.genome_version,
-                                   cell_type=self.cell_type)
-
-    def binned_signal(self):
-        bins = self.bins_task()
-        signal = self.signal_task()
-
-        binned_signal = BinnedSignal(bins_task=bins,
-                                     signal_task=signal,
-                                     binning_method=self.binning_method
-                                     )
-        return binned_signal
-
-    def requires(self):
-        return self.binned_signal()
 
 class TFSignalDataFrame(Task):
     # Since this task has dynamic dependancies we cannot run it on OGS
@@ -358,11 +339,11 @@ class TFSignalDataFrame(Task):
                 accessions_str = ';'.join(['{}:{}'.format(*x) for x in accessions])
                 logger.debug(f'Cell type: {cell_type!r}, input_accessions: {input_accessions_str!r}, target_accessions: {accessions_str!r}')
 
-                ct_track_tasks[target] = _BinnedSignal(genome_version=self.genome_version,
-                                                       cell_type=cell_type,
-                                                       binning_method=self.binning_method,
-                                                       treatment_accessions_str=accessions_str,
-                                                       input_accessions_str=input_accessions_str)
+                ct_track_tasks[target] = binned_signal_factory(genome_version=self.genome_version,
+                                                               cell_type=cell_type,
+                                                               binning_method=self.binning_method,
+                                                               treatment_accessions_str=accessions_str,
+                                                               input_accessions_str=input_accessions_str)
 
             track_tasks[cell_type] = ct_track_tasks
 
