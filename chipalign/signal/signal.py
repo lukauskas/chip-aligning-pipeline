@@ -134,7 +134,7 @@ class Signal(Task):
                         chromosomes.add(chrom)
 
                 sorted_chromosomes = sorted(chromosomes)
-
+                
                 tmp_gzip_file = 'output.gz'
                 with gzip.GzipFile(tmp_gzip_file, 'w') as out_:
                     for chrom in sorted_chromosomes:
@@ -144,6 +144,7 @@ class Signal(Task):
                             seen_chrom = False
                             for row in in_:
                                 in_chrom, __, __ = row.partition(b'\t')
+                                in_chrom = in_chrom.decode('ascii')
 
                                 # If chromosomes match, write it
                                 if chrom == in_chrom:
