@@ -49,6 +49,7 @@ INTERESTING_TRACKS = [
      'KMT2B',
      # 'MAFK', 'MAX',
      #'MAZ', 'MXI1', 'MYC', 'NANOG', 'NFE2L2', 'NRF1', 'PHF8',
+     'NFRKB', 'RUVBL1', 'RUVBL2', 'TFPT', # INO80 subunits
      'POLR2A', 'POLR2AphosphoS5',
      #'POU5F1',
      #'RAD21', 'RBBP5', 'RCOR1', 'REST', 'RFX5', 'RNF2', 'RXRA', 'SAP30',
