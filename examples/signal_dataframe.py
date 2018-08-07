@@ -298,9 +298,9 @@ class TFSignalDataFrame(Task):
             with pd.HDFStore(temp_filename, 'w') as store:
                 for cell_type in cell_types:
                     ts = track_tasks[cell_type]
-
-                    logger.info('Compiling dataframe for {}'.format(cell_type))
-                    self._compile_and_write_df(ts, store, 'tracks/{}'.format(cell_type))
+                    for key, task in ts.items():
+                        df = task.output().load()
+                        store[f'/tracks/{cell_type}/{key}'] = df
 
                 store['/target_metadata'] = target_metadata
                 store['/input_metadata'] = input_metadata

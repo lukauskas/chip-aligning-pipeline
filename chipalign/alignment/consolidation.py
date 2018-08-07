@@ -2,10 +2,11 @@ import luigi
 import shutil
 
 from chipalign.core.task import Task
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, timed_segment
 from chipalign.genome.chromosomes import Chromosomes
 
 import pandas as pd
+import numpy as np
 
 class ConsolidatedReads(Task):
     """
@@ -75,6 +76,28 @@ class ConsolidatedReads(Task):
     def task_class_friendly_name(self):
         return 'CR'
 
+    def _reads_to_table(self, filename, chromosomes):
+        fr = pd.read_table(filename,
+                           header=None,
+                           names=['chromosome', 'start', 'end', 'name', 'score', 'strand'])
+
+        if chromosomes:
+            fr = fr[fr.chromosome.isin(chromosomes)]
+
+        return fr
+
+    def _subsample_mask(self, n_reads, subsample_size, random_state):
+        random = np.random.RandomState(random_state)
+
+        indices = random.choice(np.arange(n_reads, dtype=int),
+                                subsample_size,
+                                replace=False)
+
+        mask = np.zeros(n_reads, dtype=bool)
+        mask[indices] = True
+
+        return mask
+
     def _run(self):
         logger = self.logger()
         self.ensure_output_directory_exists()
@@ -85,33 +108,40 @@ class ConsolidatedReads(Task):
         else:
             chromosomes = None
 
-        reads = []
+        n_reads = 0
 
-        for filtered_reads in self.input_alignments:
-            filtered_reads = filtered_reads.output()
-            logger.debug('Processing {}'.format(filtered_reads.path))
-            fr = pd.read_table(filtered_reads.path,
-                               header=None,
-                               names=['chromosome', 'start', 'end', 'name', 'score', 'strand'])
+        with timed_segment('Computing total number of reads', logger=self.logger()):
 
-            if chromosomes:
-                fr = fr[fr.chromosome.isin(chromosomes)]
+            for filtered_reads in self.input_alignments:
+                filtered_reads = filtered_reads.output()
+                n_reads += len(self._reads_to_table(filtered_reads.path, chromosomes))
 
-            reads.append(fr)
-            logger.debug('.. Done')
+        logger.debug('Number of reads parsed: {:,}'.format(n_reads))
 
-        logger.debug('Concatenating')
-        reads = pd.concat(reads)
-        n_reads = len(reads)
-        logger.debug('Total {:,} reads'.format(n_reads))
+        if n_reads <= self.max_sequencing_depth:
+            mask = np.ones(n_reads, dtype=bool)
+        else:
+            mask = self._subsample_mask(n_reads, subsample_size=self.max_sequencing_depth,
+                                        random_state=self.subsample_random_seed)
 
-        if n_reads > self.max_sequencing_depth:
-            logger.debug('Subsampling')
-            reads = reads.sample(n=self.max_sequencing_depth,
-                                 random_state=self.subsample_random_seed)
+        with timed_segment('Concatenating subsampled reads', logger=self.logger()):
+            reads = []
+            pos = 0
+            for filtered_reads in self.input_alignments:
+                filtered_reads = filtered_reads.output()
 
-        logger.debug('Sorting')
-        reads = reads.sort_values(by=['chromosome', 'start', 'end'])
+                fr = self._reads_to_table(filtered_reads.path, chromosomes)
+                len_ = len(fr)
+                current_mask = mask[pos:pos+len_]
+                fr = fr[current_mask]
+
+                reads.append(fr)
+                pos += len_
+
+            reads = pd.concat(reads)
+
+        with timed_segment('Sorting concatenated reads', logger=self.logger()):
+            reads = reads.sort_values(by=['chromosome', 'start', 'end'])
 
         logger.info("Writing to file")
         with temporary_file() as tf:
@@ -119,5 +149,3 @@ class ConsolidatedReads(Task):
                          compression='gzip',
                          header=False, index=False)
             shutil.move(tf, self.output().path)
-
-        logger.info('Done')
