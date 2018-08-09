@@ -22,9 +22,15 @@ from chipalign.core.task import Task
 from chipalign.core.util import temporary_file
 from chipalign.database.encode.metadata import EncodeTFMetadata
 from chipalign.signal.bins import BinnedSignal
-from chipalign.signal.bins_roadmap_bowtie import BinnedSignalRoadmapBowtie
+from chipalign.signal.bins_bowtie import BinnedSignalBowtie
 
+# Read length to truncate all data points to
 MIN_READ_LENGTH = 36
+
+# Maximum fragment length for MACS2 bin mappability will be truncated by this amount from each side.
+MAX_EXT_SIZE = 350
+# Bin width
+WINDOW_SIZE = 200
 
 INTERESTING_CELL_TYPES = ['IMR-90', 'H1-hESC', 'H9', 'HepG2', 'K562']
 INTERESTING_TRACKS = [
@@ -48,7 +54,8 @@ INTERESTING_TRACKS = [
 ]
 
 # Histones
-INTERESTING_TRACKS += ['H2AFZ', 'H2AK5ac', 'H2AK9ac', 'H2BK120ac', 'H2BK12ac', 'H2BK15ac', 'H2BK20ac', 'H2BK5ac', 'H3K14ac', 'H3K18ac', 'H3K23ac', 'H3K23me2', 'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K4ac', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K56ac', 'H3K79me1', 'H3K79me2', 'H3K9ac', 'H3K9me1', 'H3K9me3', 'H3T11ph', 'H4K20me1', 'H4K5ac', 'H4K8ac', 'H4K91ac',]
+HISTONE_TRACKS = ['H2AFZ', 'H2AK5ac', 'H2AK9ac', 'H2BK120ac', 'H2BK12ac', 'H2BK15ac', 'H2BK20ac', 'H2BK5ac', 'H3K14ac', 'H3K18ac', 'H3K23ac', 'H3K23me2', 'H3K27ac', 'H3K27me3', 'H3K36me3', 'H3K4ac', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K56ac', 'H3K79me1', 'H3K79me2', 'H3K9ac', 'H3K9me1', 'H3K9me3', 'H3T11ph', 'H4K20me1', 'H4K5ac', 'H4K8ac', 'H4K91ac',]
+INTERESTING_TRACKS += HISTONE_TRACKS.copy()
 
 ADDITIONAL_TARGETS = {
 
@@ -167,6 +174,12 @@ class TFSignalDataFrame(Task):
         # them in run() method
         return self.metadata_task
 
+    def interesting_cell_types(self):
+        return INTERESTING_CELL_TYPES
+
+    def interesting_tracks(self):
+        return INTERESTING_TRACKS
+
     def _load_metadata(self):
         metadata = pd.read_csv(self.metadata_task.output().path)
         # Remove rows for which we have no data
@@ -185,9 +198,9 @@ class TFSignalDataFrame(Task):
         metadata = metadata[metadata['File Status'] == 'released']
 
         # Now leave only interesting cell lines
-        metadata = metadata[metadata['Biosample term name'].isin(INTERESTING_CELL_TYPES)]
+        metadata = metadata[metadata['Biosample term name'].isin(self.interesting_cell_types())]
 
-        treatment_metadata = metadata[metadata['target'].isin(INTERESTING_TRACKS)]
+        treatment_metadata = metadata[metadata['target'].isin(self.interesting_tracks())]
         input_metadata = metadata[metadata['is_input']]
 
         logger = self.logger()
@@ -223,7 +236,7 @@ class TFSignalDataFrame(Task):
         # Get the logger which we will use to output current progress to terminal
         logger = self.logger()
         logger.info('Starting signal dataframe')
-        logger.debug('Interesting tracks are: {!r}'.format(INTERESTING_TRACKS))
+        logger.debug('Interesting tracks are: {!r}'.format(self.interesting_tracks()))
 
         logger.info('Loading metadata')
         target_metadata, input_metadata = self._load_metadata()
@@ -270,11 +283,15 @@ class TFSignalDataFrame(Task):
                 accessions_str = ';'.join(['{}:{}'.format(*x) for x in accessions])
                 logger.debug(f'Cell type: {cell_type!r}, input_accessions: {input_accessions_str!r}, target_accessions: {accessions_str!r}')
 
-                ct_track_tasks[target] = BinnedSignalRoadmapBowtie(genome_version=self.genome_version,
-                                                                   cell_type=cell_type,
-                                                                   binning_method=self.binning_method,
-                                                                   treatment_accessions_str=accessions_str,
-                                                                   input_accessions_str=input_accessions_str)
+                ct_track_tasks[target] = BinnedSignalBowtie(genome_version=self.genome_version,
+                                                            cell_type=cell_type,
+                                                            window_size=WINDOW_SIZE,
+                                                            remove_blacklisted=True,
+                                                            read_length=MIN_READ_LENGTH,
+                                                            binning_method=self.binning_method,
+                                                            max_ext_size=MAX_EXT_SIZE,
+                                                            treatment_accessions_str=accessions_str,
+                                                            input_accessions_str=input_accessions_str)
 
             track_tasks[cell_type] = ct_track_tasks
 
@@ -323,7 +340,7 @@ class TFSignalDataFrame(Task):
         logger = self.logger()
 
         cell_types = list(metadata['Biosample term name'].unique())
-        cell_types = cell_types + INTERESTING_CELL_TYPES
+        cell_types = cell_types + self.interesting_cell_types()
         input_accessions = {}
         for cell_type in cell_types:
             input_accessions[cell_type] = [('encode', x)
