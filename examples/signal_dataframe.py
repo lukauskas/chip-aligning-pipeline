@@ -18,8 +18,9 @@ import shutil
 import luigi
 import pandas as pd
 
+from chipalign.core.file_formats.dataframe import compress_dataframe
 from chipalign.core.task import Task
-from chipalign.core.util import temporary_file
+from chipalign.core.util import temporary_file, timed_segment
 from chipalign.database.encode.metadata import EncodeTFMetadata
 from chipalign.signal.bins import BinnedSignal
 from chipalign.signal.bins_bowtie import BinnedSignalBowtie
@@ -312,29 +313,25 @@ class TFSignalDataFrame(Task):
         # in case program gets terminated on the way, we do this to a temp file first
 
         with temporary_file() as temp_filename:
-            with pd.HDFStore(temp_filename, 'w') as store:
-                for cell_type in cell_types:
-                    ts = track_tasks[cell_type]
-                    for key, task in ts.items():
-                        df = task.output().load()
-                        store[f'/tracks/{cell_type}/{key}'] = df
 
-                store['/target_metadata'] = target_metadata
-                store['/input_metadata'] = input_metadata
+            with timed_segment("Compiling data for {}".format(self.__class__.__name__), logger=logger):
+                with pd.HDFStore(temp_filename, 'w') as store:
+                    for cell_type in cell_types:
+                        ts = track_tasks[cell_type]
+                        for key, task in ts.items():
+                            df = task.output().load()
+                            store[f'/tracks/{cell_type}/{key}'] = df
+
+                    store['/target_metadata'] = target_metadata
+                    store['/input_metadata'] = input_metadata
 
             # Nearly done
-            logger.info('Compressing output')
-            with temporary_file() as compressed_temp_filename:
-                ptrepack('--chunkshape', 'auto',
-                         '--propindexes',
-                         '--complevel', 1,
-                         '--complib', 'lzo',
-                         temp_filename, compressed_temp_filename
-                         )
-
-                logger.info('Copying output')
-                self.ensure_output_directory_exists()
-                shutil.move(compressed_temp_filename, self.output().path)
+            with timed_segment('Compressing data for {}'.format(self.__class__.__name__,
+                                                                logger=logger)):
+                with temporary_file() as compressed_temp_filename:
+                    compress_dataframe(temp_filename, compressed_temp_filename)
+                    self.ensure_output_directory_exists()
+                    shutil.move(compressed_temp_filename, self.output().path)
 
     def _parse_metadata(self, metadata, input_metadata):
         logger = self.logger()
