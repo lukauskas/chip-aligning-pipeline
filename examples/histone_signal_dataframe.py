@@ -1,4 +1,4 @@
-from .signal_dataframe import TFSignalDataFrame, HISTONE_TRACKS
+from signal_dataframe import TFSignalDataFrame, HISTONE_TRACKS
 import luigi
 
 
