@@ -159,6 +159,7 @@ class TFSignalDataFrame(Task):
     # We take two parameters: genome version, and binning method
     genome_version = luigi.Parameter(default='hg38')
     binning_method = BinnedSignal.binning_method
+    window_size = luigi.IntParameter(default=WINDOW_SIZE)
 
     # One could put the interesting TFs here as well, but I am keeping it as a constant in code for
     # for simplicity
@@ -305,7 +306,7 @@ class TFSignalDataFrame(Task):
 
                 ct_track_tasks[target] = BinnedSignalBowtie(genome_version=self.genome_version,
                                                             cell_type=cell_type,
-                                                            window_size=WINDOW_SIZE,
+                                                            window_size=self.window_size,
                                                             remove_blacklisted=True,
                                                             read_length=MIN_READ_LENGTH,
                                                             binning_method=self.binning_method,
