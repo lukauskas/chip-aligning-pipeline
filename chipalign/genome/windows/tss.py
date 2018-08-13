@@ -28,6 +28,8 @@ class BinsAroundTSS(Task):
     def _biomart_endpoint(self):
         if self.genome_version == 'hg19':
             return 'http://grch37.ensembl.org/biomart/martservice?query={}'
+        elif self.genome_version == 'hg38':
+            return 'http://jul2018.archive.ensembl.org/biomart/martservice?query={}'
         else:
             raise ValueError('Unsupported genome version: {}'.format(self.genome_version))
 
