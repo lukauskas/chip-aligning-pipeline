@@ -27,6 +27,7 @@ class MatrixBinnedSignalBowtie(MetaTask):
     matrix_accessions_str = luigi.Parameter()
     matrix_slop = WindowsAroundSummits.slop
     matrix_window_size = WindowsAroundSummits.window_size
+    matrix_limit = WindowsAroundSummits.limit
 
 
     def input_task(self):
@@ -59,6 +60,7 @@ class MatrixBinnedSignalBowtie(MetaTask):
         return WindowsAroundSummits(genome_version=self.genome_version,
                                     window_size=self.matrix_window_size,
                                     slop=self.matrix_slop,
+                                    limit=self.matrix_limit,
                                     macs_task=self.matrix_macs_task())
 
     def binned_signal(self):

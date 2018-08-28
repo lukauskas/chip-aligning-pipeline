@@ -53,6 +53,8 @@ SUBSET = {
 
 INTERESTING_TRACKS = [t for t in INTERESTING_TRACKS if t in SUBSET or t in HISTONE_TRACKS]
 
+MAX_WINDOWS = 5000
+
 class MatrixDataFrame(Task):
     # Since this task has dynamic dependancies we cannot run it on OGS
 
@@ -199,7 +201,8 @@ class MatrixDataFrame(Task):
                                                                              input_accessions_str=input_accessions_str,
                                                                              matrix_accessions_str=tf_accessions_str,
                                                                              matrix_slop=self.slop,
-                                                                             matrix_window_size=self.window_size
+                                                                             matrix_window_size=self.window_size,
+                                                                             matrix_limit=MAX_WINDOWS,
                                                                              )
                 ct_track_tasks[tf_target] = tf_target_tasks
 
