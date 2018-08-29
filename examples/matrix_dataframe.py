@@ -53,7 +53,7 @@ SUBSET = {
 
 INTERESTING_TRACKS = [t for t in INTERESTING_TRACKS if t in SUBSET or t in HISTONE_TRACKS]
 
-MAX_WINDOWS = 5000
+MAX_WINDOWS = 1000
 
 class MatrixDataFrame(Task):
     # Since this task has dynamic dependancies we cannot run it on OGS
