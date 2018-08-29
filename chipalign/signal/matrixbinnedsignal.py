@@ -34,7 +34,7 @@ class MatrixBinnedSignal(Task):
 
     binning_method = luigi.Parameter(default='max')
 
-    # _parameter_names_to_hash = ('bins_task', 'signal_task')
+    _parameter_names_to_hash = ('bins_task', 'signal_task')
 
     def requires(self):
         return [self.bins_task, self.signal_task]
