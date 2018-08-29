@@ -53,8 +53,6 @@ SUBSET = {
 
 INTERESTING_TRACKS = [t for t in INTERESTING_TRACKS if t in SUBSET or t in HISTONE_TRACKS]
 
-MAX_WINDOWS = 1000
-
 class MatrixDataFrame(Task):
     # Since this task has dynamic dependancies we cannot run it on OGS
 
@@ -62,8 +60,9 @@ class MatrixDataFrame(Task):
     # We take two parameters: genome version, and binning method
     genome_version = luigi.Parameter(default='hg38')
     binning_method = BinnedSignal.binning_method
-    window_size = luigi.IntParameter(default=20)
+    window_size = luigi.IntParameter(default=25)  # Odd numbers work better
     slop = luigi.IntParameter(default=2000)
+    limit = luigi.IntParameter(default=10000)  # limit to `limit` highest peaks.
 
     # One could put the interesting TFs here as well, but I am keeping it as a constant in code for
     # for simplicity
@@ -202,7 +201,7 @@ class MatrixDataFrame(Task):
                                                                              matrix_accessions_str=tf_accessions_str,
                                                                              matrix_slop=self.slop,
                                                                              matrix_window_size=self.window_size,
-                                                                             matrix_limit=MAX_WINDOWS,
+                                                                             matrix_limit=self.limit,
                                                                              )
                 ct_track_tasks[tf_target] = tf_target_tasks
 

@@ -67,11 +67,23 @@ class WindowsAroundSummits(Task):
 
                         bdt = bdt.filter(lambda x: x.name in best)
 
-                    bdt_slop = bdt.slop(b=self.slop, genome=self.genome_version)
+                    slop_left = self.slop
+                    slop_right = self.slop
 
-                    windows = bdt_slop.window_maker(genome=self.genome_version,
-                                                    w=self.window_size,
-                                                    i='srcwinnum')
+                    # Make sure center window is always the site
+                    if self.window_size % 2 == 1:
+                        slop_left += self.window_size // 2
+                        slop_right += self.window_size // 2
+                    else:
+                        slop_left += self.window_size // 2
+                        slop_right += self.window_size // 2 - 1
+
+                    bdt_slop = bdt.slop(l=slop_left, r=slop_right,
+                                        genome=self.genome_version)
+
+                    windows = pybedtools.BedTool().window_maker(b=bdt_slop,
+                                                                w=self.window_size,
+                                                                i='srcwinnum')
                     windows = windows.sort()
                     windows.saveas(output_file)
 
