@@ -49,6 +49,9 @@ SUBSET = {
     'TEAD4',
     'USF1',
     'YY1',
+    # Also important controls.
+    'POLR2A',
+    'POLR2AphosphoS5'
 }
 
 INTERESTING_TRACKS = [t for t in INTERESTING_TRACKS if t in SUBSET or t in HISTONE_TRACKS]
